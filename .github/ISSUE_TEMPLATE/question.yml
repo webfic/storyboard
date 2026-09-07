@@ -1,0 +1,20 @@
+name: 질문
+description: 쓰는 방법을 모르겠을 때
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        [위키](https://github.com/webfic/storyboard/wiki)에 시작 가이드와 앱별 사용법이 있습니다.
+        거기에 없거나, 있는데 이해가 안 되면 그대로 물어봐 주세요 — 문서가 부족하다는 신호입니다.
+  - type: textarea
+    id: question
+    attributes:
+      label: 무엇이 궁금하신가요
+    validations:
+      required: true
+  - type: textarea
+    id: tried
+    attributes:
+      label: 시도해 보신 것
+      description: 실행한 명령이나 눌러 본 버튼이 있다면.

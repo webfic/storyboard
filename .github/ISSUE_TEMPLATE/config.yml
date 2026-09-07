@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 사용법 문서 (위키)
+    url: https://github.com/webfic/storyboard/wiki
+    about: 시작 가이드, VS Code 확장·CLI·텔레그램 봇 사용법
+  - name: 변경 내역
+    url: https://github.com/webfic/storyboard/blob/main/CHANGELOG.md
+    about: 버전별로 무엇이 바뀌었는지

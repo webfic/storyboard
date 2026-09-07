@@ -1,0 +1,61 @@
+name: 버그 신고
+description: 도구가 잘못 동작하거나 멈췄을 때
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        생성된 원고 내용 자체가 마음에 들지 않는 경우는 버그가 아니라 **기능 제안**이나 **질문** 쪽이 맞습니다.
+  - type: dropdown
+    id: app
+    attributes:
+      label: 어디에서 생긴 문제인가요
+      options:
+        - VS Code 확장
+        - CLI (storyboard)
+        - 텔레그램 봇 (storyboard-bot)
+        - 설치 (install.sh)
+        - 모르겠음
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: 버전
+      description: "`storyboard -v` 또는 확장 상세 화면의 버전"
+      placeholder: "0.9.0"
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: 무슨 일이 있었나요
+      description: 기대한 동작과 실제 동작을 함께 적어 주세요.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 재현 방법
+      placeholder: |
+        1. …
+        2. …
+        3. 이때 이런 오류가 났습니다
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: storyboard doctor 출력
+      description: 있으면 원인을 훨씬 빨리 찾습니다. **API 키는 지우고** 붙여 주세요.
+      render: text
+  - type: input
+    id: env
+    attributes:
+      label: 환경
+      placeholder: "macOS 15 / Node 20.11 / VS Code 1.95"
+  - type: input
+    id: provider
+    attributes:
+      label: 쓰던 AI 프로바이더
+      placeholder: "claude-code, openai, ollama …"

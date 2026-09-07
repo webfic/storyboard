@@ -1,0 +1,32 @@
+name: 기능 제안
+description: 이런 게 있으면 좋겠다
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 무엇이 불편한가요
+      description: 원하는 기능보다 **막혀 있는 상황**을 먼저 적어 주세요. 더 나은 해법이 나올 때가 많습니다.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: 생각하신 방식
+      description: 떠오른 해법이 있다면. 없어도 괜찮습니다.
+  - type: textarea
+    id: workaround
+    attributes:
+      label: 지금은 어떻게 하고 계신가요
+      description: 우회 방법이 있는지, 있다면 무엇이 아쉬운지.
+  - type: dropdown
+    id: app
+    attributes:
+      label: 어느 쪽 이야기인가요
+      multiple: true
+      options:
+        - VS Code 확장
+        - CLI (storyboard)
+        - 텔레그램 봇 (storyboard-bot)
+        - 생성 품질 (초안·검수)
+        - 문서

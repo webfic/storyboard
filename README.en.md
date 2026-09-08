@@ -1,7 +1,7 @@
 # Storyboard
 
 An AI writing tool that carries one novel from **plan → draft → review → revision → assembled
-manuscript**. One engine, three front ends — a VS Code extension, a terminal CLI, and a Telegram bot.
+manuscript**. One engine, two front ends — a VS Code extension and a terminal CLI.
 
 한국어: [`README.md`](README.md) · Docs: [Wiki](https://github.com/webfic/storyboard/wiki) · Support: [Issues](https://github.com/webfic/storyboard/issues)
 
@@ -30,15 +30,15 @@ reads the assembled manuscript as a whole.
 
 > **The first public release is v0.9.0.** Until then the command below has no release to fetch.
 
-**CLI and Telegram bot** — needs Node 20+ and npm.
+**CLI** — needs Node 20+.
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/webfic/storyboard/main/install.sh | bash
 ```
 
-It verifies checksums, unpacks into `~/.local/share/`, links `~/.local/bin/storyboard` and
-`~/.local/bin/storyboard-bot`, and registers tab completion for your shell. With the tarballs
-already downloaded, use `./install.sh --from ~/Downloads`.
+It verifies the checksum, unpacks into `~/.local/share/`, links `~/.local/bin/storyboard`, and
+registers tab completion for your shell. With the tarball already downloaded, use
+`./install.sh --from ~/Downloads`.
 
 **VS Code extension** — download `storyboard-vscode-<version>.vsix` from
 [Releases](https://github.com/webfic/storyboard/releases) and install it with
@@ -48,7 +48,7 @@ already downloaded, use `./install.sh --from ~/Downloads`.
 
 ```bash
 storyboard init --title "Night Passage"   # an empty directory becomes a workspace
-storyboard setup                          # AI provider and key — shared by all three apps
+storyboard setup                          # AI provider and key — shared by both apps
 storyboard project set --genre …          # the contract the outline needs
 storyboard doctor                         # what is missing, and the command that fixes it
 ```
@@ -60,14 +60,13 @@ See the **[Wiki](https://github.com/webfic/storyboard/wiki)** for the full guide
 
 ## Configuration and secrets
 
-All three apps read the same files.
+Both apps read the same files.
 
 | File | Holds |
 |---|---|
 | `~/.storyboard/config.json` | Providers, models, generation options (all works) |
 | `<work>/.storyboard/config.json` | Overrides for that one work |
 | `~/.storyboard/secrets.json` | API keys (`0600`) |
-| `~/.storyboard/bot.json` | Telegram bot settings (`0600`) |
 
 `STORYBOARD_HOME` moves `~/.storyboard` elsewhere.
 

@@ -10,6 +10,34 @@ after the first public release.
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-09-10
+
+### Removed
+
+- **The Telegram bot (`storyboard-bot`) is gone.** The app that read, edited and generated a workspace from Telegram has been removed from the repository. What existed only to serve it goes with it: the "a save is a commit" write model (mutate gate and freshness guard), the commit/sync package (`@storyboard/story-git`), the job queue, and the native `better-sqlite3` dependency. Two apps remain — the VSCode extension and the CLI — and a release now ships two artifacts, the VSIX and the CLI tarball. Reading drafts from a phone means cloning the workspace with a git client, and that repository is now created by `storyboard init`.
+
+### Added
+
+- **`storyboard init` creates the git repository.** Until now the only thing that turned a workspace into a repository was the bot's `/doctor init`, so a project started from the extension or the CLI needed a hand-run `git init`. Both `init` and `init --repair` now write the `.gitignore` first and then run `git init` when the directory is not a repository yet, so a project starts on history with nothing generated within reach of the first commit. That first commit is still yours, and `storyboard doctor` reports a workspace that has no repository.
+
+## [0.8.10] - 2026-09-10
+
+### Added
+
+- **The story-state ledger can be resealed.** When a card changed but the draft it produced still stands, `storyboard state reseal [<scene range>]` and the extension's **Storyboard: Reseal Story State** record today's cards as the ledger's basis. Until now the only way to clear a stale mark was to regenerate the scene, so merely filling in beats dropped everything that scene had established from the prompt. Resealing cannot be undone, so the extension names the scenes and asks first.
+- **`doctor` checks the model against the scene targets.** When a workspace's largest scene target is one the configured model was measured to fall short of, it says so with the measured figure, instead of letting you find out after a long generation run. Combinations that were never measured produce no advice.
+
+### Changed
+
+- **Generation parameters are now measured per model.** How many sections a scene is written in is optimal at different values for different models. Opus writes a 15,000-character scene best in **one** call (101% of target), so its section limit is 15,000 — more output than the previous three-call setup at 92%, for a third of the cost. The share of the target budgeted to the skeleton is optimal in opposite directions too: Sonnet needs 0.8 (44% → 61% of target) while Opus overshoots to 137% at that value and keeps the previous 1/3. Models that were never measured keep the previous defaults, and `config show` labels a measured default as such. A value you set yourself always wins.
+- **`claude-code` now defaults to Opus.** Measured on a 15,000-character scene target, Sonnet reached 47% of the target and Opus 92%. A default that cannot reach the target sends people looking for a pipeline bug, so the default is Opus. Switch back with `storyboard config set providers.claude-code.model sonnet` or from the settings panel.
+- **Settings are written where git would write them.** `storyboard config set` and `storyboard setup` write the workspace's `.storyboard/config.json` when run inside a workspace; `--global` writes the shared file, and outside a workspace they refuse rather than guess. They previously always wrote the shared file, so a per-project setting had to be hand-written. API keys are unaffected: still the one 0600 home file.
+
+### Fixed
+
+- **Drafts got shorter when the scene card had beats.** With beats present, the skeleton stage never saw the card's purpose, conflict, twist or emotional shift: the filter meant to keep craft blocks out of the event material dropped them entirely. Those blocks now reach the skeleton as a separate "scene design" section, kept apart from the event material. Measured (sonnet, 3,000-char target) the skeleton grew 743 → 1,900 chars and the draft 1,636 → 2,928 (98% of target), and the gap between having beats and not having them fell from 37% to 0.4%. Beat coverage was unchanged.
+- **`doctor` pointed at a command that does not exist.** A stale ledger told you to run `storyboard draft generate`, which fails as an unknown command. It now names `storyboard scene generate --all`, which actually clears it.
+
 ## [0.8.9] - 2026-09-07
 
 ### Added

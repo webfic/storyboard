@@ -13,7 +13,6 @@ body:
       options:
         - VS Code 확장
         - CLI (storyboard)
-        - 텔레그램 봇 (storyboard-bot)
         - 설치 (install.sh)
         - 모르겠음
     validations:

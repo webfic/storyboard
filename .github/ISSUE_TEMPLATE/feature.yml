@@ -27,6 +27,5 @@ body:
       options:
         - VS Code 확장
         - CLI (storyboard)
-        - 텔레그램 봇 (storyboard-bot)
         - 생성 품질 (초안·검수)
         - 문서

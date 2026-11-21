@@ -40,6 +40,7 @@ export type GenerateDraftResult =
       readonly draftUri: StoryUri;
       readonly warnings: readonly DraftWarning[];
       readonly traceRunId?: string;
+      readonly beatSegments?: readonly (readonly number[])[];
     }
   | { readonly ok: true; readonly kind: 'cache_hit'; readonly draftUri: StoryUri }
   | {

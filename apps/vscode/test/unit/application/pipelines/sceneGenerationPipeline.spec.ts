@@ -861,7 +861,7 @@ describe("runSceneGenerationPipeline — 장면 전환 계획 (#115, #112)", () 
     )
     const measured: { sectionIndex?: number; beatNumbers?: readonly number[]; startOffset?: number }[] = []
 
-    await runSceneGenerationPipeline({
+    const result = await runSceneGenerationPipeline({
       sceneStem: "01-opening",
       context: plannedScene(contextFor([eliaCard], "본문")),
       aiService: ai,
@@ -878,6 +878,8 @@ describe("runSceneGenerationPipeline — 장면 전환 계획 (#115, #112)", () 
     expect(measured.flatMap((event) => event.beatNumbers ?? [])).toEqual([1, 2, 3])
     expect(measured.map((event) => event.startOffset)[0]).toBe(0)
     expect(expansionOptions.traceTag?.beatIds).toEqual(measured[0]?.beatNumbers?.map(String))
+    expect(result.beatSegments?.flat()).toEqual([1, 2, 3])
+    expect(result.beatSegments).toHaveLength(2)
   })
 
   it("keeps a missing-beat warning the whole-skeleton recheck confirms", async () => {

@@ -170,6 +170,14 @@ export function sectionPlaces(
   ]);
 }
 
+export function segmentBeatNumbers(ledger: SceneCoordinateLedger): number[][] | undefined {
+  if (ledger.beats === undefined || !ledger.isAlignedWithBreaks) {
+    return undefined;
+  }
+
+  return ledger.beats.map((indexes) => indexes.map((index) => index + 1));
+}
+
 export function sectionBeatNumbers(
   ledger: SceneCoordinateLedger,
   sections: readonly string[],

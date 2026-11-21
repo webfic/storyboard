@@ -245,6 +245,9 @@ export class GenerateDraftUseCase implements IUseCase<GenerateDraftRequest, Gene
       kind: 'generated',
       draftUri,
       warnings: [...inputs.warnings.map((message) => ({ message })), ...pipelineResult.warnings],
+      ...(pipelineResult.beatSegments === undefined
+        ? {}
+        : { beatSegments: pipelineResult.beatSegments }),
     };
   }
 

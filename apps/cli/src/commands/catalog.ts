@@ -16,8 +16,7 @@ export type CommandGroup =
   | '초안'
   | '카드'
   | '노트'
-  | '원고'
-  | '측정';
+  | '원고';
 
 export type GlobalFlagName =
   | 'workspace'
@@ -82,7 +81,6 @@ export const commandGroups: readonly CommandGroup[] = [
   '카드',
   '노트',
   '원고',
-  '측정',
 ];
 
 export const commandGroupIds: Readonly<Record<CommandGroup, string>> = {
@@ -93,7 +91,6 @@ export const commandGroupIds: Readonly<Record<CommandGroup, string>> = {
   카드: 'card',
   노트: 'notes',
   원고: 'manuscript',
-  측정: 'sim',
 };
 
 export function findCommandGroup(topic: string): CommandGroup | undefined {
@@ -132,41 +129,7 @@ export const flagCatalog: readonly FlagSpec[] = [
     summary: '이번 실행에만 쓸 프로바이더 (claude, openai, google …)',
   },
   { name: 'model', valueLabel: '<name>', summary: '그 프로바이더의 모델' },
-  { name: 'track', valueLabel: '<path>', summary: 'sim: 트랙 저장소 경로' },
-  {
-    name: 'config',
-    valueLabel: '<file>',
-    summary: 'sim: 기계 프로필 (기본: <track>/sim.config.json)',
-  },
-  { name: 'genre', valueLabel: '<name>', summary: 'sim: 연쇄 트랙의 장르 디렉터리' },
-  { name: 'overlay', valueLabel: '<file>', summary: 'sim: 손잡이 값을 덮는 JSON 한 장' },
-  { name: 'knobs', valueLabel: '<a,b,c>', summary: 'sim: 흔들 손잡이 목록 (쉼표로 구분)' },
-  { name: 'repeats', valueLabel: '<n>', summary: 'sim: 같은 지점을 몇 번 돌릴지 (기본 3)' },
-  {
-    name: 'judge',
-    valueLabel: '<provider|none>',
-    summary: 'sim: 심판 프로바이더 (생성과 다른 모델이어야 합니다. none 이면 생성만)',
-  },
-  { name: 'judge-model', valueLabel: '<name>', summary: 'sim: 심판 모델' },
-  {
-    name: 'prompt-variant',
-    valueLabel: '<generic|xs|rich>',
-    summary: 'sim: 생성 프롬프트 변형을 강제 (로컬 모델은 기본 xs)',
-  },
-  { name: 'max-runs', valueLabel: '<n>', summary: 'sim: 실행 횟수 상한' },
-  { name: 'out', valueLabel: '<path>', summary: 'sim: 결과를 쌓을 JSONL 경로' },
-  { name: 'point', valueLabel: '<label>', summary: 'sim: 되쓰기할 지점의 이름' },
-  {
-    name: 'profiles',
-    valueLabel: '<path>',
-    summary: 'sim: 적을 modelProfiles.params.json 경로 (기본: 엔진 저장소의 파일)',
-  },
-  {
-    name: 'source',
-    valueLabel: '<engine>',
-    summary: 'sim: 다시 채점할 원본 기록의 엔진 커밋 접두어 (기본: 전부)',
-  },
-  { name: 'yes', summary: '견적·계획을 묻지 않고 바로 진행합니다 (sim, notes absorb)' },
+  { name: 'yes', summary: '견적·계획을 묻지 않고 바로 진행합니다 (notes absorb)' },
   {
     name: 'from-notes',
     valueLabel: '<path|url>',

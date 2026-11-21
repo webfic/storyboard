@@ -30,9 +30,6 @@
       "@storyboard/story-ai": [
         "../../packages/story-ai/src/index.ts"
       ],
-      "@storyboard/story-sim": [
-        "../../packages/story-sim/src/index.ts"
-      ],
       "@storyboard/story-model/contracts": [
         "../../packages/story-model/src/contracts.ts"
       ]

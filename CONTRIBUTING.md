@@ -35,7 +35,6 @@ green too.
 | `packages/story-app` | `StoryboardApplication`: builds the object graph once for every app |
 | `packages/story-config` | `~/.storyboard`: config layers, the 0600 secrets file, watchers |
 | `packages/story-node` | Node adapters the CLI runs on |
-| `packages/story-sim` | Quality and cost measurement (knob sweeps, reader panel) |
 | `apps/cli` | The reference implementation. Every verb calls the engine; it owns no orchestration |
 | `apps/vscode` | The extension: VS Code adapters, commands, the webview |
 

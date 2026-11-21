@@ -48,6 +48,14 @@ export const diffContractRules = [
       const problems = [];
 
       for (const file of filterByGlobs(['**/*.params.json'], changed)) {
+        const isRemoved = readHead(file) === undefined;
+        if (isRemoved) {
+          if (table.includes(file)) {
+            problems.push(`${file} 는 지워졌는데 .claude/rules/coding-standards.md 의 표에 행이 남아 있습니다`);
+          }
+          continue;
+        }
+
         const schema = file.replace(/\.params\.json$/, '.ts');
         if (readHead(schema) === undefined) {
           problems.push(`${schema} 가 없습니다`);

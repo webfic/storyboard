@@ -69,7 +69,6 @@ npm workspaces 모노레포입니다. 패키지는 빌드 없이 TypeScript 소�
 | [`packages/story-ai`](packages/story-ai/)         | `@storyboard/story-ai`     | AI 엔진: 프로바이더 레지스트리·프롬프트 카탈로그·포트                   |
 | [`packages/story-config`](packages/story-config/) | `@storyboard/story-config` | 공용 홈(`~/.storyboard`): 설정 계층·시크릿 파일·변경 감시         |
 | [`packages/story-node`](packages/story-node/)     | `@storyboard/story-node`   | Node 호스트 어댑터: 파일 시스템·워크스페이스 로케이터                  |
-| [`packages/story-sim`](packages/story-sim/)       | `@storyboard/story-sim`    | 품질·비용 측정: 손잡이 스윕·독자 패널·파레토 리포트                    |
 
 
 ## 개발

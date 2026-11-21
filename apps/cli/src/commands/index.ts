@@ -60,12 +60,6 @@ import { ManuscriptAssembleCommand } from '@/commands/manuscript/manuscriptAssem
 import { ManuscriptReviewCommand } from '@/commands/manuscript/manuscriptReviewCommand';
 import { ManuscriptSummarizeCommand } from '@/commands/manuscript/manuscriptSummarizeCommand';
 import { ManuscriptExportCommand } from '@/commands/manuscript/manuscriptExportCommand';
-import { SimRunCommand } from '@/commands/sim/simRunCommand';
-import { SimScreenCommand } from '@/commands/sim/simScreenCommand';
-import { SimSweepCommand } from '@/commands/sim/simSweepCommand';
-import { SimReportCommand } from '@/commands/sim/simReportCommand';
-import { SimRejudgeCommand } from '@/commands/sim/simRejudgeCommand';
-import { SimApplyCommand } from '@/commands/sim/simApplyCommand';
 import type { CommandSpec } from '@/commands/catalog';
 import type { ICommandHandler } from '@/commands/commandHandler';
 
@@ -134,12 +128,6 @@ const workCommands: readonly ICommandHandler[] = [
   new ManuscriptReviewCommand(),
   new ManuscriptSummarizeCommand(),
   new ManuscriptExportCommand(),
-  new SimRunCommand(),
-  new SimScreenCommand(),
-  new SimSweepCommand(),
-  new SimReportCommand(),
-  new SimRejudgeCommand(),
-  new SimApplyCommand(),
 ];
 
 export const commands: readonly ICommandHandler[] = [...sessionCommands, ...workCommands];

@@ -19,7 +19,6 @@ import {
 import {
   ConfigBridge,
   type ConfigBridgeDependencies,
-  type PromptVariantId,
   SecretStore,
 } from '@storyboard/story-ai';
 
@@ -88,14 +87,7 @@ export interface CliContainerOptions {
   readonly reviseMaxIterations?: number;
   readonly configWriteTarget?: ConfigurationTarget;
   readonly usageSink?: IUsageSink;
-  readonly createConfigBridge?: (dependencies: ConfigBridgeDependencies) => ConfigBridge;
   readonly runParameters?: RunParameters;
-  readonly localRuntime?: {
-    readonly baseUrl?: string;
-    readonly contextTokens?: number;
-    readonly think?: boolean;
-  };
-  readonly promptVariant?: PromptVariantId;
 }
 
 function createCommandLineConfigOverrides(options: CliContainerOptions): Record<string, unknown> {
@@ -113,22 +105,6 @@ function createCommandLineConfigOverrides(options: CliContainerOptions): Record<
 
   if (options.reviseMaxIterations !== undefined) {
     overrides['revise.loop.maxIterations'] = options.reviseMaxIterations;
-  }
-
-  if (options.localRuntime?.baseUrl !== undefined) {
-    overrides['providers.ollama.baseUrl'] = options.localRuntime.baseUrl;
-  }
-
-  if (options.localRuntime?.contextTokens !== undefined) {
-    overrides['providers.ollama.contextTokens'] = options.localRuntime.contextTokens;
-  }
-
-  if (options.localRuntime?.think !== undefined) {
-    overrides['providers.ollama.think'] = options.localRuntime.think;
-  }
-
-  if (options.promptVariant !== undefined) {
-    overrides['ai.prompt.variant'] = options.promptVariant;
   }
 
   return overrides;
@@ -161,9 +137,7 @@ export function createCliContainer(options: CliContainerOptions): CliContainer {
       ? {}
       : { generationKnobOverrides: options.runParameters.generationKnobs }),
   };
-  const configBridge: ConfigBridge =
-    options.createConfigBridge?.(configBridgeDependencies) ??
-    new ConfigBridge(configBridgeDependencies);
+  const configBridge: ConfigBridge = new ConfigBridge(configBridgeDependencies);
 
   const application: StoryboardApplication = new StoryboardApplication(
     {

@@ -18,7 +18,6 @@ const SOURCE_ROOTS = [
   'packages/story-ai/src',
   'packages/story-engine/src',
   'packages/story-app/src',
-  'packages/story-sim/src',
   'packages/story-config/src',
   'packages/story-node/src',
 ];

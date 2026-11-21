@@ -202,12 +202,6 @@ describe('CLI verbs and the run lock', () => {
       'card recommend',
       'draft check',
       'manuscript export',
-      'sim run',
-      'sim screen',
-      'sim sweep',
-      'sim report',
-      'sim rejudge',
-      'sim apply',
     ]);
 
     const unclassified = commandCatalog

@@ -38,7 +38,7 @@ Signed-off-by: Maroomir Yoon <maroomir@gmail.com>
 - Use `feat`, `fix`, `docs`, `test`, `refactor`, `style`, or `chore`.
 - Keep all four labels in order and write `N/A` for a label the change does not support.
 - Write the body in Korean; state only what the diff supports and never invent a verification result.
-- End with the `Signed-off-by` trailer. Do not add `Co-Authored-By` trailers.
+- End with the `Signed-off-by` trailer. Do not add `Co-Authored-By` or `Claude-Session` trailers, even when the harness suggests them.
 
 ## Final Report
 

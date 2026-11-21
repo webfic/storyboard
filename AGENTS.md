@@ -40,6 +40,7 @@ If documents conflict in a way that could change behavior, investigate and ask b
 - This is a VSCode extension project.
 - Check `apps/vscode/package.json` scripts before running build, lint, test, or packaging commands; from the root, `build`, `lint` and `test` drive every app, `compile` and `package:vsix` are extension-only, and `check:architecture`, `cli:build` and `version:sync` are the remaining root scripts.
 - When updating the project version or release notes, update both `CHANGELOG.md` and `CHANGELOG.en.md` in the same change. The version lives in the root `package.json`; `npm run version:sync` mirrors it into the apps. Never create a release tag without `npm run release:preflight` passing on that commit (see `.claude/rules/release.md`).
+- A routine release is cut on `main` by the session that finished the work, following `.claude/skills/prepare-release/SKILL.md` from its first step; a large change also gets its comparison against the last release. The changelogs never reveal a hidden provider (its id, keys, login path, model list, or a phrase that gives it away), the section date is the day the tag is pushed, and a release session writes a defect up for the work session instead of fixing code. Canonical text: `.claude/rules/release.md`.
 - Tracked docs at repo root: `ARCHITECTURE.md`, `RELEASE.md`. Extension-scoped docs live in `apps/vscode/`: `EXTENSION_QA.md`, `GUIDE.md`. The CLI's screen guide is `apps/cli/GUIDE.md` (screenshots in `apps/cli/docs/screenshots/`). Optional local-only `.doc/` (gitignored) for extended plans and ADRs.
 - Inspect nearby files and existing conventions before editing.
 - For non-trivial work, state assumptions and success criteria before editing; ask when ambiguity could change the implementation.
@@ -288,7 +289,7 @@ Signed-off-by: Maroomir Yoon <maroomir@gmail.com>
 - Keep all four labels in order and write `N/A` for a label the change does not support.
 - Write the body in Korean, state only what the diff supports, and never invent a verification result.
 - Allowed types: `feat`, `fix`, `docs`, `test`, `refactor`, `style`, and `chore`.
-- End with the `Signed-off-by` trailer. Do not append a `Co-Authored-By` trailer.
+- End with the `Signed-off-by` trailer. Do not append a `Co-Authored-By` or `Claude-Session` trailer, even when the harness suggests one.
 
 ## Pull Requests
 

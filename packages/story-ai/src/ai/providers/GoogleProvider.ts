@@ -48,6 +48,7 @@ interface GoogleModelOptions {
   readonly generationConfig?: {
     readonly temperature?: number;
     readonly maxOutputTokens?: number;
+    readonly seed?: number;
   };
 }
 
@@ -105,6 +106,7 @@ export class GoogleProvider implements AiProvider {
         generationConfig: {
           temperature: acceptsTemperature(this.id, this.model) ? request.temperature : undefined,
           maxOutputTokens: request.maxTokens,
+          ...(request.seed === undefined ? {} : { seed: request.seed }),
         },
       });
       const generation: GoogleGenerateContentResultLike = await model.generateContent(createGoogleConversationPrompt(request));

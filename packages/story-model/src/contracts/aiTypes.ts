@@ -43,6 +43,7 @@ export interface AiGenerateRequest {
   readonly temperature?: number;
   readonly maxTokens?: number;
   readonly reasoningEffort?: ReasoningEffort;
+  readonly seed?: number;
 }
 
 export type AiStreamChunk =

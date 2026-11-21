@@ -1,4 +1,4 @@
-import type { AiTaskName, UsageRecord } from '@storyboard/story-model';
+import { acceptsSeed, type AiTaskName, type UsageRecord } from '@storyboard/story-model';
 
 export interface StageUsage {
   readonly stage?: string;
@@ -40,4 +40,8 @@ export function summarizeUsageByStage(records: readonly UsageRecord[]): readonly
   }
 
   return [...byStageTask.values()];
+}
+
+export function isSeedHonouredByEveryCall(records: readonly UsageRecord[]): boolean {
+  return records.every((record) => acceptsSeed(record.providerId));
 }

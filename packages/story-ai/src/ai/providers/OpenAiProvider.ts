@@ -48,6 +48,7 @@ interface OpenAiChatCompletionRequest {
   readonly max_tokens?: number;
   readonly max_completion_tokens?: number;
   readonly reasoning_effort?: ReasoningEffort;
+  readonly seed?: number;
 }
 
 export interface OpenAiChatCompletionResponse {
@@ -110,6 +111,7 @@ export class OpenAiProvider implements AiProvider {
         messages: request.messages.map(({ role, content }) => ({ role, content })),
         temperature: acceptsTemperature(this.id, this.model) ? request.temperature : undefined,
         max_completion_tokens: request.maxTokens,
+        ...(request.seed === undefined ? {} : { seed: request.seed }),
         ...(request.reasoningEffort !== undefined && acceptsReasoningEffort(this.id, this.model)
           ? { reasoning_effort: request.reasoningEffort }
           : {}),

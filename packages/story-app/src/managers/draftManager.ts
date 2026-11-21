@@ -62,6 +62,7 @@ import type {
 import {
   ProjectRepository,
   summarizeUsageByStage,
+  isSeedHonouredByEveryCall,
   SceneContextReader,
   SceneNarrationResolver,
   type ChapterNarrationDefaults,
@@ -84,7 +85,9 @@ import {
   type SceneListItem,
   type SceneTargetLength,
   type StoryUri,
+  type UsageRecord,
 } from '@storyboard/story-model';
+import type { ConfigBridge } from '@storyboard/story-ai';
 
 export interface DraftReading {
   readonly uri: StoryUri;
@@ -103,6 +106,7 @@ export interface GenerateAndReviseDraftResult {
   readonly generation: GenerateDraftResult;
   readonly revision: ReviseDraftWorkflowResult | undefined;
   readonly usage: readonly StageUsage[];
+  readonly seedHonoured?: boolean;
 }
 
 export interface DraftManagerDependencies {
@@ -130,6 +134,7 @@ export interface DraftManagerDependencies {
   readonly summaries: ChapterSummaryLedger;
   readonly caches: WorkspaceCaches;
   readonly usageMeter: UsageMeter;
+  readonly configBridge: Pick<ConfigBridge, 'getSeed'>;
 }
 
 export class DraftManager {
@@ -190,9 +195,17 @@ export class DraftManager {
     const spending: UsageMeterSession = this.deps.usageMeter.startSession();
 
     try {
-      const outcome: Omit<GenerateAndReviseDraftResult, 'usage'> =
+      const outcome: Omit<GenerateAndReviseDraftResult, 'usage' | 'seedHonoured'> =
         await this.generateThenRevise(request);
-      return { ...outcome, usage: summarizeUsageByStage(spending.records()) };
+      const records: readonly UsageRecord[] = spending.records();
+      const hasSeededCalls: boolean =
+        this.deps.configBridge.getSeed() !== undefined && records.length > 0;
+
+      return {
+        ...outcome,
+        usage: summarizeUsageByStage(records),
+        ...(hasSeededCalls ? { seedHonoured: isSeedHonouredByEveryCall(records) } : {}),
+      };
     } finally {
       spending.stop();
     }
@@ -200,7 +213,7 @@ export class DraftManager {
 
   private async generateThenRevise(
     request: GenerateAndReviseDraftRequest,
-  ): Promise<Omit<GenerateAndReviseDraftResult, 'usage'>> {
+  ): Promise<Omit<GenerateAndReviseDraftResult, 'usage' | 'seedHonoured'>> {
     const { isReviseAllowed, onDraftReady, onReviseProgress, ...generateRequest } = request;
     const generation: GenerateDraftResult = await this.generate({
       ...generateRequest,

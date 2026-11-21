@@ -417,6 +417,13 @@ export class ConfigBridge {
     return this.readBooleanSetting('editor.slop.realtime');
   }
 
+  public getSeed(): number | undefined {
+    const seed: number = this.readIntegerSetting('ai.seed');
+    const isSeedUnset: boolean = seed === 0;
+
+    return isSeedUnset ? undefined : seed;
+  }
+
   public isTraceEnabled(): boolean {
     return this.readBooleanSetting('trace.enabled');
   }

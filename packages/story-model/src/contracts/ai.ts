@@ -10,6 +10,7 @@ export type {
   ProviderTransport,
 } from '#model/contracts/providerCatalog';
 export {
+  acceptsSeed,
   acceptsTemperature,
   aiProviderIds,
   connectionCheckFailedMessage,

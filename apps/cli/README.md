@@ -360,7 +360,8 @@ from them; a name the model uses that matches no card stays as written and `doct
 it, the violation kinds and the section, when known); the exit code stays 0. `data.usage` lists
 the run's model calls by stage and task (calls, tokens, and the cost when every price is known),
 `data.cached` says whether the existing draft was kept, and with `trace.enabled` on
-`data.traceRunId` names the trace run. `--verbose` also logs each pipeline stage as it runs, which
+`data.traceRunId` names the trace run. With `ai.seed` set (usually in a `--params` file)
+`data.seedHonoured` says whether every call went to a provider that takes a seed. `--verbose` also logs each pipeline stage as it runs, which
 is how you tell a 20-minute scene apart from a hung one.
 
 `--workspace <path>` picks the workspace (default: the current directory). `--json` puts a single

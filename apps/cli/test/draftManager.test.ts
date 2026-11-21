@@ -23,6 +23,7 @@ function createManager(generation: GenerateDraftResult, events: string[]): Draft
       }),
     },
     usageMeter: new UsageMeter(),
+    configBridge: { getSeed: () => undefined },
   } as unknown as DraftManagerDependencies);
 }
 

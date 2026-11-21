@@ -30,6 +30,7 @@ export interface ProviderCatalogEntry {
   readonly transport: ProviderTransport;
   readonly requiresApiKey: boolean;
   readonly isHidden?: boolean;
+  readonly acceptsSeed?: boolean;
   readonly defaultModel: string | undefined;
   readonly defaultBaseUrl: string | undefined;
   readonly models: readonly ProviderModelEntry[];
@@ -40,6 +41,7 @@ export const providerCatalog = {
     displayName: 'OpenAI',
     transport: 'http',
     requiresApiKey: true,
+    acceptsSeed: true,
     defaultModel: 'gpt-6.1-sol',
     defaultBaseUrl: undefined,
     models: [
@@ -327,6 +329,7 @@ export const providerCatalog = {
     displayName: 'Google Gemini',
     transport: 'http',
     requiresApiKey: true,
+    acceptsSeed: true,
     defaultModel: 'gemini-3.8-flash',
     defaultBaseUrl: undefined,
     models: [
@@ -417,6 +420,7 @@ export const providerCatalog = {
     displayName: 'xAI Grok',
     transport: 'http',
     requiresApiKey: true,
+    acceptsSeed: true,
     defaultModel: 'grok-4.7',
     defaultBaseUrl: 'https://api.x.ai/v1',
     models: [
@@ -462,6 +466,7 @@ export const providerCatalog = {
     displayName: 'Ollama',
     transport: 'http',
     requiresApiKey: false,
+    acceptsSeed: true,
     defaultModel: 'gemma4:12b',
     defaultBaseUrl: 'http://localhost:11434',
     models: [
@@ -614,6 +619,7 @@ export const providerCatalog = {
     displayName: 'Mock AI',
     transport: 'mock',
     requiresApiKey: false,
+    acceptsSeed: true,
     defaultModel: undefined,
     defaultBaseUrl: undefined,
     models: [
@@ -731,6 +737,10 @@ export function getDefaultModelId(providerId: AiProviderId): string | undefined 
 
 export function isModelInCatalogForProvider(providerId: AiProviderId, modelId: string): boolean {
   return catalogRows[providerId].models.some((model) => model.id === modelId);
+}
+
+export function acceptsSeed(providerId: AiProviderId): boolean {
+  return catalogRows[providerId].acceptsSeed === true;
 }
 
 const providersRejectingTemperatureOnUnlistedModels: readonly AiProviderId[] = ['claude'];

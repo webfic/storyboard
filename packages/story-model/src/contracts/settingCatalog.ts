@@ -178,6 +178,17 @@ export const storyboardSettingCatalog: readonly StoryboardSettingDefinition[] = 
     defaultValue: false,
     group: '진단',
   },
+  {
+    key: 'ai.seed',
+    label: '생성 씨앗',
+    description:
+      '모델 호출에 같은 씨앗을 넘겨 실행을 되풀이할 수 있게 합니다. 0이면 넘기지 않습니다. 씨앗을 받지 않는 프로바이더는 무시합니다.',
+    kind: 'integer',
+    defaultValue: 0,
+    minimum: 0,
+    maximum: 999999,
+    group: '진단',
+  },
 ];
 
 export const storyboardSettingKeys: string[] = storyboardSettingCatalog.map((entry) => entry.key);

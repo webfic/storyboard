@@ -81,7 +81,7 @@ export class DraftGenerateCommand implements ICommandHandler {
       return failure('씬 stem을 지정해 주세요. 예: storyboard draft generate 001-scene-1-1');
     }
 
-    const { generation, revision, usage }: GenerateAndReviseDraftResult =
+    const { generation, revision, usage, seedHonoured }: GenerateAndReviseDraftResult =
       await container.drafts.generateAndRevise({
         sceneUri: sceneUriFor(container.workspaceRoot, stem),
         force: flagBoolean(args.flags, 'force'),
@@ -102,12 +102,12 @@ export class DraftGenerateCommand implements ICommandHandler {
       return failure(generation.kind === 'failed' ? generation.message : '취소했습니다.');
     }
 
-    return this.describeGeneratedScene(container, { generation, revision, usage });
+    return this.describeGeneratedScene(container, { generation, revision, usage, seedHonoured });
   }
 
   private describeGeneratedScene(
     container: CommandContext['container'],
-    { generation: draft, revision, usage }: GeneratedSceneRun,
+    { generation: draft, revision, usage, seedHonoured }: GeneratedSceneRun,
   ): CommandOutcome {
     const warnings: readonly DraftWarning[] = draftWarningsOf(draft);
     const revise: ReviseOutcome | undefined = revision && describeReviseOutcome(revision);
@@ -124,6 +124,7 @@ export class DraftGenerateCommand implements ICommandHandler {
         draft: (draft.draftUri as StoryUri).fsPath,
         cached: isCached,
         usage,
+        ...(seedHonoured === undefined ? {} : { seedHonoured }),
         ...(draft.kind === 'generated' && draft.traceRunId !== undefined
           ? { traceRunId: draft.traceRunId }
           : {}),
@@ -140,6 +141,7 @@ interface GeneratedSceneRun {
   readonly generation: ReadyDraft;
   readonly revision: ReviseDraftWorkflowResult | undefined;
   readonly usage: readonly StageUsage[];
+  readonly seedHonoured: boolean | undefined;
 }
 
 function draftWarningsOf(draft: ReadyDraft): readonly DraftWarning[] {

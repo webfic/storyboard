@@ -197,6 +197,23 @@ interface EnabledHiddenProviders {
   readonly ids: AiProviderId[];
 }
 
+function layOverridesOverEveryNotation(
+  settings: Record<string, unknown>,
+  overrides: Readonly<Record<string, unknown>>,
+): Record<string, unknown> {
+  const hasNoOverride: boolean = Object.keys(overrides).length === 0;
+  if (hasNoOverride) {
+    return settings;
+  }
+
+  const nested: Record<string, unknown> = structuredClone(settings);
+  for (const [section, value] of Object.entries(overrides)) {
+    assignNested(nested, section, structuredClone(value));
+  }
+
+  return { ...nested, ...overrides };
+}
+
 class JsonFileConfiguration implements FileConfiguration {
   private readonly overrides: Readonly<Record<string, unknown>>;
   private readonly cache: Map<string, CachedFile> = new Map<string, CachedFile>();
@@ -294,13 +311,10 @@ class JsonFileConfiguration implements FileConfiguration {
   }
 
   private merged(): Record<string, unknown> {
-    return {
-      ...mergeDeep(
-        this.read(this.options.userConfigFile),
-        this.read(this.options.workspaceConfigFile),
-      ),
-      ...this.overrides,
-    };
+    return layOverridesOverEveryNotation(
+      mergeDeep(this.read(this.options.userConfigFile), this.read(this.options.workspaceConfigFile)),
+      this.overrides,
+    );
   }
 }
 

@@ -121,6 +121,25 @@ describe('--params', () => {
     }
   });
 
+  it('moves a task the home file routes elsewhere', async () => {
+    writeFileSync(
+      join(home, 'config.json'),
+      JSON.stringify({ tasks: { sceneSkeleton: { provider: 'claude', model: 'claude-sonnet-5' } } }),
+    );
+    const result: DispatchResult = await new CommandDispatcher(deps()).dispatch([
+      'params',
+      'show',
+      '--json',
+      '--params',
+      writeParams('route.json', { 'tasks.sceneSkeleton.provider': 'openai', 'tasks.sceneSkeleton.model': 'gpt-5.4-mini' }),
+    ]);
+    const tasks: readonly { readonly task: string; readonly providerId: string; readonly model: string }[] = (
+      JSON.parse(result.stdout) as { data: { tasks: { task: string; providerId: string; model: string }[] } }
+    ).data.tasks;
+
+    expect(tasks.find((row) => row.task === 'sceneSkeleton')).toMatchObject({ providerId: 'openai', model: 'gpt-5.4-mini' });
+  });
+
   it('refuses a file it cannot apply in full, before anything runs', async () => {
     expect(await refusalOf({ 'generation.skeleton.lengthRato': 0.8 })).toContain('알 수 없는 키');
     expect(await refusalOf({ 'generation.skeleton.lengthRatio': 7 })).toContain('0.05 이상 1 이하');

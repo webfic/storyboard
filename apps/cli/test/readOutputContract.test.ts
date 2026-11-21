@@ -46,6 +46,7 @@ beforeEach(async () => {
     [
       'type: scene',
       'id: 001-opening',
+      'purpose: 하나가 등대를 물려받을 마음을 굳힌다',
       'characters:',
       '  - hana',
       'beats:',
@@ -72,9 +73,10 @@ describe('read outputs an outside tool relies on', () => {
     });
   });
 
-  it('scene show --json gives the target length and the numbered beats with their coordinates', async () => {
+  it('scene show --json gives the purpose, the target length and the numbered beats with their coordinates', async () => {
     expect(await readJson('scene', 'show', '001-opening')).toMatchObject({
       stem: '001-opening',
+      purpose: '하나가 등대를 물려받을 마음을 굳힌다',
       targetLength: expect.any(Number),
       beats: [
         { number: 1, text: '하나가 항구에 선다' },
@@ -88,6 +90,16 @@ describe('read outputs an outside tool relies on', () => {
       id: 'hana',
       card: { name: '하나' },
       statements: [expect.objectContaining({ facet: 'fact', value: '왼손잡이다' })],
+    });
+  });
+
+  it('draft show --json gives the body the draft file holds under its front matter', async () => {
+    await run('draft', 'generate', '001-opening', '--no-revise');
+
+    expect(await readJson('draft', 'show', '001-opening')).toMatchObject({
+      stem: '001-opening',
+      path: expect.any(String),
+      body: expect.stringContaining('하나'),
     });
   });
 

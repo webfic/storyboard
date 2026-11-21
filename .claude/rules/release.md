@@ -5,6 +5,48 @@ When preparing a Storyboard release (version bump, changelog, the extension/CLI 
 1. Follow the **`prepare-release`** skill (`.claude/skills/prepare-release/SKILL.md`).
 2. Match the repo-root **`RELEASE.md`** for the version commit contents, tag shape (`v` + semver), and GitHub Release workflow.
 
+## Who releases
+
+- **A routine release** is cut by the session that finished the work, on `main` after that work
+  has landed, following the `prepare-release` skill from its first step.
+- **A release after a large change** (a work-format change, dozens of commits, a new runtime
+  dependency, a provider or transport change) adds the comparison against the last release that
+  the skill's «Large release» step describes. The maintainer may hand it to a release session.
+- A release session does not fix code. A defect it finds is written up for the work session (what
+  happens, how to reproduce it, where the cause probably is, what should happen, how to test it)
+  and the release waits for the fix, unless the maintainer says to ship it as a known issue.
+
+## Release notes and public text
+
+- **The changelogs never reveal a hidden provider.** A hidden provider is a catalog row with
+  `isHidden` (`.claude/rules/coding-standards.md`, «Hidden providers»). Its id, its config keys,
+  its login path and its model list must not be named, nor anything that tells a reader it exists
+  — a sentence such as «a provider that runs a program» or «the subscription login» gives it away
+  as surely as its id. Describe the effect for «some providers», or leave the sentence out. A
+  change that concerns only a hidden provider gets no entry, or only its effect.
+- Entries stay vague about how a hidden path works: write what a user sees, not the mechanism.
+- No personal data in the changelogs or the release notes (`.claude/rules/public-posts.md`).
+- **The section date is the day the tag is pushed.** When a cut waited past midnight (a fix, a
+  re-run), correct `## [x.y.z] - YYYY-MM-DD` in both files and amend the release commit before
+  tagging.
+
+## Release commit
+
+- Subject `chore(release): Cut x.y.z`, the Korean four-label body (`agent-workflow.md`), and the
+  `Signed-off-by` trailer only. No `Co-Authored-By` and no `Claude-Session` trailer, even when the
+  harness suggests one.
+- `[Checking Method]` states what was actually run and its result; it never claims a check that
+  did not run.
+
+## When the preflight fails
+
+- Read the failure before running again. Re-running until it turns green hides a defect.
+- A test that fails only under load: run that file alone several times. If it passes alone, it is
+  a timing defect in the test — record it, hand it to the work session, and do not tag on a failed
+  preflight. The tag waits for a preflight that passes on the release commit.
+
+## Version and changelogs
+
 The version lives in the **root `package.json`**; `npm run version:sync` mirrors it into `apps/vscode`, `apps/cli` and the version the CLI prints, and `node scripts/sync-version.mjs --check` is what the release workflow enforces. Run `npm install` afterwards so the root `package-lock.json` follows. One `v*` tag ships every app: the VSIX and the CLI tarball. **`CHANGELOG.md`** and **`CHANGELOG.en.md`** stay the source of the release notes — update both in the same change.
 
 ## Build verification test (BVT)

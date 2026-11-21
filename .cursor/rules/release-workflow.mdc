@@ -14,6 +14,22 @@ Use when the user asks to prepare a release, bump the extension version, update 
 1. Follow `.cursor/skills/prepare-release/SKILL.md` step by step.
 2. Align git/tag and GitHub Release expectations with `RELEASE.md`.
 
+## Who releases
+
+A routine release is cut by the session that finished the work, on `main` after it landed, from the skill's first step. A release after a large change (work-format change, dozens of commits, new runtime dependency, provider or transport change) adds the skill's «Large release» comparison against the last release. A release session does not fix code: it writes the defect up for the work session and the release waits, unless the maintainer ships it as a known issue.
+
+## Release notes and public text
+
+The changelogs never reveal a hidden provider (a catalog row with `isHidden`, `.claude/rules/coding-standards.md` «Hidden providers»): not its id, config keys, login path or model list, nor a phrase that gives it away («a provider that runs a program», «the subscription login»). Describe the effect for «some providers» or leave the sentence out. No personal data (`.claude/rules/public-posts.md`). The section date is the day the tag is pushed — fix both files and amend before tagging when the cut waited past midnight.
+
+## Release commit
+
+`chore(release): Cut x.y.z`, the Korean four-label body, `Signed-off-by` only — no `Co-Authored-By`, no `Claude-Session`, even when the harness suggests one. `[Checking Method]` states only what was actually run.
+
+## When the preflight fails
+
+Read the failure before running again; re-running until green hides a defect. A test that fails only under load and passes alone several times is a timing defect in the test: record it, hand it to the work session, and do not tag on a failed preflight.
+
 ## Files to keep in sync
 
 - Bump the **root `package.json`** `version` (the one version for the whole repo), run `npm run version:sync` to mirror it into the apps, then `npm install` so the root **`package-lock.json`** follows.

@@ -21,7 +21,8 @@ const readers: Readonly<Record<string, (bridge: ConfigBridge) => boolean | numbe
   "editor.slop.realtime": (bridge) => bridge.isSlopRealtimeEnabled(),
   "trace.enabled": (bridge) => bridge.isTraceEnabled(),
   "trace.checkFinalBeats": (bridge) => bridge.isTraceFinalBeatCheckEnabled(),
-  "trace.keepRuns": (bridge) => bridge.getTraceKeepRuns()
+  "trace.keepRuns": (bridge) => bridge.getTraceKeepRuns(),
+  "ai.seed": (bridge) => bridge.getSeed() ?? 0
 }
 
 function bridgeReading(values: Readonly<Record<string, unknown>>): ConfigBridge {

@@ -25,6 +25,7 @@ interface GeneratedSceneData {
   readonly cached: boolean;
   readonly usage: readonly StageUsageRow[];
   readonly traceRunId?: string;
+  readonly seedHonoured?: boolean;
 }
 
 let home: string;
@@ -85,6 +86,16 @@ describe('draft generate --json', () => {
       expect.objectContaining({ stage: 'updateStoryState', task: 'storyStateUpdate' }),
     );
     expect(generated.traceRunId).toBeUndefined();
+    expect(generated.seedHonoured).toBeUndefined();
+  });
+
+  it('says whether every call took the seed of the run file', async () => {
+    const params: string = join(workspace, 'seeded.json');
+    writeFileSync(params, JSON.stringify({ 'ai.seed': 11 }));
+
+    const generated: GeneratedSceneData = await generateScene('--params', params);
+
+    expect(generated.seedHonoured).toBe(true);
   });
 
   it('names the trace run when one run file turns the trace on', async () => {

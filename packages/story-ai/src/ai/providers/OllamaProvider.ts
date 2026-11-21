@@ -38,6 +38,7 @@ interface OllamaChatRequest {
     readonly temperature?: number;
     readonly num_predict?: number;
     readonly num_ctx?: number;
+    readonly seed?: number;
   };
 }
 
@@ -106,6 +107,7 @@ export class OllamaProvider implements AiProvider {
         options: {
           temperature: request.temperature,
           num_predict: request.maxTokens,
+          ...(request.seed === undefined ? {} : { seed: request.seed }),
           ...(this.contextTokens === undefined ? {} : { num_ctx: this.contextTokens }),
         },
       });

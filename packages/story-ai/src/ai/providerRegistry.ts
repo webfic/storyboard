@@ -1,4 +1,5 @@
 import {
+  acceptsSeed,
   getProviderDisplayName,
   AiProviderError,
   type AiConnectionResult,
@@ -101,7 +102,9 @@ export class AiProviderRegistry {
   ): Promise<AiGenerateResponse> {
     const model: string | undefined =
       modelOverride ?? this.findTaskModelFor(request.taskName, providerId);
-    return (await this.createProvider(providerId, model)).generate(request);
+    return (await this.createProvider(providerId, model)).generate(
+      this.withSeed(providerId, request),
+    );
   }
 
   public async *generateStreamWithProvider(
@@ -114,15 +117,24 @@ export class AiProviderRegistry {
     const provider: AiProvider = await this.createProvider(providerId, model);
 
     if (provider.generateStream) {
-      yield* provider.generateStream(request);
+      yield* provider.generateStream(this.withSeed(providerId, request));
       return;
     }
 
-    const response: AiGenerateResponse = await provider.generate(request);
+    const response: AiGenerateResponse = await provider.generate(
+      this.withSeed(providerId, request),
+    );
     if (response.text.length > 0) {
       yield { type: 'text-delta', delta: response.text };
     }
     yield { type: 'done', response };
+  }
+
+  private withSeed(providerId: AiProviderId, request: AiGenerateRequest): AiGenerateRequest {
+    const seed: number | undefined = this.options.configBridge.getSeed();
+    const isSeedPassed: boolean = seed !== undefined && acceptsSeed(providerId);
+
+    return isSeedPassed ? { ...request, seed } : request;
   }
 
   private findTaskModelFor(taskName: AiTaskName, providerId: AiProviderId): string | undefined {

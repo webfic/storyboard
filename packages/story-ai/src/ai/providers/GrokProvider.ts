@@ -70,6 +70,7 @@ export class GrokProvider implements AiProvider {
         messages: request.messages,
         temperature: acceptsTemperature(this.id, this.model) ? request.temperature : undefined,
         max_tokens: request.maxTokens,
+        ...(request.seed === undefined ? {} : { seed: request.seed }),
       });
 
       const text: string = response.choices[0]?.message?.content ?? '';
@@ -113,6 +114,7 @@ function createDefaultGrokClient(apiKey: string): OpenAiClientLike {
             messages: [...request.messages],
             temperature: request.temperature,
             max_tokens: request.max_tokens,
+            ...(request.seed === undefined ? {} : { seed: request.seed }),
           }),
       },
     },

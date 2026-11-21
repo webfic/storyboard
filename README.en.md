@@ -72,7 +72,6 @@ An npm-workspaces monorepo. Packages expose TypeScript source with no build step
 | [`packages/story-ai`](packages/story-ai/) | `@storyboard/story-ai` | AI engine: provider registry, prompt catalog, ports |
 | [`packages/story-config`](packages/story-config/) | `@storyboard/story-config` | The shared home (`~/.storyboard`): config layers, the secrets file, watchers |
 | [`packages/story-node`](packages/story-node/) | `@storyboard/story-node` | Node host adapters: file system, workspace locator |
-| [`packages/story-sim`](packages/story-sim/) | `@storyboard/story-sim` | Quality and cost measurement: knob sweeps, reader panel, Pareto reports |
 
 ## Development
 

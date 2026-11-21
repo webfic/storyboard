@@ -191,7 +191,6 @@ behaviour it changes.
 | `packages/story-ai/src/ai/prompts/promptVariants.params.json` | story-ai | When a call gets the `xs` or `rich` prompt variant instead of the generic one: compact providers, model name pattern and tasks for `xs`; output floor, long-form tasks and top-tier model keywords for `rich` |
 | `packages/story-model/src/format/compositionPresets.params.json` | story-model | What the composition presets build: the omnibus episode count and minimum, the episode thread id prefix and title suffix, the frame/inner/main thread ids and titles |
 | `packages/story-engine/src/pipeline/pipelineDefaults.params.json` | story-engine | Model-agnostic generation defaults: skeleton ratio, retry limits, similarity thresholds, repetition windows, voice-sample bounds, context budgets, retry-candidate weights, the size of one revise rewrite (`revise.sectionMaxChars`), and the interview knobs (`interview.*`: option count, exploration, off-beat questions, vote weights, distill threshold, skips before an axis is set aside, answers between distills when asking until decided) |
-| `packages/story-sim/src/simDefaults.params.json` | story-sim | Measurement-side knobs: reader-panel size, repeat count, and the reference token prices the cost axis converts with |
 
 A prompt's `temperature`, `maxTokens`, optional `reasoningEffort` and optional `prefixCacheTtl` (the
 cache life of its `## prefix` section, `5m` or `1h`) are not a params file: they sit
@@ -202,7 +201,7 @@ author's override file may carry its own. `reasoningEffort` reaches only a model
 
 Identifier tables stay TypeScript (declared type first) and live with their owner:
 `providerCatalog.ts`, `settingCatalog.ts` and `generationParameters.ts` (story-model `contracts/`; the last names every
-`generation.*` knob the model profiles and the sweep may move), `project.ts` / `paths.ts` / `narrator.ts`
+`generation.*` knob the model profiles and a `--params` file may move), `project.ts` / `paths.ts` / `narrator.ts`
 (story-model `format/`), `contributionIds.ts` and `storyboardMessages.ts` (vscode), `commands/catalog.ts` (cli).
 
 Adding a params file means: the `*.params.json` suffix, a sibling zod schema, a row in this table.
@@ -211,7 +210,7 @@ Adding a params file means: the `*.params.json` suffix, a sibling zod schema, a 
 
 - Direction: apps import `@storyboard/*` entry points only; packages import other packages (declared
   ones only) and Node builtins — never `vscode`, app code, or browser APIs. Current graph:
-  `model ← ai ← engine ← app`, `engine ← node`, `engine ← sim`, `ai ← config`.
+  `model ← ai ← engine ← app`, `engine ← node`, `ai ← config`.
 - **Every imported workspace package must be declared in that consumer's `package.json`** — do not
   rely on app-level aliases happening to resolve it.
 - App-specific bans are build failures: the CLI must not import the engine's pipeline assembly

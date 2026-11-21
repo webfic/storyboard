@@ -25,9 +25,13 @@ Storyboard의 주요 변경 사항을 한국어로 기록합니다.
 - **`draft generate --json` 이 그 실행의 모델 호출을 단계별로 냅니다.** `data.usage` 는 단계(`stage`)와 작업(`task`)마다 호출 수·입력·출력·캐시 읽기 토큰과, 모든 호출의 단가를 알 때 비용(`costUsd`)을 담습니다. 검수 루프와 이야기 상태 갱신처럼 파이프라인 앞뒤의 단계도 같은 이름(`reviseLoop`, `updateStoryState`)으로 들어갑니다. `data.cached` 는 입력이 같아 기존 초안을 썼는지를 말하고(이때 `usage` 는 빈 배열), 생성 추적이 켜져 있으면 `data.traceRunId` 가 그 run 의 폴더 이름입니다. (#218)
 - **`draft generate --json` 의 `data.warnings` 가 문장 대신 객체입니다.** 항목마다 `message`(지금까지의 문장)와, 알 수 있으면 그 경고를 낸 단계 `stage`(씬 단계 id, 검수 루프는 `reviseLoop`), 위반 종류 `kinds`(`cast`·`too-short`·`repeats-previous` 같은 이름), 구간 번호 `sectionNumber` 가 실립니다. 경고를 문장에서 찾아 읽던 도구는 `message` 를 읽으면 됩니다. 화면에 찍히는 경고 문장과 초안 파일에 남는 경고는 그대로입니다. (#218)
 
+### 제거
+
+- **`storyboard sim` 명령과 `@storyboard/story-sim` 패키지를 뺐습니다.** 품질·비용 측정(`sim run`·`sim screen`·`sim sweep`·`sim rejudge`·`sim report`·`sim apply`)은 엔진과 따로 관리하는 도구로 옮겼고, 그 도구는 `storyboard` 를 명령줄로만 부릅니다. 한 실행의 값은 `--params <file>` 로 주고, 결과는 `draft generate --json` 의 `usage`·`warnings`·`beatRanges` 와 `params show --json`, `--version --json` 으로 읽습니다. 도움말의 «측정» 묶음과 sim 전용 옵션(`--track`, `--overlay`, `--knobs`, `--judge`, `--judge-model`, `--repeats`, `--max-runs`, `--point`, `--profiles`, `--source`, `--prompt-variant`)도 함께 없어졌습니다. (#218)
+
 ### 고침
 
-- **`sim apply` 가 `--profiles` 없이도 엔진의 모델 프로필 파일을 찾습니다.** 저장소 안의 빌드에서 돌려도 프로필 파일을 옛 `story-ai` 패키지 자리에서 찾아 «엔진의 modelProfiles.params.json 을 찾지 못했습니다» 로 끝났는데, 이제 `packages/story-model` 에서 찾습니다. 설치 스크립트(`install.sh`)의 기본 저장소와 README·릴리즈 안내·확장 매니페스트의 저장소 링크도 옮겨 간 `webfic/storyboard` 를 가리킵니다. (#219)
+- **설치 스크립트와 문서가 옮겨 간 저장소를 가리킵니다.** 설치 스크립트(`install.sh`)의 기본 저장소와 README·릴리즈 안내·확장 매니페스트의 저장소 링크가 `webfic/storyboard` 를 가리킵니다. (#219)
 
 ## [0.16.8] - 2026-11-20
 

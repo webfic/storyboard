@@ -189,15 +189,6 @@
       ]
     },
     {
-      "id": "story-sim",
-      "paths": [
-        "packages/story-sim/**"
-      ],
-      "checks": [
-        "npm run test --workspace @storyboard/cli -- test/sim"
-      ]
-    },
-    {
       "id": "cli",
       "paths": [
         "apps/cli/**"

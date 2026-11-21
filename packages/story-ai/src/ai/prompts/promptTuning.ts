@@ -13,10 +13,6 @@ export function applyPromptTuningOverrides(overrides: PromptTuningOverrides): vo
   promptTuningOverrides = overrides;
 }
 
-export function resetPromptTuningOverrides(): void {
-  promptTuningOverrides = {};
-}
-
 export function promptTuningKeys(): readonly PromptTuningKey[] {
   return promptResourceKeys();
 }

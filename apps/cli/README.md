@@ -71,7 +71,7 @@ for combinations that were never measured.
 
 `storyboard --help` prints these steps and the command groups, not every command;
 `storyboard help <group>` lists one group (by its id — `start`, `plan`, `scene`, `draft`, `card`,
-`notes`, `manuscript`, `sim` — or its Korean name), `storyboard help --all` lists every command, and
+`notes`, `manuscript` — or its Korean name), `storyboard help --all` lists every command, and
 `storyboard <command> --help` (or `-h`) shows one command's options and examples. Lines wrap to the
 terminal width, and a mistyped verb suggests the closest real ones. `-v` prints the version;
 `--version --json` adds the commit the build came from and whether its tree had uncommitted
@@ -92,7 +92,7 @@ session rather than a file of the work.
 `scene` is the scene card and `draft` is the prose written from it: `scene list|show|create|rename|
 move|remove|seed|plot|complete` against `draft generate|revise|show|edit|augment|condense|expand|format|
 check`. `storyboard --help` groups the commands the same way: 시작하기, 기획, 씬, 초안, 카드,
-노트, 원고, 측정.
+노트, 원고.
 
 ```bash
 storyboard status                 # contract, outline, cards, scenes, drafts, manuscript + next command

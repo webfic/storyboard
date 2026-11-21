@@ -26,9 +26,13 @@ after the first public release.
 - **`draft generate --json` reports the run's model calls by stage.** `data.usage` holds, for each stage (`stage`) and task (`task`), the number of calls, the input, output and cache-read tokens and, when every call's price is known, the cost (`costUsd`). The steps around the pipeline appear under their own names too (`reviseLoop`, `updateStoryState`). `data.cached` says whether the inputs matched and the existing draft was kept (`usage` is then empty), and with the generation trace on `data.traceRunId` names that run's folder. (#218)
 - **`draft generate --json` reports `data.warnings` as objects rather than sentences.** Each entry carries `message` (the sentence as before) and, when known, the `stage` that raised it (a scene stage id, `reviseLoop` for the revise loop), the violation `kinds` (names such as `cast`, `too-short`, `repeats-previous`) and the `sectionNumber`. A tool that read the sentences reads `message` now. The warnings printed on stderr and kept in the draft file are unchanged. (#218)
 
+### Removed
+
+- **The `storyboard sim` commands and the `@storyboard/story-sim` package are gone.** Quality and cost measurement (`sim run`, `sim screen`, `sim sweep`, `sim rejudge`, `sim report`, `sim apply`) moved to a tool kept apart from the engine, which drives `storyboard` only through its command line: one run's values go in with `--params <file>`, and the results are read from `usage`, `warnings` and `beatRanges` under `draft generate --json`, from `params show --json` and from `--version --json`. The «측정» help group and the sim-only options (`--track`, `--overlay`, `--knobs`, `--judge`, `--judge-model`, `--repeats`, `--max-runs`, `--point`, `--profiles`, `--source`, `--prompt-variant`) went with it. (#218)
+
 ### Fixed
 
-- **`sim apply` finds the engine's model profile file without `--profiles`.** Even from a build inside the repository it looked for the file in the old `story-ai` package and ended with «엔진의 modelProfiles.params.json 을 찾지 못했습니다»; it now looks in `packages/story-model`. The install script's (`install.sh`) default repository and the repository links in the READMEs, the release notes and the extension manifest also name the new home, `webfic/storyboard`. (#219)
+- **The install script and the docs name the new repository.** The install script's (`install.sh`) default repository and the repository links in the READMEs, the release notes and the extension manifest name `webfic/storyboard`. (#219)
 
 ## [0.16.8] - 2026-11-20
 

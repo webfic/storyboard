@@ -25,8 +25,8 @@ describe('glob matcher', () => {
   it('matches the forms the BVT tables use', () => {
     expect(matchesGlob('apps/*/src/**', 'apps/cli/src/commands/catalog.ts')).toBe(true);
     expect(matchesGlob('apps/*/src/**', 'apps/cli/test/help.test.ts')).toBe(false);
-    expect(matchesGlob('**/*.params.json', 'packages/story-sim/src/simDefaults.params.json')).toBe(true);
-    expect(matchesGlob('**/*.params.json', 'simDefaults.params.json')).toBe(true);
+    expect(matchesGlob('**/*.params.json', 'packages/story-engine/src/pipeline/pipelineDefaults.params.json')).toBe(true);
+    expect(matchesGlob('**/*.params.json', 'pipelineDefaults.params.json')).toBe(true);
     expect(matchesGlob('packages/story-ai/src/ai/prompts/resources/*.md', 'packages/story-ai/src/ai/prompts/resources/a.md')).toBe(true);
     expect(matchesGlob('packages/story-ai/src/ai/prompts/resources/*.md', 'packages/story-ai/src/ai/prompts/resources/x/a.md')).toBe(false);
     expect(matchesGlob('CHANGELOG{,.en}.md', 'CHANGELOG.en.md')).toBe(true);
@@ -63,13 +63,21 @@ describe('diff contracts', () => {
   });
 
   it('requires a sibling schema and a coding-standards row for a params file', () => {
-    const params = 'packages/story-sim/src/simDefaults.params.json';
-    const schema = 'packages/story-sim/src/simDefaults.ts';
-    const table = `| \`${params}\` | story-sim | knobs |`;
+    const params = 'packages/story-engine/src/pipeline/pipelineDefaults.params.json';
+    const schema = 'packages/story-engine/src/pipeline/pipelineDefaults.ts';
+    const table = `| \`${params}\` | story-engine | knobs |`;
 
-    expect(statusOf({ changed: [params], head: { [schema]: 'export {}', '.claude/rules/coding-standards.md': table } }, 'params-owner')).toBe('passed');
+    expect(statusOf({ changed: [params], head: { [params]: '{}', [schema]: 'export {}', '.claude/rules/coding-standards.md': table } }, 'params-owner')).toBe('passed');
+    expect(statusOf({ changed: [params], head: { [params]: '{}', '.claude/rules/coding-standards.md': table } }, 'params-owner')).toBe('failed');
+    expect(statusOf({ changed: [params], head: { [params]: '{}', [schema]: 'export {}', '.claude/rules/coding-standards.md': '' } }, 'params-owner')).toBe('failed');
+  });
+
+  it('asks a removed params file only to take its coding-standards row with it', () => {
+    const params = 'packages/story-engine/src/pipeline/pipelineDefaults.params.json';
+    const table = `| \`${params}\` | story-engine | knobs |`;
+
+    expect(statusOf({ changed: [params], head: { '.claude/rules/coding-standards.md': '' } }, 'params-owner')).toBe('passed');
     expect(statusOf({ changed: [params], head: { '.claude/rules/coding-standards.md': table } }, 'params-owner')).toBe('failed');
-    expect(statusOf({ changed: [params], head: { [schema]: 'export {}', '.claude/rules/coding-standards.md': '' } }, 'params-owner')).toBe('failed');
   });
 
   it('requires a settings test beside a config schema or setting catalog change', () => {

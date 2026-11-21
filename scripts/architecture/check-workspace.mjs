@@ -24,7 +24,6 @@ const SHARED_PACKAGES = [
   'story-ai',
   'story-config',
   'story-node',
-  'story-sim',
 ];
 // Each package addresses its own files through a Node subpath import declared in its package.json.
 // The prefix is private to the package: reaching for another one's would bind two packages through
@@ -36,7 +35,6 @@ const PACKAGE_INTERNAL_PREFIXES = {
   'story-ai': '#ai/',
   'story-config': '#config/',
   'story-node': '#node/',
-  'story-sim': '#sim/',
 };
 
 // The package's entry files (its package.json `exports`) and every folder `index.ts` re-export

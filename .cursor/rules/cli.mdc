@@ -46,7 +46,7 @@ the prose: generating, revising, showing and checking a draft are all `draft` ve
 
 A command's help group follows its noun, so one noun never spreads over two groups: 시작하기 /
 기획 (`project`, `outline`, `novel`) / 씬 / 초안 (`draft`, `state`) / 카드
-(`card`, 서술자 카드도) / 노트 / 원고 / 측정. Old names are not kept as aliases — a rename is a breaking
+(`card`, 서술자 카드도) / 노트 / 원고. Old names are not kept as aliases — a rename is a breaking
 change recorded in the changelog — and a freed name is not reused for a different action.
 
 Verbs read and write the work through manager verbs, not the file system: reads

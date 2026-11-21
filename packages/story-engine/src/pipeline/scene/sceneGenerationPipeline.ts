@@ -10,7 +10,7 @@ import { DraftSkeletonStage } from '#engine/pipeline/scene/stages/draftSkeleton'
 import { ExpandSectionStage } from '#engine/pipeline/scene/stages/expandSection';
 import { PolishDialogueStage } from '#engine/pipeline/scene/stages/polishDialogue';
 import { ProofreadDraftStage } from '#engine/pipeline/scene/stages/proofreadDraft';
-import { listSceneCoordinates } from '#engine/pipeline/sceneCoordinates';
+import { listSceneCoordinates, segmentBeatNumbers } from '#engine/pipeline/sceneCoordinates';
 import type {
   RunSceneGenerationPipelineInput,
   RunSceneGenerationPipelineResult,
@@ -51,11 +51,16 @@ export class SceneGenerationPipeline {
       warnings.push(...stageWarnings.map((warning) => ({ ...warning, stage })));
     }
 
+    const beatSegments: readonly (readonly number[])[] | undefined = segmentBeatNumbers(
+      run.sceneCoordinates,
+    );
+
     return {
       draftBody: run.draftBody,
       skeleton: run.polishedText,
       sceneCoordinates: listSceneCoordinates(run.sceneCoordinates),
       warnings,
+      ...(beatSegments === undefined ? {} : { beatSegments }),
       detectedCharacters: run.detectedCharacters,
       personasUsed: run.personasUsed,
       providers: run.providers,

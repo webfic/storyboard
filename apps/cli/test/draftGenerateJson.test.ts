@@ -1,8 +1,8 @@
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { STORYBOARD_RELATIVE_PATHS } from '@storyboard/story-model';
+import { parseDraft, STORYBOARD_RELATIVE_PATHS } from '@storyboard/story-model';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { writeSceneBundleFromYaml } from './fixtures/sceneBundles';
 
@@ -21,11 +21,19 @@ interface StageUsageRow {
   readonly calls: number;
 }
 
+interface GeneratedWarning {
+  readonly sectionNumber?: number;
+  readonly beatNumbers?: readonly number[];
+}
+
 interface GeneratedSceneData {
+  readonly draft: string;
+  readonly warnings: readonly GeneratedWarning[];
   readonly cached: boolean;
   readonly usage: readonly StageUsageRow[];
   readonly traceRunId?: string;
   readonly seedHonoured?: boolean;
+  readonly beatRanges?: readonly { readonly beats: readonly number[]; readonly start: number; readonly end: number }[];
 }
 
 let home: string;
@@ -96,6 +104,46 @@ describe('draft generate --json', () => {
     const generated: GeneratedSceneData = await generateScene('--params', params);
 
     expect(generated.seedHonoured).toBe(true);
+  });
+
+  it('places the beats of a scene with planned breaks in the finished draft', async () => {
+    const dispatcher: CommandDispatcher = new CommandDispatcher(deps());
+    await dispatcher.dispatch(['card', 'create', 'background', '바닷가 등대', '--name', '등대', '--id', 'lighthouse']);
+    await dispatcher.dispatch(['card', 'create', 'background', '고깃배가 드나드는 항구', '--name', '항구', '--id', 'harbor']);
+    await writeSceneBundleFromYaml(
+      workspace,
+      [
+        'type: scene',
+        'id: 001-opening',
+        'characters:',
+        '  - hana',
+        'beats:',
+        '  - text: 하나가 항구에 선다',
+        '    place: harbor',
+        '    time: 아침',
+        '  - text: 하나가 등대에 오른다',
+        '    place: lighthouse',
+        '    time: 밤',
+        '',
+      ].join('\n'),
+    );
+
+    const generated: GeneratedSceneData = await generateScene();
+    const body: string = parseDraft(readFileSync(generated.draft, 'utf8')).body;
+    const [first, second] = generated.beatRanges ?? [];
+
+    expect(generated.beatRanges?.map((range) => range.beats)).toEqual([[1], [2]]);
+    expect(first?.start).toBe(0);
+    expect(second?.end).toBe(body.trimEnd().length);
+    expect(body.slice(first?.end, second?.start).trim()).toBe('---');
+    expect(generated.warnings.filter((warning) => warning.sectionNumber !== undefined)).toSatisfy(
+      (located: readonly GeneratedWarning[]) =>
+        located.length > 0 && located.every((warning) => warning.beatNumbers?.join() === '1,2'),
+    );
+  });
+
+  it('gives no beat range to a scene without planned breaks', async () => {
+    expect((await generateScene()).beatRanges).toBeUndefined();
   });
 
   it('names the trace run when one run file turns the trace on', async () => {

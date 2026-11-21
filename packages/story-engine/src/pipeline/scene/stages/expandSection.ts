@@ -260,7 +260,7 @@ export class ExpandSectionStage implements ISceneStage {
         expandedSections,
       );
       expandedSections.push(repaired.text);
-      this.addSectionWarnings(run, index, repaired);
+      this.addSectionWarnings(run, { index, beatNumbers: plan.beatNumbersBySection[index] ?? [] }, repaired);
       assertNotCancelled(run.shouldCancel);
     }
 
@@ -438,22 +438,26 @@ export class ExpandSectionStage implements ISceneStage {
 
   private addSectionWarnings(
     run: SceneGenerationRun,
-    index: number,
+    section: { readonly index: number; readonly beatNumbers: readonly number[] },
     repaired: CheckedSectionText,
   ): void {
-    const sectionNumber: number = index + 1;
+    const sectionNumber: number = section.index + 1;
+    const location: Pick<SceneWarning, 'sectionNumber' | 'beatNumbers'> = {
+      sectionNumber,
+      ...(section.beatNumbers.length === 0 ? {} : { beatNumbers: section.beatNumbers }),
+    };
     run.warnings.push(
       ...repaired.violations.map((violation) => ({
         message: `${sectionNumber}구간: ${violation.detail}`,
         kinds: [violation.kind],
-        sectionNumber,
+        ...location,
       })),
     );
     const recaps: number = countRecapPhrases(repaired.text);
     if (recaps > run.tuning.sectionRecapPhraseLimit) {
       run.warnings.push({
         message: `${sectionNumber}구간: 앞 장면을 «아까 …»로 되짚는 표현이 ${recaps}회입니다 (허용 ${run.tuning.sectionRecapPhraseLimit}회). 새 반응·논평·대사로 채우는 쪽이 낫습니다`,
-        sectionNumber,
+        ...location,
       });
     }
   }

@@ -19,6 +19,7 @@ import {
   type ReviseDraftWorkflowResult,
   type ReviseOutcome,
   type StageUsage,
+  type BeatRange,
 } from '@storyboard/story-engine';
 import type { GenerateAndReviseDraftResult, ReadyDraft } from '@storyboard/story-app';
 import type { DraftGenerationStepId, StoryUri } from '@storyboard/story-model';
@@ -81,7 +82,7 @@ export class DraftGenerateCommand implements ICommandHandler {
       return failure('씬 stem을 지정해 주세요. 예: storyboard draft generate 001-scene-1-1');
     }
 
-    const { generation, revision, usage, seedHonoured }: GenerateAndReviseDraftResult =
+    const { generation, revision, usage, seedHonoured, beatRanges }: GenerateAndReviseDraftResult =
       await container.drafts.generateAndRevise({
         sceneUri: sceneUriFor(container.workspaceRoot, stem),
         force: flagBoolean(args.flags, 'force'),
@@ -102,12 +103,18 @@ export class DraftGenerateCommand implements ICommandHandler {
       return failure(generation.kind === 'failed' ? generation.message : '취소했습니다.');
     }
 
-    return this.describeGeneratedScene(container, { generation, revision, usage, seedHonoured });
+    return this.describeGeneratedScene(container, {
+      generation,
+      revision,
+      usage,
+      seedHonoured,
+      beatRanges,
+    });
   }
 
   private describeGeneratedScene(
     container: CommandContext['container'],
-    { generation: draft, revision, usage, seedHonoured }: GeneratedSceneRun,
+    { generation: draft, revision, usage, seedHonoured, beatRanges }: GeneratedSceneRun,
   ): CommandOutcome {
     const warnings: readonly DraftWarning[] = draftWarningsOf(draft);
     const revise: ReviseOutcome | undefined = revision && describeReviseOutcome(revision);
@@ -125,6 +132,7 @@ export class DraftGenerateCommand implements ICommandHandler {
         cached: isCached,
         usage,
         ...(seedHonoured === undefined ? {} : { seedHonoured }),
+        ...(beatRanges === undefined ? {} : { beatRanges }),
         ...(draft.kind === 'generated' && draft.traceRunId !== undefined
           ? { traceRunId: draft.traceRunId }
           : {}),
@@ -142,6 +150,7 @@ interface GeneratedSceneRun {
   readonly revision: ReviseDraftWorkflowResult | undefined;
   readonly usage: readonly StageUsage[];
   readonly seedHonoured: boolean | undefined;
+  readonly beatRanges: readonly BeatRange[] | undefined;
 }
 
 function draftWarningsOf(draft: ReadyDraft): readonly DraftWarning[] {

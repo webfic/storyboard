@@ -129,6 +129,7 @@ export interface SceneWarning {
   readonly message: string;
   readonly kinds?: readonly SectionViolationKind[];
   readonly sectionNumber?: number;
+  readonly beatNumbers?: readonly number[];
 }
 
 export interface SceneStageWarning extends SceneWarning {
@@ -140,6 +141,7 @@ export interface RunSceneGenerationPipelineResult {
   readonly skeleton: string;
   readonly sceneCoordinates: readonly string[];
   readonly warnings: readonly SceneStageWarning[];
+  readonly beatSegments?: readonly (readonly number[])[];
   readonly detectedCharacters: readonly string[];
   readonly personasUsed: ReadonlyMap<string, string>;
   readonly providers: Readonly<SceneGenerationPipelineTaskProviders>;

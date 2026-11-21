@@ -56,12 +56,14 @@ import type {
   ChapterSummaryLedger,
   WorkspaceCaches,
   StageUsage,
+  BeatRange,
   UsageMeter,
   UsageMeterSession,
 } from '@storyboard/story-engine';
 import {
   ProjectRepository,
   summarizeUsageByStage,
+  locateBeatRanges,
   isSeedHonouredByEveryCall,
   SceneContextReader,
   SceneNarrationResolver,
@@ -107,7 +109,10 @@ export interface GenerateAndReviseDraftResult {
   readonly revision: ReviseDraftWorkflowResult | undefined;
   readonly usage: readonly StageUsage[];
   readonly seedHonoured?: boolean;
+  readonly beatRanges?: readonly BeatRange[];
 }
+
+type GeneratedThenRevisedDraft = Pick<GenerateAndReviseDraftResult, 'generation' | 'revision'>;
 
 export interface DraftManagerDependencies {
   readonly generateDraftUseCase: GenerateDraftUseCase;
@@ -195,8 +200,10 @@ export class DraftManager {
     const spending: UsageMeterSession = this.deps.usageMeter.startSession();
 
     try {
-      const outcome: Omit<GenerateAndReviseDraftResult, 'usage' | 'seedHonoured'> =
-        await this.generateThenRevise(request);
+      const outcome: GeneratedThenRevisedDraft = await this.generateThenRevise(request);
+      const beatRanges: readonly BeatRange[] | undefined = await this.locateFinalBeatRanges(
+        outcome.generation,
+      );
       const records: readonly UsageRecord[] = spending.records();
       const hasSeededCalls: boolean =
         this.deps.configBridge.getSeed() !== undefined && records.length > 0;
@@ -205,6 +212,7 @@ export class DraftManager {
         ...outcome,
         usage: summarizeUsageByStage(records),
         ...(hasSeededCalls ? { seedHonoured: isSeedHonouredByEveryCall(records) } : {}),
+        ...(beatRanges === undefined ? {} : { beatRanges }),
       };
     } finally {
       spending.stop();
@@ -213,7 +221,7 @@ export class DraftManager {
 
   private async generateThenRevise(
     request: GenerateAndReviseDraftRequest,
-  ): Promise<Omit<GenerateAndReviseDraftResult, 'usage' | 'seedHonoured'>> {
+  ): Promise<GeneratedThenRevisedDraft> {
     const { isReviseAllowed, onDraftReady, onReviseProgress, ...generateRequest } = request;
     const generation: GenerateDraftResult = await this.generate({
       ...generateRequest,
@@ -236,6 +244,19 @@ export class DraftManager {
         : undefined;
 
     return { generation, revision };
+  }
+
+  private async locateFinalBeatRanges(
+    generation: GenerateDraftResult,
+  ): Promise<readonly BeatRange[] | undefined> {
+    if (!generation.ok || generation.kind !== 'generated' || generation.beatSegments === undefined) {
+      return undefined;
+    }
+
+    const finalText: string = new TextDecoder().decode(
+      await this.deps.fileSystem.readFile(generation.draftUri),
+    );
+    return locateBeatRanges(parseDraft(finalText).body, generation.beatSegments);
   }
 
   public reviseScene(

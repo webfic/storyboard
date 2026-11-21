@@ -356,12 +356,15 @@ keeps the right people in the right place and the pipeline can decide the scene 
 from them; a name the model uses that matches no card stays as written and `doctor` reports it.
 
 `draft generate` prints the draft's warnings (a short draft, for instance) on stderr and, under
-`--json`, in `data.warnings` as `{ message, stage?, kinds?, sectionNumber? }` (the stage that raised
-it, the violation kinds and the section, when known); the exit code stays 0. `data.usage` lists
+`--json`, in `data.warnings` as `{ message, stage?, kinds?, sectionNumber?, beatNumbers? }` (the stage that raised
+it, the violation kinds, the section and the beats that section covers, when known); the exit code stays 0. `data.usage` lists
 the run's model calls by stage and task (calls, tokens, and the cost when every price is known),
 `data.cached` says whether the existing draft was kept, and with `trace.enabled` on
 `data.traceRunId` names the trace run. With `ai.seed` set (usually in a `--params` file)
-`data.seedHonoured` says whether every call went to a provider that takes a seed. `--verbose` also logs each pipeline stage as it runs, which
+`data.seedHonoured` says whether every call went to a provider that takes a seed. For a scene
+whose breaks are planned from its beats' places and times, `data.beatRanges` gives each scene
+segment's beats and its `start`/`end` in the finished draft body; it is left out when the draft's
+breaks no longer match the plan. `--verbose` also logs each pipeline stage as it runs, which
 is how you tell a 20-minute scene apart from a hung one.
 
 `--workspace <path>` picks the workspace (default: the current directory). `--json` puts a single

@@ -96,6 +96,7 @@ export class SceneShowCommand implements ICommandHandler {
       {
         stem,
         title: scene.card.title ?? null,
+        purpose: scene.card.purpose ?? null,
         narrator: scene.card.narrator ?? null,
         narration,
         thread,

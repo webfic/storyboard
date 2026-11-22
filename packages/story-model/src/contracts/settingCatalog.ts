@@ -179,6 +179,17 @@ export const storyboardSettingCatalog: readonly StoryboardSettingDefinition[] = 
     group: '진단',
   },
   {
+    key: 'ai.request.timeoutMinutes',
+    label: '모델 호출 시간 제한 (분)',
+    description:
+      'API 프로바이더의 모델 호출 하나가 재시도를 포함해 이 시간 안에 끝나지 않으면 끊고 «시간 초과»로 실패합니다. 긴 출력을 쓰는 모델이면 늘리세요.',
+    kind: 'integer',
+    defaultValue: 10,
+    minimum: 1,
+    maximum: 120,
+    group: '생성',
+  },
+  {
     key: 'ai.seed',
     label: '생성 씨앗',
     description:

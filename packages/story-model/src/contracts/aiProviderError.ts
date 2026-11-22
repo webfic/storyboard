@@ -13,6 +13,7 @@ export type AiProviderErrorCode =
   | 'cli-not-logged-in'
   | 'cli-usage-limit'
   | 'cli-timeout'
+  | 'request-timeout'
   | 'login-required'
   | 'usage-limit';
 
@@ -26,4 +27,8 @@ export class AiProviderError extends Error {
     super(message);
     this.name = 'AiProviderError';
   }
+}
+
+export function isTimeoutErrorCode(code: AiProviderErrorCode): boolean {
+  return code === 'cli-timeout' || code === 'request-timeout';
 }

@@ -1,6 +1,7 @@
 import { curlDialogueQuotes } from '#engine/pipeline/dialogueQuotes';
 import {
   AiProviderError,
+  isTimeoutErrorCode,
   buildRevisionInstructions,
   countBlockingIssues,
   findBrokenHangulSpans,
@@ -150,7 +151,7 @@ function toReviseLoopFailure(stage: ReviseLoopFailure['stage'], error: unknown):
 
   return {
     stage,
-    kind: error.code === 'cli-timeout' ? 'timeout' : 'provider',
+    kind: isTimeoutErrorCode(error.code) ? 'timeout' : 'provider',
     message: error.message,
   };
 }

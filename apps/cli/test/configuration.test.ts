@@ -197,6 +197,23 @@ describe('CLI configuration validation', () => {
     );
   });
 
+  it('reads the request time limit in minutes from the workspace file and refuses one out of range', () => {
+    const workspace = write('workspace.json', { ai: { request: { timeoutMinutes: 25 } } });
+    const tooLong = write('tooLong.json', { ai: { request: { timeoutMinutes: 500 } } });
+    const millisecondsPerMinute: number = 60 * 1000;
+
+    const bridge = new ConfigBridge({
+      getConfiguration: () => createFileConfiguration({ workspaceConfigFile: workspace }),
+    });
+    const untouched = new ConfigBridge({ getConfiguration: () => createFileConfiguration({}) });
+
+    expect(bridge.getRequestTimeoutMs()).toBe(25 * millisecondsPerMinute);
+    expect(untouched.getRequestTimeoutMs()).toBe(10 * millisecondsPerMinute);
+    expect(() =>
+      createFileConfiguration({ userConfigFile: tooLong }).get('ai.request.timeoutMinutes', 10),
+    ).toThrow(ConfigFileError);
+  });
+
   it('lets a tolerant host fall back to defaults for a file with a bad value', () => {
     const user = write('user.json', { budget: { run: { limitUsd: -1 } } });
     const reported: ConfigFileError[] = [];

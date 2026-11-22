@@ -44,6 +44,7 @@ export interface AiGenerateRequest {
   readonly maxTokens?: number;
   readonly reasoningEffort?: ReasoningEffort;
   readonly seed?: number;
+  readonly signal?: AbortSignal;
 }
 
 export type AiStreamChunk =

@@ -424,6 +424,11 @@ export class ConfigBridge {
     return isSeedUnset ? undefined : seed;
   }
 
+  public getRequestTimeoutMs(): number {
+    const millisecondsPerMinute: number = 60 * 1000;
+    return this.readIntegerSetting('ai.request.timeoutMinutes') * millisecondsPerMinute;
+  }
+
   public isTraceEnabled(): boolean {
     return this.readBooleanSetting('trace.enabled');
   }

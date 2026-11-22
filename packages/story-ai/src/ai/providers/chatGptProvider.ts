@@ -1,4 +1,5 @@
 import { aiGenerateResponseWithUsage } from '#ai/ai/cost';
+import { requestOptionsOf } from '#ai/ai/requestDeadline';
 import { registerProviderFactory } from '#ai/ai/providerFactory';
 import type { OAuthConnection, OAuthRegistration, OAuthTokens } from '#ai/ports/SecretStore';
 import {
@@ -322,6 +323,7 @@ export class ChatGptProvider implements AiProvider {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' },
         body: JSON.stringify(body),
+        ...requestOptionsOf(request),
       },
       'generation-failed',
     );

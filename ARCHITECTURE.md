@@ -710,6 +710,7 @@ Storyboard 워크스페이스는 git 저장소 그 자체이며, 교환용 아�
 `temperature`를 거부하는 모델(Claude 4.7 이후, GPT-6, Gemini 3.x)은 그 행에 `acceptsTemperature: false`를 적고,
 프로바이더는 그 모델에 `temperature`를 보내지 않는다.
 - `tasks.<taskName>.provider`·`tasks.<taskName>.model`: 작업별 provider·모델 오버라이드. 모델만 있고 provider가 없는 항목은 무시된다. CLI는 `config set|unset`으로 다룬다.
+- `ai.request.timeoutMinutes`: API 프로바이더(`transport: 'http'`·`'oauth'`)의 모델 호출 하나가 SDK 재시도를 포함해 이 시간 안에 끝나지 않으면 `AbortSignal` 로 끊고 `AiProviderError('request-timeout')` 로 실패한다(`AiProviderRegistry` 가 기한을 걸고 프로바이더는 그 신호를 SDK 요청에 넘긴다). 시간 초과는 프로그램 실행 경로의 `cli-timeout` 과 같이 한 번 다시 부른다. 기본 `10`, 1~120. 프로그램 실행 경로는 자기 `providers.<id>.timeoutMs` 를 쓴다.
 - `trace.enabled`: 모델 호출마다 프롬프트·응답을 `.storyboard/cache/traces/` 에 남긴다(§4.12). 기본 `false`.
 - `trace.keepRuns`: 같은 종류·같은 씬의 추적을 최근 몇 회 남길지. 기본 `3`, 1~50.
 - `trace.checkFinalBeats`: 추적을 켠 생성·검수에서, 끝난 원고가 씬 카드의 비트를 담았는지 확인해 추적에 남긴다(단계 `checkFinalBeats`). 검수 루프가 이어지면 그 루프가 끝난 원고를, 이어지지 않으면 저장한 초안을 본다. 씬마다 모델 호출이 하나 늘어난다. 기본 `false`.

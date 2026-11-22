@@ -20,6 +20,7 @@ import {
   missingApiKeyMessage,
   missingModelMessage,
 } from '@storyboard/story-model';
+import { requestOptionsOf, type AiRequestOptions } from '#ai/ai/requestDeadline';
 import { registerProviderFactory, resolveApiKeyProviderOptions } from '#ai/ai/providerFactory';
 
 type ClaudeMessageRole = Exclude<AiMessageRole, 'system'>;
@@ -33,7 +34,10 @@ interface ClaudeConversationMessage {
 }
 
 interface ClaudeMessagesLike {
-  readonly create: (request: ClaudeMessageRequest) => Promise<ClaudeMessageResponse>;
+  readonly create: (
+    request: ClaudeMessageRequest,
+    options?: AiRequestOptions,
+  ) => Promise<ClaudeMessageResponse>;
 }
 
 export interface ClaudeClientLike {
@@ -149,7 +153,7 @@ export class ClaudeProvider implements AiProvider {
             }
           : {}),
         messages,
-      });
+      }, requestOptionsOf(request));
 
       const text: string = extractClaudeText(response);
       const usage: AiUsage | undefined = usageFromClaudeResponse(response);
@@ -268,7 +272,7 @@ function createDefaultClaudeClient(apiKey: string): ClaudeClientLike {
 
   return {
     messages: {
-      create: async (request): Promise<ClaudeMessageResponse> => {
+      create: async (request, options): Promise<ClaudeMessageResponse> => {
         const { messages, system, ...rest } = request;
         return client.messages
           .stream({
@@ -277,7 +281,7 @@ function createDefaultClaudeClient(apiKey: string): ClaudeClientLike {
               ? { system: typeof system === 'string' ? system : [...system] }
               : {}),
             messages: [...messages] as MessageParam[],
-          })
+          }, options)
           .finalMessage() as Promise<ClaudeMessageResponse>;
       },
     },

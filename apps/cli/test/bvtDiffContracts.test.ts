@@ -1,3 +1,5 @@
+import { spawnSync, type SpawnSyncReturns } from 'node:child_process';
+
 import { describe, expect, it } from 'vitest';
 
 // @ts-expect-error -- the BVT scripts are plain JavaScript and ship no types.
@@ -121,5 +123,22 @@ describe('diff contracts', () => {
     expect(report).toContain('✗ b');
     expect(report).toContain(': why');
     expect(report).toContain('1 passed, 1 failed, 1 skipped');
+  });
+});
+
+describe('reading a file at a ref', () => {
+  it('prints nothing when the file does not exist at that ref', () => {
+    const gitDiffModuleUrl: string = new URL('../../../scripts/bvt/gitDiff.mjs', import.meta.url).href;
+    const script: string = [
+      `import { readFileAt } from ${JSON.stringify(gitDiffModuleUrl)};`,
+      `process.stdout.write(String(readFileAt('HEAD', 'no/such/file.params.json')));`,
+    ].join('\n');
+
+    const run: SpawnSyncReturns<string> = spawnSync(process.execPath, ['--input-type=module', '-e', script], {
+      encoding: 'utf8',
+    });
+
+    expect(run.stdout).toBe('undefined');
+    expect(run.stderr).toBe('');
   });
 });

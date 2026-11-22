@@ -45,7 +45,11 @@ export function listDeletedFiles(baseRef) {
 
 export function readFileAt(ref, filePath) {
   try {
-    return execFileSync('git', ['show', `${ref}:${filePath}`], { cwd: repoRoot, encoding: 'utf8' });
+    return execFileSync('git', ['show', `${ref}:${filePath}`], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
   } catch {
     return undefined;
   }

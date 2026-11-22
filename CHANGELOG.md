@@ -11,6 +11,7 @@ Storyboard의 주요 변경 사항을 한국어로 기록합니다.
 
 ### 고침
 
+- **GPT-5.x 모델이 엔진이 보내는 온도를 거부해 생성이 첫 호출에서 실패하지 않습니다.** 실제 API 로 모델마다 확인한 결과, `gpt-5.5`·`gpt-5.6-terra`·`gpt-5.6-sol`·`gpt-5.6-luna` 는 기본값(1)이 아닌 온도를 아예 받지 않아 카탈로그에 그렇게 적었고, `gpt-5.4`·`gpt-5.4-mini`·`gpt-5.4-nano`·`gpt-5.2`·`gpt-5.1` 은 온도만 보내면 받지만 추론 노력(`reasoning_effort`)과 함께 보내면 «400 Unsupported value: 'temperature'» 로 거부했습니다. 이제 OpenAI 프로바이더는 추론 노력을 보내는 호출(배경 묘사·연속성 검사·비평·노트 흡수)에는 온도를 싣지 않습니다. (#228)
 - **응답이 오지 않는 모델 호출이 `draft generate` 를 수십 분 붙잡지 않습니다.** API 프로바이더(OpenAI·Claude·Google·Grok·Ollama)는 요청 시간 제한을 따로 두지 않아 SDK 기본값(시도마다 10분, 재시도 2번)에 맡겨졌고, 응답이 오지 않는 요청 하나가 37분 동안 프로세스를 붙잡은 적이 있었습니다. 이제 호출 하나는 재시도를 포함해 `ai.request.timeoutMinutes`(기본 10분, 1~120) 안에 끝나야 하고, 넘기면 요청을 끊고 «시간 초과»로 실패합니다. 시간 초과는 한 번 다시 부르며, 그래도 끝나지 않으면 `draft generate` 가 0 이 아닌 종료 코드와 그 문구로 끝납니다. 생성 추적을 켰다면 그 단계가 같은 문구로 실패로 남습니다. (#232)
 - **`draft generate --all --json` 이 씬마다의 실행 결과를 냅니다.** 0.17.0 에서 한 씬 실행에만 들어간 필드를 일괄 실행에도 싣습니다. `data.scenes[]` 에 씬마다 `stem`, `ok`, `cached`, 단계별 호출 `usage`, 경고 `warnings`(검수 경고는 `stage: "reviseLoop"`), 실패한 씬의 `message`, 알 수 있으면 `traceRunId`·`seedHonoured`·`beatRanges` 가 실리고, `data.usage` 는 일괄 실행 전체의 호출을 단계·작업별로 합칩니다. 기존 집계(`generated`·`cacheHits`·`failures`·`failureLabels`·`sceneCount`)는 그대로입니다. (#234)
 - **`card build`·`scene complete` 가 모양이 틀린 응답에 zod 오류 덩어리 대신 한 줄로 알립니다.** 모델 응답에 기대한 필드가 없거나 비어 있으면 «카드 구성 응답을 읽지 못했습니다(entities 가 없음). 다시 실행해 보세요.»처럼 무엇이 틀렸는지와 할 일을 한 줄로 내고, 종료 코드는 그대로 1입니다. 검증 오류의 원문은 `--verbose` 를 줄 때만 그 아래에 찍힙니다. (#229)

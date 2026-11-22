@@ -158,6 +158,36 @@ describe("OpenAiProvider", () => {
 
     expect((captured as { reasoning_effort?: string } | undefined)?.reasoning_effort).toBe(expected)
   })
+
+  it.each([
+    ["gpt-5.4-mini", undefined, 0.7],
+    ["gpt-5.4-mini", "medium", undefined],
+    ["gpt-5.6-terra", undefined, undefined]
+  ] as const)(
+    "sends %s a temperature only when it takes one and no reasoning effort goes with it (effort %s)",
+    async (model, reasoningEffort, expectedTemperature) => {
+      let captured: FakeOpenAiCreateRequest | undefined
+      const provider = new OpenAiProvider({
+        apiKey: "sk-test",
+        model,
+        createClient: (): OpenAiClientLike =>
+          createFakeOpenAiClient({
+            onCreate: (request): void => {
+              captured = request
+            }
+          })
+      })
+
+      await provider.generate({
+        taskName: "continuityCheck",
+        messages: [{ role: "user", content: "초안" }],
+        temperature: 0.7,
+        ...(reasoningEffort === undefined ? {} : { reasoningEffort })
+      })
+
+      expect((captured as { temperature?: number } | undefined)?.temperature).toBe(expectedTemperature)
+    }
+  )
 })
 
 interface FakeOpenAiCreateRequest {

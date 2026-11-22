@@ -10,6 +10,8 @@ after the first public release.
 
 ## [Unreleased]
 
+## [0.17.1] - 2026-11-22
+
 ### Fixed
 
 - **GPT-5.x models no longer refuse the temperature the engine sends and fail a run on its first call.** Checked model by model against the real API: `gpt-5.5`, `gpt-5.6-terra`, `gpt-5.6-sol` and `gpt-5.6-luna` take no temperature but the default (1), and the catalog now says so; `gpt-5.4`, `gpt-5.4-mini`, `gpt-5.4-nano`, `gpt-5.2` and `gpt-5.1` take a temperature on its own but refuse it with «400 Unsupported value: 'temperature'» when a reasoning effort (`reasoning_effort`) goes with it. The OpenAI provider now leaves the temperature out of a call that sends a reasoning effort (background description, continuity check, critique, note absorb). (#228)

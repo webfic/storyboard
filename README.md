@@ -47,7 +47,8 @@ storyboard manuscript assemble        # draft/NNN-slug.md → 원고
 
 카드와 씬은 `<종류>/<slug>.card/` 번들 폴더(`card.yaml` 머리말 + `statements.yaml` 진술)이고, 씬 번호는
 `.storyboard/structure.yaml`의 순서에서 나옵니다. 씬은 `001-prologue`, `1`, `prologue` 어느 것으로도 부를
-수 있습니다. 0.15 형식 작품은 열리지 않으니(변환 없음) 그 작품은 0.15.x로 계속 쓰세요.
+수 있습니다. 0.15 형식 작품은 열리지 않으니(변환 없음) 그 작품은 0.15.x로 계속 쓰세요. 반대로 0.15.x로
+0.16 작품을 열면 목록이 비어 보이고 `status`가 스키마 오류를 내니, 0.16 작품은 0.16 이상으로만 여세요.
 
 `storyboard novel generate`는 이 전체를 승인 없이 한 번에 돌립니다. 예산 상한(`budget.run.limitUsd`)에
 닿으면 진행 중인 씬까지 마치고 멈추며, 다시 실행하면 이어서 갑니다. 실패하거나 프로세스가 끊긴 실행도 다시 돌리면 이어 갑니다. 터미널에서는 이어 갈지 처음부터 할지 묻고,

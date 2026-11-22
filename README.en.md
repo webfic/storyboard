@@ -49,7 +49,8 @@ storyboard manuscript assemble        # draft/NNN-slug.md → manuscript
 Cards and scenes are bundle folders, `<kind>/<slug>.card/` (a `card.yaml` header plus a
 `statements.yaml` of statements), and a scene's number comes from its place in
 `.storyboard/structure.yaml`. A scene can be named `001-prologue`, `1` or `prologue`. A 0.15 work is
-not opened (there is no conversion); keep using 0.15.x for it.
+not opened (there is no conversion); keep using 0.15.x for it. Do not open a 0.16 work with 0.15.x
+either: its lists look empty and `status` prints a schema error.
 
 `storyboard novel generate` runs all of it without approvals. When the run budget
 (`budget.run.limitUsd`) is reached it finishes the scene in progress and stops; running it again

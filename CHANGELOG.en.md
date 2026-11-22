@@ -10,6 +10,8 @@ after the first public release.
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-11-22
+
 ### Added
 
 - **`draft generate --json` says where each beat ended up in the finished draft.** For a scene whose beats carry a place or time, so that its scene breaks (`---`) are planned, `data.beatRanges` lists for each scene segment the beats it covers (`beats`) and its character range in the draft body (`start` inclusive, `end` exclusive, counted in the body without the front matter). The ranges are measured on the draft as it stands after the revise loop. Beats grouped into one segment share one range, and nothing is estimated: when the draft has another number of scene breaks than the plan (a revision removed or added one), when the scene has no planned breaks, or when the existing draft was kept, `beatRanges` is left out. A warning that names a section now also carries the beats that section covers as `beatNumbers`. (#218)

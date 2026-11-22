@@ -121,6 +121,29 @@ describe("findRunAheadDialogue", () => {
   it("finds nothing when the expansion stays in its section", () => {
     expect(findRunAheadDialogue(skeleton, section, `${section}\n\n은하가 웃었다.`, tuning)).toEqual([])
   })
+
+  it("does not count a later line that only sits inside a longer line of this section", () => {
+    const catchphraseSkeleton = [
+      "\u201c이번에도 내가 다 나눠줬잖아.\u201d",
+      "\u201c다 나눠줬잖아.\u201d"
+    ].join("\n\n")
+    const ownSection = "\u201c이번에도 내가 다 나눠줬잖아.\u201d"
+    const expanded = `\u201c그래, 이번에도 내가 다 나눠줬잖아.\u201d\n\n은하가 웃었다.`
+
+    expect(findRunAheadDialogue(catchphraseSkeleton, ownSection, expanded, tuning)).toEqual([])
+  })
+
+  it("trims from the quoted line, not from an earlier line that contains it", () => {
+    const expanded = [
+      "\u201c이번에도 내가 다 나눠줬잖아.\u201d",
+      "은하가 웃었다.",
+      "\u201c다 나눠줬잖아.\u201d 은하가 말했다."
+    ].join("\n\n")
+
+    expect(trimRunAheadDialogue(expanded, ["다 나눠줬잖아."])).toBe(
+      "\u201c이번에도 내가 다 나눠줬잖아.\u201d\n\n은하가 웃었다."
+    )
+  })
 })
 
 describe("findPlacesOffCoordinates", () => {

@@ -12,6 +12,7 @@ after the first public release.
 
 ### Fixed
 
+- **`draft generate --all --json` reports each scene's run.** The fields 0.17.0 gave only a one-scene run now come with a batch too: `data.scenes[]` holds, per scene, `stem`, `ok`, `cached`, the calls by stage in `usage`, `warnings` (a revise warning carries `stage: "reviseLoop"`), `message` for a failed scene, and `traceRunId`, `seedHonoured` and `beatRanges` when known; `data.usage` adds up the calls of the whole batch by stage and task. The existing counts (`generated`, `cacheHits`, `failures`, `failureLabels`, `sceneCount`) stay as they were. (#234)
 - **`card build` and `scene complete` report a wrongly shaped response in one line instead of a zod issue dump.** When the model response lacks a field or leaves it empty, the message says what was wrong and what to do — «카드 구성 응답을 읽지 못했습니다(entities 가 없음). 다시 실행해 보세요.» — and the exit code stays 1. The raw validation issues are printed under it only with `--verbose`. (#229)
 
 ## [0.17.0] - 2026-11-22

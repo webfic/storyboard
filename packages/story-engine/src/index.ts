@@ -20,6 +20,7 @@ export * from '#engine/application/drafts/augmentDraftUseCase';
 export * from '#engine/application/drafts/condenseDraftUseCase';
 export * from '#engine/application/drafts/expandDraftUseCase';
 export * from '#engine/application/drafts/generateAllDraftsUseCase';
+export * from '#engine/application/drafts/sceneRunReport';
 export * from '#engine/application/drafts/draftRepositories';
 export * from '#engine/application/drafts/draftGenerationContract';
 export * from '#engine/application/engineServices';

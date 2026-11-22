@@ -76,6 +76,7 @@ import {
   GenerationTraceRecorder,
   UsageLedgerRecorder,
   UsageMeter,
+  SceneRunReporter,
   WorkspaceCaches,
   WorkspaceCards,
   WorkspaceRunLocks,
@@ -158,6 +159,7 @@ interface EngineGraph {
   readonly runLocks: WorkspaceRunLocks;
   readonly usageLedger: UsageLedgerRecorder;
   readonly usageMeter: UsageMeter;
+  readonly sceneRunReporter: SceneRunReporter;
   readonly cardSidebarRepository: ICardSidebarRepository;
   readonly narratorCardRepository: INarratorCardRepository;
   readonly novelRunStateRepository: INovelRunStateRepository;
@@ -342,6 +344,7 @@ function buildServices(
   });
   const usageLedger: UsageLedgerRecorder = new UsageLedgerRecorder({ caches });
   const usageMeter: UsageMeter = new UsageMeter();
+  const sceneRunReporter: SceneRunReporter = new SceneRunReporter({ usageMeter, fileSystem, configBridge });
   const usageSink: IUsageSink = usageMeter.wrap(
     recordUsageWithoutFailingPaidGeneration([usageLedger, dependencies.usageObserver], logger),
   );
@@ -416,6 +419,7 @@ function buildServices(
     runLocks,
     usageLedger,
     usageMeter,
+    sceneRunReporter,
     cardSidebarRepository: repositories.cardSidebar,
     narratorCardRepository: repositories.narratorCards,
     novelRunStateRepository: repositories.novelRunState,
@@ -439,6 +443,8 @@ function buildServices(
     generateAllDraftsUseCase: new GenerateAllDraftsUseCase(host, repositories, {
       generateDraftUseCase,
       reviseAfterGenerateGate,
+      sceneRunReporter,
+      usageMeter,
     }),
     generateDraftUseCase,
     generateOutlineUseCase: new GenerateOutlineUseCase(host, ai, repositories),

@@ -5,11 +5,15 @@ import type { ReviseAfterGenerateGate } from '#engine/application/drafts/reviseA
 import { describeReviseOutcome, type ReviseDraftWorkflowResult } from '#engine/application/drafts/reviseDraftUseCase';
 import type { IUseCase } from '#engine/application/useCase';
 import type { BatchSceneList } from '#engine/application/drafts/draftRepositories';
-import type { StoryUri } from '@storyboard/story-model';
+import { STORYBOARD_FILE_EXTENSIONS, type DraftGenerationStepId, type StoryUri } from '@storyboard/story-model';
 import {
   draftWarningMessages,
   type DraftWarning,
 } from '#engine/application/drafts/draftGenerationContract';
+import type { SceneRunReport, SceneRunReporter } from '#engine/application/drafts/sceneRunReport';
+import { summarizeUsageByStage, type StageUsage } from '#engine/application/ai/stageUsage';
+import type { UsageMeter, UsageMeterSession } from '#engine/application/ai/usageMeter';
+import type { BeatRange } from '#engine/pipeline/beatRanges';
 
 export type GenerateAllDraftsProgress = {
   readonly current: number;
@@ -21,6 +25,18 @@ export type GenerateAllDraftsProgress = {
   readonly total: number;
 };
 
+export interface DraftBatchSceneResult {
+  readonly stem: string;
+  readonly ok: boolean;
+  readonly cached: boolean;
+  readonly usage: readonly StageUsage[];
+  readonly warnings: readonly DraftWarning[];
+  readonly message?: string;
+  readonly seedHonoured?: boolean;
+  readonly beatRanges?: readonly BeatRange[];
+  readonly traceRunId?: string;
+}
+
 export type GenerateAllDraftsSummary = {
   readonly cacheHits: number;
   readonly failureLabels: readonly string[];
@@ -28,6 +44,8 @@ export type GenerateAllDraftsSummary = {
   readonly generated: number;
   readonly sceneCount: number;
   readonly pausedWithRemaining?: number;
+  readonly usage: readonly StageUsage[];
+  readonly scenes: readonly DraftBatchSceneResult[];
 };
 
 export type GenerateAllDraftsResult =
@@ -44,7 +62,16 @@ export type GenerateAllDraftsOptions = {
 export interface GenerateAllDraftsCollaborators {
   readonly generateDraftUseCase: GenerateDraftUseCase;
   readonly reviseAfterGenerateGate: ReviseAfterGenerateGate;
+  readonly sceneRunReporter: SceneRunReporter;
+  readonly usageMeter: UsageMeter;
 }
+
+interface BatchSceneRun {
+  readonly draft: GenerateDraftResult;
+  readonly reviseWarning?: string;
+}
+
+const reviseStage: DraftGenerationStepId = 'reviseLoop';
 
 const maxListedFailureLabels: number = 5;
 
@@ -56,6 +83,37 @@ interface BatchScenePosition {
 }
 
 type FailedDraftResult = Extract<GenerateDraftResult, { readonly ok: false }>;
+
+function sceneStemOfBundleName(bundleName: string): string {
+  const cardSuffix: string = STORYBOARD_FILE_EXTENSIONS.card;
+  return bundleName.endsWith(cardSuffix) ? bundleName.slice(0, -cardSuffix.length) : bundleName;
+}
+
+function describeSceneResult(
+  stem: string,
+  run: BatchSceneRun,
+  report: SceneRunReport,
+): DraftBatchSceneResult {
+  const { draft, reviseWarning } = run;
+  const draftWarnings: readonly DraftWarning[] = draft.ok && draft.kind === 'generated' ? draft.warnings : [];
+  const traceRunId: string | undefined =
+    draft.ok && draft.kind === 'generated' ? draft.traceRunId : undefined;
+
+  return {
+    stem,
+    ok: draft.ok,
+    cached: draft.ok && draft.kind === 'cache_hit',
+    usage: report.usage,
+    warnings:
+      reviseWarning === undefined
+        ? draftWarnings
+        : [...draftWarnings, { message: reviseWarning, stage: reviseStage }],
+    ...(draft.ok ? {} : { message: draft.kind === 'failed' ? draft.message : '취소했습니다.' }),
+    ...(report.seedHonoured === undefined ? {} : { seedHonoured: report.seedHonoured }),
+    ...(report.beatRanges === undefined ? {} : { beatRanges: report.beatRanges }),
+    ...(traceRunId === undefined ? {} : { traceRunId }),
+  };
+}
 
 function describeBatchScenePosition(
   sceneUri: StoryUri,
@@ -76,8 +134,13 @@ class DraftBatchTally {
   private failures: number = 0;
   private readonly failureLabels: string[] = [];
   private pausedWithRemaining: number | undefined;
+  private readonly sceneResults: DraftBatchSceneResult[] = [];
 
   public constructor(private readonly sceneCount: number) {}
+
+  public recordSceneResult(sceneResult: DraftBatchSceneResult): void {
+    this.sceneResults.push(sceneResult);
+  }
 
   public recordCacheHit(): void {
     this.cacheHits += 1;
@@ -96,7 +159,7 @@ class DraftBatchTally {
     this.pausedWithRemaining = remaining;
   }
 
-  public toResult(): GenerateAllDraftsResult {
+  public toResult(usage: readonly StageUsage[]): GenerateAllDraftsResult {
     const pausedWithRemaining: number | undefined = this.pausedWithRemaining;
 
     return {
@@ -109,6 +172,8 @@ class DraftBatchTally {
         failureLabels: this.failureLabels,
         sceneCount: this.sceneCount,
         ...(pausedWithRemaining === undefined ? {} : { pausedWithRemaining }),
+        usage,
+        scenes: this.sceneResults,
       },
     };
   }
@@ -134,10 +199,24 @@ export class GenerateAllDraftsUseCase implements IUseCase<
       return { kind: 'no_scenes', ok: false };
     }
 
-    const total: number = scenes.scenes.length;
+    const spending: UsageMeterSession = this.collaborators.usageMeter.startSession();
+
+    try {
+      const tally: DraftBatchTally = await this.generateScenes(scenes.scenes, options);
+      return tally.toResult(summarizeUsageByStage(spending.records()));
+    } finally {
+      spending.stop();
+    }
+  }
+
+  private async generateScenes(
+    sceneUris: readonly StoryUri[],
+    options: GenerateAllDraftsOptions,
+  ): Promise<DraftBatchTally> {
+    const total: number = sceneUris.length;
     const tally: DraftBatchTally = new DraftBatchTally(total);
 
-    for (const [index, sceneUri] of scenes.scenes.entries()) {
+    for (const [index, sceneUri] of sceneUris.entries()) {
       if (options.shouldCancel?.()) {
         break;
       }
@@ -152,7 +231,7 @@ export class GenerateAllDraftsUseCase implements IUseCase<
       if (!shouldContinue) break;
     }
 
-    return tally.toResult();
+    return tally;
   }
 
   private async generateScene(
@@ -163,14 +242,53 @@ export class GenerateAllDraftsUseCase implements IUseCase<
   ): Promise<boolean> {
     const { current, label, total } = position;
     options.onProgress?.({ current, kind: 'prepared', label, total });
-    const draftResult: GenerateDraftResult = await this.requestDraft(sceneUri, position, options);
 
-    if (!draftResult.ok) {
-      return this.recordFailedDraft(draftResult, position, tally);
+    const { outcome, report } = await this.collaborators.sceneRunReporter.measure(
+      () => this.runScene(sceneUri, position, options),
+      (run) => run.draft,
+    );
+    return this.recordSceneRun(outcome, report, position, tally);
+  }
+
+  private async runScene(
+    sceneUri: StoryUri,
+    position: BatchScenePosition,
+    options: GenerateAllDraftsOptions,
+  ): Promise<BatchSceneRun> {
+    const draft: GenerateDraftResult = await this.requestDraft(sceneUri, position, options);
+
+    if (!draft.ok || draft.kind === 'cache_hit') {
+      return { draft };
     }
 
-    if (draftResult.kind === 'cache_hit') tally.recordCacheHit();
-    else await this.recordGeneratedDraft(sceneUri, draftResult.warnings, position, options, tally);
+    const reviseWarning: string | undefined = await this.reviseGeneratedDraft(
+      sceneUri,
+      draft.warnings,
+      position,
+      options,
+    );
+    return { draft, ...(reviseWarning === undefined ? {} : { reviseWarning }) };
+  }
+
+  private recordSceneRun(
+    run: BatchSceneRun,
+    report: SceneRunReport,
+    position: BatchScenePosition,
+    tally: DraftBatchTally,
+  ): boolean {
+    const { draft } = run;
+    const isCancelled: boolean = !draft.ok && draft.kind === 'cancelled';
+
+    if (!isCancelled) {
+      tally.recordSceneResult(describeSceneResult(sceneStemOfBundleName(position.label), run, report));
+    }
+
+    if (!draft.ok) {
+      return this.recordFailedDraft(draft, position, tally);
+    }
+
+    if (draft.kind === 'cache_hit') tally.recordCacheHit();
+    else tally.recordGenerated();
     return true;
   }
 
@@ -207,15 +325,13 @@ export class GenerateAllDraftsUseCase implements IUseCase<
     });
   }
 
-  private async recordGeneratedDraft(
+  private async reviseGeneratedDraft(
     sceneUri: StoryUri,
     warnings: readonly DraftWarning[],
     position: BatchScenePosition,
     options: GenerateAllDraftsOptions,
-    tally: DraftBatchTally,
-  ): Promise<void> {
+  ): Promise<string | undefined> {
     const { current, label, total } = position;
-    tally.recordGenerated();
     if (warnings.length > 0) {
       this.host.logger.warn(`${label}: ${draftWarningMessages(warnings).join(' / ')}`);
     }
@@ -229,6 +345,7 @@ export class GenerateAllDraftsUseCase implements IUseCase<
     if (reviseWarning) {
       this.host.logger.warn(`${label}: ${reviseWarning}`);
     }
+    return reviseWarning || undefined;
   }
 
   private recordFailedDraft(

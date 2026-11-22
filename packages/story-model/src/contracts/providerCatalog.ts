@@ -90,6 +90,7 @@ export const providerCatalog = {
         displayName: 'GPT-5.6 Terra',
         inputPricePerMillion: 2.0,
         outputPricePerMillion: 12.0,
+        acceptsTemperature: false,
         acceptsReasoningEffort: true,
       },
       {
@@ -97,6 +98,7 @@ export const providerCatalog = {
         displayName: 'GPT-5.6 Sol',
         inputPricePerMillion: 4.0,
         outputPricePerMillion: 20.0,
+        acceptsTemperature: false,
         acceptsReasoningEffort: true,
       },
       {
@@ -104,6 +106,7 @@ export const providerCatalog = {
         displayName: 'GPT-5.5',
         inputPricePerMillion: 5.0,
         outputPricePerMillion: 30.0,
+        acceptsTemperature: false,
         acceptsReasoningEffort: true,
       },
       {
@@ -111,6 +114,7 @@ export const providerCatalog = {
         displayName: 'GPT-5.6 Luna',
         inputPricePerMillion: 0.2,
         outputPricePerMillion: 1.2,
+        acceptsTemperature: false,
         acceptsReasoningEffort: true,
       },
       {

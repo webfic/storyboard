@@ -109,16 +109,19 @@ export class OpenAiProvider implements AiProvider {
   }
 
   public async generate(request: AiGenerateRequest): Promise<AiGenerateResponse> {
+    const isReasoningEffortSent: boolean =
+      request.reasoningEffort !== undefined && acceptsReasoningEffort(this.id, this.model);
+    const isTemperatureSent: boolean =
+      acceptsTemperature(this.id, this.model) && !isReasoningEffortSent;
+
     try {
       const response: OpenAiChatCompletionResponse = await this.client.chat.completions.create({
         model: this.model,
         messages: request.messages.map(({ role, content }) => ({ role, content })),
-        temperature: acceptsTemperature(this.id, this.model) ? request.temperature : undefined,
+        temperature: isTemperatureSent ? request.temperature : undefined,
         max_completion_tokens: request.maxTokens,
         ...(request.seed === undefined ? {} : { seed: request.seed }),
-        ...(request.reasoningEffort !== undefined && acceptsReasoningEffort(this.id, this.model)
-          ? { reasoning_effort: request.reasoningEffort }
-          : {}),
+        ...(isReasoningEffortSent ? { reasoning_effort: request.reasoningEffort } : {}),
       }, requestOptionsOf(request));
 
       const text: string = response.choices[0]?.message?.content ?? '';

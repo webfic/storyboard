@@ -138,4 +138,10 @@ describe('BuildStoryCardsUseCase', () => {
       }).execute({ workspaceRoot }),
     ).rejects.toThrow('알 수 없는 근거 씬');
   });
+
+  it('names the missing field in one line when the response has the wrong shape', async () => {
+    await expect(useCase({ items: [] }).execute({ workspaceRoot })).rejects.toThrow(
+      '카드 구성 응답을 읽지 못했습니다(entities 가 없음). 다시 실행해 보세요.',
+    );
+  });
 });

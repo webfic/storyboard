@@ -99,4 +99,10 @@ describe('CompleteStoryScenesUseCase', () => {
       }).execute({ workspaceRoot }),
     ).rejects.toThrow('존재하지 않는 캐릭터 ID');
   });
+
+  it('names the empty field in one line when the response has no scenes', async () => {
+    await expect(useCase({ scenes: [] }).execute({ workspaceRoot })).rejects.toThrow(
+      '씬 완성 응답을 읽지 못했습니다(scenes 가 비어 있음). 다시 실행해 보세요.',
+    );
+  });
 });

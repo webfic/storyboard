@@ -10,6 +10,10 @@ after the first public release.
 
 ## [Unreleased]
 
+### Fixed
+
+- **`card build` and `scene complete` report a wrongly shaped response in one line instead of a zod issue dump.** When the model response lacks a field or leaves it empty, the message says what was wrong and what to do — «카드 구성 응답을 읽지 못했습니다(entities 가 없음). 다시 실행해 보세요.» — and the exit code stays 1. The raw validation issues are printed under it only with `--verbose`. (#229)
+
 ## [0.17.0] - 2026-11-22
 
 ### Added

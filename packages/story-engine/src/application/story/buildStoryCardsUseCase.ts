@@ -7,13 +7,12 @@ import { normalizeEntityName, slugify } from '@storyboard/story-model';
 import {
   applyCardCollectProposals,
   shouldProposeCardCollect,
-  parseJsonObject,
   cardCollectProposalId,
   type CardCollectProposal,
   type CardCollectProposalDraft,
 } from '@storyboard/story-model';
 import type { StoryFeatureSource, StoryFileSnapshot } from '#engine/application/story/storyFeatureSource';
-import { StoryFeatureSourceError } from '#engine/application/story/storyFeatureSource';
+import { parseStoryResponse, StoryFeatureSourceError } from '#engine/application/story/storyFeatureSource';
 import type { StoryboardAiService } from '@storyboard/story-ai';
 
 const SCENE_CHUNK_SIZE: number = 40_000;
@@ -187,7 +186,7 @@ export class BuildStoryCardsUseCase implements IUseCase<BuildStoryCardsRequest, 
       ],
       {},
     );
-    return responseSchema.parse(parseJsonObject(response.text)).entities;
+    return parseStoryResponse(responseSchema, response.text, '카드 구성').entities;
   }
 }
 

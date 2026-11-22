@@ -21,6 +21,7 @@ import {
 import '#ai/ai/providers/index';
 import { createRegisteredProvider, type ProviderClientFactories } from '#ai/ai/providerFactory';
 import { SecretStore } from '#ai/ports/SecretStore';
+import { RequestDeadline, runWithinDeadline } from '#ai/ai/requestDeadline';
 import {
   ConfigBridge,
   type ProviderModelConfig,
@@ -37,6 +38,27 @@ export interface AiProviderRegistryOptions extends ProviderClientFactories {
 
 export const missingProviderMessage: string =
   '기본 AI 제공자가 설정되지 않았습니다. 설정에서 제공자를 고른 뒤 다시 시도하세요.';
+
+function hasRequestDeadline(providerId: AiProviderId): boolean {
+  const transport: string = getProviderTransport(providerId);
+  return transport === 'http' || transport === 'oauth';
+}
+
+async function* streamFromProvider(
+  provider: AiProvider,
+  request: AiGenerateRequest,
+): AsyncIterable<AiStreamChunk> {
+  if (provider.generateStream) {
+    yield* provider.generateStream(request);
+    return;
+  }
+
+  const response: AiGenerateResponse = await provider.generate(request);
+  if (response.text.length > 0) {
+    yield { type: 'text-delta', delta: response.text };
+  }
+  yield { type: 'done', response };
+}
 
 export class AiProviderRegistry {
   public constructor(private readonly options: AiProviderRegistryOptions) {}
@@ -102,8 +124,15 @@ export class AiProviderRegistry {
   ): Promise<AiGenerateResponse> {
     const model: string | undefined =
       modelOverride ?? this.findTaskModelFor(request.taskName, providerId);
-    return (await this.createProvider(providerId, model)).generate(
-      this.withSeed(providerId, request),
+    const provider: AiProvider = await this.createProvider(providerId, model);
+    const seededRequest: AiGenerateRequest = this.withSeed(providerId, request);
+
+    if (!hasRequestDeadline(providerId)) {
+      return await provider.generate(seededRequest);
+    }
+
+    return await runWithinDeadline(providerId, this.options.configBridge.getRequestTimeoutMs(), (signal) =>
+      provider.generate({ ...seededRequest, signal }),
     );
   }
 
@@ -115,19 +144,24 @@ export class AiProviderRegistry {
     const model: string | undefined =
       modelOverride ?? this.findTaskModelFor(request.taskName, providerId);
     const provider: AiProvider = await this.createProvider(providerId, model);
+    const seededRequest: AiGenerateRequest = this.withSeed(providerId, request);
 
-    if (provider.generateStream) {
-      yield* provider.generateStream(this.withSeed(providerId, request));
+    if (!hasRequestDeadline(providerId)) {
+      yield* streamFromProvider(provider, seededRequest);
       return;
     }
 
-    const response: AiGenerateResponse = await provider.generate(
-      this.withSeed(providerId, request),
+    const deadline: RequestDeadline = new RequestDeadline(
+      providerId,
+      this.options.configBridge.getRequestTimeoutMs(),
     );
-    if (response.text.length > 0) {
-      yield { type: 'text-delta', delta: response.text };
+    try {
+      yield* streamFromProvider(provider, { ...seededRequest, signal: deadline.signal });
+    } catch (error) {
+      throw deadline.explainFailure(error);
+    } finally {
+      deadline.clear();
     }
-    yield { type: 'done', response };
   }
 
   private withSeed(providerId: AiProviderId, request: AiGenerateRequest): AiGenerateRequest {

@@ -8,6 +8,7 @@ import type {
   AiTaskName,
 } from '@storyboard/story-model';
 import {
+  isTimeoutErrorCode,
   AiProviderError,
   emptyTruncatedResponseMessage,
   projectUsageAttribution,
@@ -30,7 +31,7 @@ function isEmptyTruncatedResponse(response: AiGenerateResponse): boolean {
 }
 
 function isTimedOutCall(error: unknown): boolean {
-  return error instanceof AiProviderError && error.code === 'cli-timeout';
+  return error instanceof AiProviderError && isTimeoutErrorCode(error.code);
 }
 
 export class AiTextGateway {

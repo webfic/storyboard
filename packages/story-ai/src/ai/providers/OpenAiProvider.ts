@@ -18,6 +18,7 @@ import {
   missingApiKeyMessage,
   missingModelMessage,
 } from '@storyboard/story-model';
+import { requestOptionsOf, type AiRequestOptions } from '#ai/ai/requestDeadline';
 import { registerProviderFactory, resolveApiKeyProviderOptions } from '#ai/ai/providerFactory';
 
 interface OpenAiModelsLike {
@@ -25,7 +26,10 @@ interface OpenAiModelsLike {
 }
 
 interface OpenAiChatCompletionsLike {
-  readonly create: (request: OpenAiChatCompletionRequest) => Promise<OpenAiChatCompletionResponse>;
+  readonly create: (
+    request: OpenAiChatCompletionRequest,
+    options?: AiRequestOptions,
+  ) => Promise<OpenAiChatCompletionResponse>;
 }
 
 export interface OpenAiClientLike {
@@ -115,7 +119,7 @@ export class OpenAiProvider implements AiProvider {
         ...(request.reasoningEffort !== undefined && acceptsReasoningEffort(this.id, this.model)
           ? { reasoning_effort: request.reasoningEffort }
           : {}),
-      });
+      }, requestOptionsOf(request));
 
       const text: string = response.choices[0]?.message?.content ?? '';
       const usage: AiUsage | undefined = usageFromOpenAiResponse(response);
@@ -159,8 +163,8 @@ function createDefaultOpenAiClient(apiKey: string): OpenAiClientLike {
     },
     chat: {
       completions: {
-        create: async (request): Promise<OpenAiChatCompletionResponse> =>
-          client.chat.completions.create({ ...request, messages: [...request.messages] }),
+        create: async (request, options): Promise<OpenAiChatCompletionResponse> =>
+          client.chat.completions.create({ ...request, messages: [...request.messages] }, options),
       },
     },
   };

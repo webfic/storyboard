@@ -13,12 +13,17 @@ import {
   generationFailedMessage,
   missingModelMessage,
 } from '@storyboard/story-model';
+import { requestOptionsOf, type AiRequestOptions } from '#ai/ai/requestDeadline';
 import { registerProviderFactory } from '#ai/ai/providerFactory';
 import type { ProviderModelConfig } from '#ai/ports/ConfigBridge';
 
 export interface OllamaClientLike {
   readonly get: (path: string) => Promise<unknown>;
-  readonly post: (path: string, body: OllamaChatRequest) => Promise<OllamaChatResponse>;
+  readonly post: (
+    path: string,
+    body: OllamaChatRequest,
+    options?: AiRequestOptions,
+  ) => Promise<OllamaChatResponse>;
 }
 
 export interface OllamaProviderOptions {
@@ -110,7 +115,7 @@ export class OllamaProvider implements AiProvider {
           ...(request.seed === undefined ? {} : { seed: request.seed }),
           ...(this.contextTokens === undefined ? {} : { num_ctx: this.contextTokens }),
         },
-      });
+      }, requestOptionsOf(request));
 
       const text: string = response.message?.content ?? '';
       const thinking: string = response.message?.thinking ?? '';
@@ -164,8 +169,8 @@ function createDefaultOllamaClient(baseUrl: string): OllamaClientLike {
 
   return {
     get: async (path): Promise<unknown> => (await client.get(path)).data,
-    post: async (path, body): Promise<OllamaChatResponse> =>
-      (await client.post(path, body)).data as OllamaChatResponse,
+    post: async (path, body, options): Promise<OllamaChatResponse> =>
+      (await client.post(path, body, options)).data as OllamaChatResponse,
   };
 }
 

@@ -15,10 +15,14 @@ import {
   missingApiKeyMessage,
   missingModelMessage,
 } from '@storyboard/story-model';
+import { requestOptionsOf, type AiRequestOptions } from '#ai/ai/requestDeadline';
 import { registerProviderFactory, resolveApiKeyProviderOptions } from '#ai/ai/providerFactory';
 
 interface GoogleGenerativeModelLike {
-  readonly generateContent: (prompt: string) => Promise<GoogleGenerateContentResultLike>;
+  readonly generateContent: (
+    prompt: string,
+    options?: AiRequestOptions,
+  ) => Promise<GoogleGenerateContentResultLike>;
 }
 
 interface GoogleGenerateContentResultLike {
@@ -109,7 +113,10 @@ export class GoogleProvider implements AiProvider {
           ...(request.seed === undefined ? {} : { seed: request.seed }),
         },
       });
-      const generation: GoogleGenerateContentResultLike = await model.generateContent(createGoogleConversationPrompt(request));
+      const generation: GoogleGenerateContentResultLike = await model.generateContent(
+        createGoogleConversationPrompt(request),
+        requestOptionsOf(request),
+      );
 
       const text: string = generation.response.text();
       const usage: AiUsage | undefined = usageFromGoogleResult(generation);

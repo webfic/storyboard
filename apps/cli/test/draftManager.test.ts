@@ -31,6 +31,7 @@ function createManager(generation: GenerateDraftResult, events: string[]): Draft
       usageMeter: new UsageMeter(),
       fileSystem: {} as never,
       configBridge: { getSeed: () => undefined },
+      beatLocator: {} as never,
     }),
   } as unknown as DraftManagerDependencies);
 }

@@ -46,6 +46,7 @@ export * from '#ai/ai/prompts/personaGeneration';
 export * from '#ai/ai/prompts/promptResource';
 export * from '#ai/ai/prompts/promptTuning';
 export * from '#ai/ai/prompts/sceneCoverage';
+export * from '#ai/ai/prompts/beatLocation';
 export * from '#ai/ai/prompts/sceneBeats';
 export * from '#ai/ai/prompts/sceneBeatActor';
 export * from '#ai/ai/prompts/sceneBeatArbiter';

@@ -51,6 +51,7 @@ import {
   emptyDraftBodyMessage,
   type GenerateDraftRequest,
   type GenerateDraftResult,
+  type BeatLocationSource,
 } from '#engine/application/drafts/draftGenerationContract';
 import {
   SceneGenerationInputsLoader,
@@ -248,7 +249,17 @@ export class GenerateDraftUseCase implements IUseCase<GenerateDraftRequest, Gene
       ...(pipelineResult.beatSegments === undefined
         ? {}
         : { beatSegments: pipelineResult.beatSegments }),
+      ...this.describeBeatsToLocate(inputs),
     };
+  }
+
+  private describeBeatsToLocate(inputs: SceneGenerationInputs): { beatsToLocate?: BeatLocationSource } {
+    const beats: readonly string[] = (inputs.context.scene.card?.beats ?? []).map(sceneBeatText);
+    const shouldLocate: boolean = this.host.configBridge.isBeatLocationEnabled() && beats.length > 0;
+
+    return shouldLocate
+      ? { beatsToLocate: { workspaceRoot: inputs.paths.workspaceRoot, sceneStem: inputs.scene.stem, beats } }
+      : {};
   }
 
   private logDialoguePolish(

@@ -77,6 +77,7 @@ import {
   UsageLedgerRecorder,
   UsageMeter,
   SceneRunReporter,
+  BeatLocator,
   WorkspaceCaches,
   WorkspaceCards,
   WorkspaceRunLocks,
@@ -344,7 +345,6 @@ function buildServices(
   });
   const usageLedger: UsageLedgerRecorder = new UsageLedgerRecorder({ caches });
   const usageMeter: UsageMeter = new UsageMeter();
-  const sceneRunReporter: SceneRunReporter = new SceneRunReporter({ usageMeter, fileSystem, configBridge });
   const usageSink: IUsageSink = usageMeter.wrap(
     recordUsageWithoutFailingPaidGeneration([usageLedger, dependencies.usageObserver], logger),
   );
@@ -375,6 +375,12 @@ function buildServices(
     usageSink,
     traceRecorder,
   };
+  const sceneRunReporter: SceneRunReporter = new SceneRunReporter({
+    usageMeter,
+    fileSystem,
+    configBridge,
+    beatLocator: new BeatLocator(ai, logger),
+  });
   const repositories: WorkspaceRepositories = buildWorkspaceRepositories(
     host,
     dependencies.fetch ?? globalThis.fetch,

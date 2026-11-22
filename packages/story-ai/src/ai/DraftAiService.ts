@@ -20,6 +20,7 @@ import { DraftRevisionPrompt, type DraftRevisionInput } from '#ai/ai/prompts/dra
 import { GrammarCheckPrompt } from '#ai/ai/prompts/grammarCheck';
 import { InlineCompletionPrompt } from '#ai/ai/prompts/inlineCompletion';
 import { SceneCoveragePrompt } from '#ai/ai/prompts/sceneCoverage';
+import { BeatLocationPrompt } from '#ai/ai/prompts/beatLocation';
 import { StoryStateUpdatePrompt, type StoryStateUpdateInput } from '#ai/ai/prompts/storyStateUpdate';
 import type { PromptArtifact, PromptConfig, PromptVariantId } from '#ai/ai/prompts/types';
 import type { AiGenerateResponse, AiTaskName } from '@storyboard/story-model';
@@ -28,6 +29,7 @@ import {
   coerceCritiqueIssues,
   type DraftCritiqueIssue,
   coerceSceneCoverage,
+  coerceBeatParagraphs,
   type SceneCoverageIssue,
   coerceStoryStateUpdate,
   type StoryStateUpdateItem,
@@ -124,6 +126,24 @@ export class DraftAiService {
     );
 
     return coerceSceneCoverage(response.text, beats.length);
+  }
+
+  public async locateBeatParagraphs(
+    beats: readonly string[],
+    numberedParagraphs: string,
+    paragraphCount: number,
+    options: GenerateTextOptions = {},
+  ): Promise<ReadonlyMap<number, number>> {
+    const variant: PromptVariantId = this.gateway.resolvePromptVariant('beatLocation', options);
+    const prompt: PromptArtifact = BeatLocationPrompt.build(beats, numberedParagraphs, variant);
+    const response: AiGenerateResponse = await this.generateWithDefaults(
+      'beatLocation',
+      prompt,
+      BeatLocationPrompt.config,
+      options,
+    );
+
+    return coerceBeatParagraphs(response.text, beats.length, paragraphCount);
   }
 
   public async updateStoryState(

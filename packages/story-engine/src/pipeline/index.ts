@@ -1,6 +1,7 @@
 export * from '#engine/pipeline/addressTerms';
 export * from '#engine/pipeline/beatActors';
 export * from '#engine/pipeline/beatRanges';
+export * from '#engine/pipeline/beatLocations';
 export * from '#engine/pipeline/catchphrases';
 export * from '#engine/pipeline/dialogueCorpus';
 export * from '#engine/pipeline/dialogueRewrites';

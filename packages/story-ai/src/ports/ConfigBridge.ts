@@ -424,6 +424,10 @@ export class ConfigBridge {
     return isSeedUnset ? undefined : seed;
   }
 
+  public isBeatLocationEnabled(): boolean {
+    return this.readBooleanSetting('generation.beats.locate');
+  }
+
   public getRequestTimeoutMs(): number {
     const millisecondsPerMinute: number = 60 * 1000;
     return this.readIntegerSetting('ai.request.timeoutMinutes') * millisecondsPerMinute;

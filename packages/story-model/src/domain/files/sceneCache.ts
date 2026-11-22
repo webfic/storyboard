@@ -99,6 +99,7 @@ interface SceneCacheProviders {
   chapterSummary?: AiProviderId;
   storyStateUpdate?: AiProviderId;
   sceneCoverage?: AiProviderId;
+  beatLocation?: AiProviderId;
   cardRecommendation?: AiProviderId;
   storyCompletion?: AiProviderId;
   storyCardBuild?: AiProviderId;

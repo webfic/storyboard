@@ -1029,12 +1029,31 @@ export function findRunAheadDialogue(
     (line) => !own.has(line),
   );
 
-  return [...new Set(later.filter((line) => expanded.includes(line)))];
+  const written: Set<string> = new Set(linesOf(expanded));
+
+  return [...new Set(later.filter((line) => written.has(line)))];
+}
+
+const dialogueOpeningQuotes: string = '“"';
+const dialogueClosingQuotes: string = '”"';
+
+function indexOfQuotedLine(text: string, line: string): number {
+  for (let index: number = text.indexOf(line); index >= 0; index = text.indexOf(line, index + 1)) {
+    const opening: string = text.slice(0, index).trimEnd().at(-1) ?? '';
+    const closing: string = text.slice(index + line.length).trimStart().at(0) ?? '';
+    const isWholeQuotedLine: boolean =
+      dialogueOpeningQuotes.includes(opening) && dialogueClosingQuotes.includes(closing);
+    if (isWholeQuotedLine) {
+      return index;
+    }
+  }
+
+  return -1;
 }
 
 export function trimRunAheadDialogue(expanded: string, lines: readonly string[]): string {
   const first: number = Math.min(
-    ...lines.map((line) => expanded.indexOf(line)).filter((index) => index >= 0),
+    ...lines.map((line) => indexOfQuotedLine(expanded, line)).filter((index) => index >= 0),
   );
   if (!Number.isFinite(first)) {
     return expanded;

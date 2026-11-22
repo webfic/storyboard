@@ -14,6 +14,10 @@ after the first public release.
 
 - **`draft generate --json` can give each beat its range in the draft (`generation.beats.locate`).** When on, one more call per scene reads the saved draft (after the revise loop when it follows) for the paragraph where each beat starts, and `data.beatLocations` holds, per beat, `beat`, `isLocated` and, when found, the range in the body (`start` inclusive, `end` exclusive, from that paragraph to the one before the next beat starts). A beat the answer left out, or one whose order against the others cannot be settled, is not guessed but left `isLocated: false`. It works for a scene without places and times too, a warning whose beats are all located gets their range (`start`, `end`), and `--all --json` gives the same field per scene. The draft does not change, and the setting is off by default. (#226)
 
+### Fixed
+
+- **A section's own dialogue is no longer cut as «dialogue run ahead from the next section».** The expansion check counted a line of a later section's skeleton as run ahead whenever its text appeared anywhere in the expansion, and cut from that paragraph to the end. A short catchphrase line of a later section that sat inside a longer line of this section therefore cut several of the section's own beats, and nothing wrote them again. A line now counts only when a whole quoted line is the same, and the cut starts where that line is quoted. (#239)
+
 ## [0.17.1] - 2026-11-22
 
 ### Fixed

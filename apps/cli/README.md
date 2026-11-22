@@ -365,7 +365,10 @@ the run's model calls by stage and task (calls, tokens, and the cost when every 
 `data.seedHonoured` says whether every call went to a provider that takes a seed. For a scene
 whose breaks are planned from its beats' places and times, `data.beatRanges` gives each scene
 segment's beats and its `start`/`end` in the finished draft body; it is left out when the draft's
-breaks no longer match the plan. `--verbose` also logs each pipeline stage as it runs, which
+breaks no longer match the plan. `draft generate --all --json` carries the same fields per scene in
+`data.scenes[]` (`stem`, `ok`, `cached`, `usage`, `warnings`, and `message` for a failed scene,
+`traceRunId`, `seedHonoured`, `beatRanges` when known) and the calls of the whole batch in
+`data.usage`. `--verbose` also logs each pipeline stage as it runs, which
 is how you tell a 20-minute scene apart from a hung one.
 
 `--workspace <path>` picks the workspace (default: the current directory). `--json` puts a single

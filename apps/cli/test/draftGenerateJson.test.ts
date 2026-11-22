@@ -166,3 +166,58 @@ describe('draft generate --json', () => {
     expect(again.traceRunId).toBeUndefined();
   });
 });
+
+interface BatchSceneData extends Omit<GeneratedSceneData, 'draft'> {
+  readonly stem: string;
+  readonly ok: boolean;
+}
+
+interface BatchData {
+  readonly generated: number;
+  readonly usage: readonly StageUsageRow[];
+  readonly scenes: readonly BatchSceneData[];
+}
+
+async function generateAllScenes(...extraArgs: string[]): Promise<BatchData> {
+  const result = await new CommandDispatcher(deps()).dispatch([
+    'draft',
+    'generate',
+    '--all',
+    '--no-revise',
+    '--json',
+    ...extraArgs,
+  ]);
+  expect(result.exitCode).toBe(0);
+  return (JSON.parse(result.stdout) as { data: BatchData }).data;
+}
+
+describe('draft generate --all --json', () => {
+  it('reports each scene with the fields of a one-scene run and the calls of the whole batch', async () => {
+    const params: string = join(workspace, 'point.json');
+    writeFileSync(params, JSON.stringify({ 'trace.enabled': true }));
+
+    const batch: BatchData = await generateAllScenes('--params', params);
+    const [scene] = batch.scenes;
+
+    expect(batch.generated).toBe(1);
+    expect(batch.scenes).toHaveLength(1);
+    expect(scene).toMatchObject({ stem: '001-opening', ok: true, cached: false });
+    expect(scene?.usage).toContainEqual(
+      expect.objectContaining({ stage: 'expandSection', task: 'sceneSectionExpansion' }),
+    );
+    expect(scene?.traceRunId).toBeDefined();
+    expect(Array.isArray(scene?.warnings)).toBe(true);
+    expect(batch.usage).toEqual(scene?.usage);
+  });
+
+  it('lists a scene whose input did not change as cached with no calls', async () => {
+    await generateAllScenes();
+
+    const again: BatchData = await generateAllScenes();
+
+    expect(again.scenes).toEqual([
+      expect.objectContaining({ stem: '001-opening', ok: true, cached: true, usage: [] }),
+    ]);
+    expect(again.usage).toEqual([]);
+  });
+});

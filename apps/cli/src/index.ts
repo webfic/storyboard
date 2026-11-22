@@ -149,7 +149,17 @@ void main(process.argv.slice(2))
       process.stdout.write(`${JSON.stringify({ ok: false, message, data: null })}\n`);
     } else {
       process.stderr.write(`[error] ${message}\n`);
+      writeCauseWhenVerbose(error);
     }
 
     process.exitCode = 1;
   });
+
+function writeCauseWhenVerbose(error: unknown): void {
+  const isVerbose: boolean = process.argv.includes('--verbose');
+  const cause: unknown = error instanceof Error ? error.cause : undefined;
+
+  if (isVerbose && cause !== undefined) {
+    process.stderr.write(`${extractErrorMessage(cause)}\n`);
+  }
+}

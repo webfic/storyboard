@@ -7,10 +7,9 @@ import {
   formatNumberedSceneStem,
   sceneFileNamePattern,
   serializeSceneCard,
-  parseJsonObject,
 } from '@storyboard/story-model';
 import type { StoryFeatureSource, StoryFileSnapshot } from '#engine/application/story/storyFeatureSource';
-import { StoryFeatureSourceError } from '#engine/application/story/storyFeatureSource';
+import { parseStoryResponse, StoryFeatureSourceError } from '#engine/application/story/storyFeatureSource';
 import type { StoryboardAiService } from '@storyboard/story-ai';
 
 const MAX_COMPLETE_SCENES: number = 20;
@@ -127,7 +126,7 @@ export class CompleteStoryScenesUseCase implements IUseCase<CompleteStoryScenesR
         ],
         {},
       );
-    return completionResponseSchema.parse(parseJsonObject(response.text));
+    return parseStoryResponse(completionResponseSchema, response.text, '씬 완성');
   }
 
   private async buildSceneContext(

@@ -47,6 +47,7 @@ statements, and `draft/NNN-slug.md`. Bundles change through verbs, not by hand. 
 generated (usage, runs, the run lock, chapter summaries, studio sessions, draft revisions) lives in
 one git-ignored database, `.storyboard/cache/storyboard.db`. 0.16 does not open a 0.15 work: it
 reports «0.15 형식» and refuses, and there is no conversion — keep using 0.15.x for that work.
+Do not open a 0.16 work with 0.15.x: its lists look empty and `status` prints a schema error.
 
 `doctor` looks at the workspace for what an older Storyboard left behind: missing `draft/`/`scene/`, a stale `.gitignore` block, bundles it cannot parse or that share a uuid. It also checks the story-state
 ledger (the scene bundles' `state.yaml`) against the current cards and scenes: entries whose

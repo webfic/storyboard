@@ -280,6 +280,7 @@ const mockResponseBuilders: Readonly<Partial<Record<AiTaskName, MockResponseBuil
   grammarCheck: createMockGrammarIssues,
   sceneProofread: (): string => '[]',
   continuityCheck: (): string => '[]',
+  beatLocation: (promptSummary: string): string => mockBeatParagraphs(promptSummary),
   cardFactExtraction: (): string =>
     JSON.stringify({ attributes: [], relations: [], arc: { summary: '' } }),
   backgroundFactConflicts: (): string => JSON.stringify({ conflicts: [] }),
@@ -447,3 +448,15 @@ function extractLastContentLine(prompt: string, fallback: string): string {
 }
 
 registerProviderFactory('mock', () => new MockAiProvider());
+
+function mockBeatParagraphs(prompt: string): string {
+  const beatCount: number = (prompt.match(/^\d+\. /gm) ?? []).length;
+  const paragraphCount: number = (prompt.match(/^\[\d+\] /gm) ?? []).length;
+
+  return JSON.stringify(
+    Array.from({ length: beatCount }, (_, index) => ({
+      index: index + 1,
+      paragraph: Math.min(index + 1, paragraphCount),
+    })),
+  );
+}

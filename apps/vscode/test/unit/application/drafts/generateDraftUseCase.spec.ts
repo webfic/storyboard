@@ -156,6 +156,7 @@ interface ConfigBridgeStub {
   readonly isAiContextCondenseEnabled: () => boolean
   readonly getSectionOutputLimit: () => number
   readonly getSceneGenerationTuning: () => Record<string, number>
+  readonly isBeatLocationEnabled: () => boolean
 }
 
 function createConfigBridge(overrides: Partial<ConfigBridgeStub> = {}): ConfigBridgeStub {
@@ -167,6 +168,7 @@ function createConfigBridge(overrides: Partial<ConfigBridgeStub> = {}): ConfigBr
     isAiContextCondenseEnabled: () => false,
     getSectionOutputLimit: () => 7000,
     getSceneGenerationTuning: () => ({}),
+    isBeatLocationEnabled: () => false,
     ...overrides
   }
 }

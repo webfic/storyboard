@@ -341,6 +341,15 @@ export class StoryboardAiService {
     return this.draftAiService.checkSceneCoverage(beats, draft, options);
   }
 
+  public async locateBeatParagraphs(
+    beats: readonly string[],
+    numberedParagraphs: string,
+    paragraphCount: number,
+    options: GenerateTextOptions = {},
+  ): Promise<ReadonlyMap<number, number>> {
+    return this.draftAiService.locateBeatParagraphs(beats, numberedParagraphs, paragraphCount, options);
+  }
+
   public async updateStoryState(
     input: StoryStateUpdateInput,
     options: GenerateTextOptions = {},

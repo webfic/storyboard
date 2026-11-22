@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -34,6 +34,12 @@ interface GeneratedSceneData {
   readonly traceRunId?: string;
   readonly seedHonoured?: boolean;
   readonly beatRanges?: readonly { readonly beats: readonly number[]; readonly start: number; readonly end: number }[];
+  readonly beatLocations?: readonly {
+    readonly beat: number;
+    readonly isLocated: boolean;
+    readonly start?: number;
+    readonly end?: number;
+  }[];
 }
 
 let home: string;
@@ -219,5 +225,75 @@ describe('draft generate --all --json', () => {
       expect.objectContaining({ stem: '001-opening', ok: true, cached: true, usage: [] }),
     ]);
     expect(again.usage).toEqual([]);
+  });
+});
+
+describe('draft generate --json with beat location on', () => {
+  async function writeTwoBeatScene(): Promise<void> {
+    await writeSceneBundleFromYaml(
+      workspace,
+      [
+        'type: scene',
+        'id: 001-opening',
+        'characters:',
+        '  - hana',
+        'beats:',
+        '  - 하나가 항구에 선다',
+        '  - 하나가 등대에 오른다',
+        '',
+      ].join('\n'),
+    );
+  }
+
+  it('gives each beat a range in the saved draft body through one more call', async () => {
+    await writeTwoBeatScene();
+    const params: string = join(workspace, 'locate.json');
+    writeFileSync(params, JSON.stringify({ 'generation.beats.locate': true }));
+
+    const generated: GeneratedSceneData = await generateScene('--force', '--params', params);
+    const body: string = parseDraft(readFileSync(generated.draft, 'utf8')).body;
+
+    expect(generated.beatLocations?.map((location) => [location.beat, location.isLocated])).toEqual([
+      [1, true],
+      [2, true],
+    ]);
+    for (const location of generated.beatLocations ?? []) {
+      expect(location.start).toBeLessThan(location.end ?? 0);
+      expect(location.end).toBeLessThanOrEqual(body.length);
+    }
+    expect(generated.usage).toContainEqual(expect.objectContaining({ stage: 'locateBeats', task: 'beatLocation', calls: 1 }));
+  });
+
+  it('records the call in the trace run of the scene, leaving no other run behind', async () => {
+    await writeTwoBeatScene();
+    const params: string = join(workspace, 'locate.json');
+    writeFileSync(params, JSON.stringify({ 'generation.beats.locate': true, 'trace.enabled': true }));
+
+    const generated: GeneratedSceneData = await generateScene('--force', '--params', params);
+    const traceRoot: string = join(workspace, ...STORYBOARD_RELATIVE_PATHS.traceDirectory.split('/'));
+    const callsDirectory: string = join(traceRoot, generated.traceRunId ?? '', 'calls');
+    const readTaskNames = (): readonly string[] =>
+      readdirSync(callsDirectory).map(
+        (file) => (JSON.parse(readFileSync(join(callsDirectory, file), 'utf8')) as { taskName: string }).taskName,
+      );
+
+    await vi.waitFor(() => expect(readTaskNames()).toContain('beatLocation'));
+    expect(readdirSync(traceRoot)).toEqual([generated.traceRunId]);
+  });
+
+  it('leaves the field out and makes no call when the setting is off', async () => {
+    const generated: GeneratedSceneData = await generateScene();
+
+    expect(generated.beatLocations).toBeUndefined();
+    expect(generated.usage.some((row) => row.task === 'beatLocation')).toBe(false);
+  });
+
+  it('carries the locations per scene in a batch', async () => {
+    const params: string = join(workspace, 'locate.json');
+    writeFileSync(params, JSON.stringify({ 'generation.beats.locate': true }));
+
+    const batch: BatchData = await generateAllScenes('--params', params);
+
+    expect(batch.scenes[0]?.beatLocations).toEqual([expect.objectContaining({ beat: 1, isLocated: true })]);
   });
 });

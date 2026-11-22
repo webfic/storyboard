@@ -26,7 +26,8 @@ function collaborators(
   const sceneRunReporter: SceneRunReporter = new SceneRunReporter({
     usageMeter,
     fileSystem: {} as never,
-    configBridge: { getSeed: () => undefined }
+    configBridge: { getSeed: () => undefined },
+    beatLocator: {} as never
   })
   return {
     generateDraftUseCase: generateDraftUseCase as never,

@@ -5,7 +5,12 @@ import type { ReviseAfterGenerateGate } from '#engine/application/drafts/reviseA
 import { describeReviseOutcome, type ReviseDraftWorkflowResult } from '#engine/application/drafts/reviseDraftUseCase';
 import type { IUseCase } from '#engine/application/useCase';
 import type { BatchSceneList } from '#engine/application/drafts/draftRepositories';
-import { STORYBOARD_FILE_EXTENSIONS, type DraftGenerationStepId, type StoryUri } from '@storyboard/story-model';
+import {
+  STORYBOARD_FILE_EXTENSIONS,
+  type BeatLocation,
+  type DraftGenerationStepId,
+  type StoryUri,
+} from '@storyboard/story-model';
 import {
   draftWarningMessages,
   type DraftWarning,
@@ -14,6 +19,7 @@ import type { SceneRunReport, SceneRunReporter } from '#engine/application/draft
 import { summarizeUsageByStage, type StageUsage } from '#engine/application/ai/stageUsage';
 import type { UsageMeter, UsageMeterSession } from '#engine/application/ai/usageMeter';
 import type { BeatRange } from '#engine/pipeline/beatRanges';
+import { addBeatSpansToWarnings } from '#engine/pipeline/beatLocations';
 
 export type GenerateAllDraftsProgress = {
   readonly current: number;
@@ -34,6 +40,7 @@ export interface DraftBatchSceneResult {
   readonly message?: string;
   readonly seedHonoured?: boolean;
   readonly beatRanges?: readonly BeatRange[];
+  readonly beatLocations?: readonly BeatLocation[];
   readonly traceRunId?: string;
 }
 
@@ -95,7 +102,10 @@ function describeSceneResult(
   report: SceneRunReport,
 ): DraftBatchSceneResult {
   const { draft, reviseWarning } = run;
-  const draftWarnings: readonly DraftWarning[] = draft.ok && draft.kind === 'generated' ? draft.warnings : [];
+  const draftWarnings: readonly DraftWarning[] = addBeatSpansToWarnings(
+    draft.ok && draft.kind === 'generated' ? draft.warnings : [],
+    report.beatLocations,
+  );
   const traceRunId: string | undefined =
     draft.ok && draft.kind === 'generated' ? draft.traceRunId : undefined;
 
@@ -111,6 +121,7 @@ function describeSceneResult(
     ...(draft.ok ? {} : { message: draft.kind === 'failed' ? draft.message : '취소했습니다.' }),
     ...(report.seedHonoured === undefined ? {} : { seedHonoured: report.seedHonoured }),
     ...(report.beatRanges === undefined ? {} : { beatRanges: report.beatRanges }),
+    ...(report.beatLocations === undefined ? {} : { beatLocations: report.beatLocations }),
     ...(traceRunId === undefined ? {} : { traceRunId }),
   };
 }

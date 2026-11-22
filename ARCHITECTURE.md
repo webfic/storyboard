@@ -712,6 +712,7 @@ Storyboard 워크스페이스는 git 저장소 그 자체이며, 교환용 아�
 기본값이 아닌 `temperature` 를 거부하므로(2026-11-22 실측: GPT-5.1·5.2·5.4·5.4-mini·5.4-nano 는 온도만이면 받고 노력과 함께면 400),
 OpenAI 프로바이더는 노력을 보내는 호출에는 온도를 싣지 않는다.
 - `tasks.<taskName>.provider`·`tasks.<taskName>.model`: 작업별 provider·모델 오버라이드. 모델만 있고 provider가 없는 항목은 무시된다. CLI는 `config set|unset`으로 다룬다.
+- `generation.beats.locate`: 생성(과 이어지는 검수)이 끝나 저장한 원고의 문단에 번호를 붙여 비트 목록과 함께 보내고(`beatLocation` 작업, 단계 `locateBeats`), 비트마다 시작 문단을 받아 `draft generate --json` 의 `beatLocations` 에 글자 범위로 낸다. 범위는 그 문단부터 다음 비트가 시작하는 문단 앞까지이고, 답이 없거나 어떤 가장 긴 순서에도 빠지지 않고 들지 못하는 비트는 `isLocated: false` 로 둔다(어림하지 않는다). 원고·프롬프트는 바뀌지 않고 호출이 씬마다 하나 는다. 기본 `false`.
 - `ai.request.timeoutMinutes`: API 프로바이더(`transport: 'http'`·`'oauth'`)의 모델 호출 하나가 SDK 재시도를 포함해 이 시간 안에 끝나지 않으면 `AbortSignal` 로 끊고 `AiProviderError('request-timeout')` 로 실패한다(`AiProviderRegistry` 가 기한을 걸고 프로바이더는 그 신호를 SDK 요청에 넘긴다). 시간 초과는 프로그램 실행 경로의 `cli-timeout` 과 같이 한 번 다시 부른다. 기본 `10`, 1~120. 프로그램 실행 경로는 자기 `providers.<id>.timeoutMs` 를 쓴다.
 - `trace.enabled`: 모델 호출마다 프롬프트·응답을 `.storyboard/cache/traces/` 에 남긴다(§4.12). 기본 `false`.
 - `trace.keepRuns`: 같은 종류·같은 씬의 추적을 최근 몇 회 남길지. 기본 `3`, 1~50.

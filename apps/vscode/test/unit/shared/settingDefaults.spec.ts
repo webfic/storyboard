@@ -23,7 +23,8 @@ const readers: Readonly<Record<string, (bridge: ConfigBridge) => boolean | numbe
   "trace.checkFinalBeats": (bridge) => bridge.isTraceFinalBeatCheckEnabled(),
   "trace.keepRuns": (bridge) => bridge.getTraceKeepRuns(),
   "ai.seed": (bridge) => bridge.getSeed() ?? 0,
-  "ai.request.timeoutMinutes": (bridge) => bridge.getRequestTimeoutMs() / (60 * 1000)
+  "ai.request.timeoutMinutes": (bridge) => bridge.getRequestTimeoutMs() / (60 * 1000),
+  "generation.beats.locate": (bridge) => bridge.isBeatLocationEnabled()
 }
 
 function bridgeReading(values: Readonly<Record<string, unknown>>): ConfigBridge {

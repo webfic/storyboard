@@ -88,7 +88,8 @@ export type DraftGenerationStepId =
   | 'refreshChapterSummaries'
   | 'updateStoryState'
   | 'reviseLoop'
-  | 'checkFinalBeats';
+  | 'checkFinalBeats'
+  | 'locateBeats';
 
 export interface DraftGenerationStepDefinition {
   readonly id: DraftGenerationStepId;
@@ -102,6 +103,7 @@ export const draftGenerationStepCatalog: readonly DraftGenerationStepDefinition[
   { id: 'updateStoryState', label: '이야기 상태 갱신', runsAfterPipeline: true },
   { id: 'reviseLoop', label: '검수·재작성 루프', runsAfterPipeline: true },
   { id: 'checkFinalBeats', label: '최종 원고 비트 확인', runsAfterPipeline: true },
+  { id: 'locateBeats', label: '비트 위치 찾기', runsAfterPipeline: true },
 ];
 
 export const draftGenerationTraceKind: string = 'draft-generate';

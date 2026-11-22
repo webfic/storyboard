@@ -61,6 +61,7 @@ export type AiTaskName =
   | 'chapterSummary'
   | 'storyStateUpdate'
   | 'sceneCoverage'
+  | 'beatLocation'
   | 'cardRecommendation'
   | 'storyCompletion'
   | 'storyCardBuild'
@@ -113,6 +114,7 @@ export const aiTaskCatalog: readonly AiTaskCatalogEntry[] = [
   { name: 'chapterSummary', label: '장 요약' },
   { name: 'storyStateUpdate', label: '이야기 상태 갱신' },
   { name: 'sceneCoverage', label: '장면 커버리지 검사' },
+  { name: 'beatLocation', label: '비트 위치 찾기' },
   { name: 'cardRecommendation', label: '카드 추천' },
   { name: 'storyCompletion', label: '이야기 완결' },
   { name: 'storyCardBuild', label: '씬 기반 카드 구성' },

@@ -84,6 +84,7 @@ import {
   type SceneListItem,
   type SceneTargetLength,
   type StoryUri,
+  type BeatLocation,
 } from '@storyboard/story-model';
 
 export interface DraftReading {
@@ -105,6 +106,7 @@ export interface GenerateAndReviseDraftResult {
   readonly usage: readonly StageUsage[];
   readonly seedHonoured?: boolean;
   readonly beatRanges?: readonly BeatRange[];
+  readonly beatLocations?: readonly BeatLocation[];
 }
 
 type GeneratedThenRevisedDraft = Pick<GenerateAndReviseDraftResult, 'generation' | 'revision'>;

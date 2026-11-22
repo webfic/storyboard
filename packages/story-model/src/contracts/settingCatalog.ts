@@ -179,6 +179,15 @@ export const storyboardSettingCatalog: readonly StoryboardSettingDefinition[] = 
     group: '진단',
   },
   {
+    key: 'generation.beats.locate',
+    label: '비트 위치 찾기',
+    description:
+      '생성(과 이어지는 검수)이 끝난 원고에서 비트마다 시작 문단을 찾아 draft generate --json 의 beatLocations 에 글자 범위로 냅니다. 씬마다 모델 호출이 하나 늘고, 원고는 바뀌지 않습니다.',
+    kind: 'boolean',
+    defaultValue: false,
+    group: '생성',
+  },
+  {
     key: 'ai.request.timeoutMinutes',
     label: '모델 호출 시간 제한 (분)',
     description:

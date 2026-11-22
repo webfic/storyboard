@@ -27,6 +27,14 @@ export type ReviseFollowing = 'always' | 'when-enabled';
 
 export interface DraftWarning extends SceneWarning {
   readonly stage?: string;
+  readonly start?: number;
+  readonly end?: number;
+}
+
+export interface BeatLocationSource {
+  readonly workspaceRoot: StoryUri;
+  readonly sceneStem: string;
+  readonly beats: readonly string[];
 }
 
 export function draftWarningMessages(warnings: readonly DraftWarning[]): readonly string[] {
@@ -41,6 +49,7 @@ export type GenerateDraftResult =
       readonly warnings: readonly DraftWarning[];
       readonly traceRunId?: string;
       readonly beatSegments?: readonly (readonly number[])[];
+      readonly beatsToLocate?: BeatLocationSource;
     }
   | { readonly ok: true; readonly kind: 'cache_hit'; readonly draftUri: StoryUri }
   | {

@@ -9,6 +9,10 @@ Storyboard의 주요 변경 사항을 한국어로 기록합니다.
 
 ## [Unreleased]
 
+### 추가
+
+- **`params show` 가 모든 호출을 묶는 프롬프트 변형과 리소스 파일의 출처를 냅니다.** 변형은 호출마다 규칙(`promptVariants.params.json`)으로 고르지만 `ai.prompt.variant` 가 있으면 모든 호출이 그 값을 씁니다. 그 값이 어디서 왔는지 밖에서 알 수 없어, 같은 엔진으로 잰 두 기계의 결과가 다른 프롬프트로 나와도 구분할 수 없었습니다. 이제 `--json` 의 `data.promptVariant` 에 `value`(정하지 않았으면 없음)와 `origin`(`run`·`workspace`·`user`·`default`)이 실리고, 글 출력에는 «[프롬프트 변형]» 줄이 붙습니다. 적용된 리소스 파일(`data.resources.applied[]`)에는 홈(`user`)의 것인지 작품(`workspace`)의 것인지가 `origin` 으로 붙습니다.
+
 ## [0.17.2] - 2026-11-23
 
 ### 추가

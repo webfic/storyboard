@@ -12,6 +12,7 @@ import {
   promptTuning,
   type ConfigBridge,
   type PromptConfig,
+  type PromptVariantId,
   type TaskAiConfigResolved,
 } from '@storyboard/story-ai';
 import { generationParameterDefault } from '@storyboard/story-engine';
@@ -24,7 +25,11 @@ import type {
   StoryUri,
 } from '@storyboard/story-model';
 
-import type { ResourceOverrideApplied, ResourceOverrideReport } from '#app/resourceOverrides';
+import type {
+  ResourceOverrideApplied,
+  ResourceOverrideProblem,
+  ResourceOverrideReport,
+} from '#app/resourceOverrides';
 import { emptyRunParameters, listRunParameterKeys, type RunParameters } from '#app/runParameters';
 
 export type ParameterKind = 'setting' | 'generation' | 'prompt';
@@ -69,10 +74,27 @@ export interface TaskModelEntry {
   readonly price?: ModelPricePerMillion;
 }
 
+export interface PromptVariantEntry {
+  readonly value?: PromptVariantId;
+  readonly origin: ParameterOrigin;
+}
+
+export type ResourceOrigin = 'user' | 'workspace';
+
+export interface ParameterResourceApplied extends ResourceOverrideApplied {
+  readonly origin: ResourceOrigin;
+}
+
+export interface ParameterResourceReport {
+  readonly applied: readonly ParameterResourceApplied[];
+  readonly problems: readonly ResourceOverrideProblem[];
+}
+
 export interface ParameterReport {
   readonly parameters: readonly ParameterEntry[];
   readonly tasks: readonly TaskModelEntry[];
-  readonly resources: ResourceOverrideReport;
+  readonly promptVariant: PromptVariantEntry;
+  readonly resources: ParameterResourceReport;
 }
 
 export interface DescribeParametersInput {
@@ -82,6 +104,7 @@ export interface DescribeParametersInput {
   readonly runParameters?: RunParameters;
 }
 
+const promptVariantSettingKey: string = 'ai.prompt.variant';
 const temperatureMinimum: number = 0;
 const temperatureMaximum: number = 2;
 const maxTokensMinimum: number = 1;
@@ -101,8 +124,32 @@ export function describeParameters(input: DescribeParametersInput): ParameterRep
       runParameterKeys.has(entry.id) ? { ...entry, origin: 'run' } : entry,
     ),
     tasks: taskModelEntries(input.configBridge),
-    resources: input.resources,
+    promptVariant: promptVariantEntry(input.configBridge, runParameterKeys),
+    resources: {
+      applied: input.resources.applied.map((entry) => ({
+        ...entry,
+        origin: resourceOrigin(entry, input.roots),
+      })),
+      problems: input.resources.problems,
+    },
   };
+}
+
+function promptVariantEntry(
+  configBridge: ConfigBridge,
+  runParameterKeys: ReadonlySet<string>,
+): PromptVariantEntry {
+  const value: PromptVariantId | undefined = configBridge.getPromptVariantOverride();
+
+  if (value === undefined) {
+    return { origin: 'default' };
+  }
+
+  const origin: ParameterOrigin = runParameterKeys.has(promptVariantSettingKey)
+    ? 'run'
+    : configBridge.getValueOrigin(promptVariantSettingKey);
+
+  return { value, origin };
 }
 
 function taskModelEntries(configBridge: ConfigBridge): TaskModelEntry[] {
@@ -237,10 +284,10 @@ function promptOrigin(
     .reverse()
     .find((entry) => entry.kind === 'prompt' && entry.key === key);
 
-  if (applied === undefined) {
-    return 'default';
-  }
+  return applied === undefined ? 'default' : resourceOrigin(applied, roots);
+}
 
+function resourceOrigin(applied: ResourceOverrideApplied, roots: readonly StoryUri[]): ResourceOrigin {
   const index: number = roots.findIndex((root) => root.fsPath === applied.root.fsPath);
 
   return index <= 0 ? 'user' : 'workspace';

@@ -404,7 +404,10 @@ other source. `draft generate`, `draft revise`, `state generate` and `params sho
 file with an unknown key or a value out of range is refused before anything runs. `params show
 --json` lists each parameter's `valueKind` and its `minimum`/`maximum`, which are the bounds the
 file is checked against, and under `tasks` the provider and model each task would run with and that
-model's price per million tokens when the catalog knows it.
+model's price per million tokens when the catalog knows it. `promptVariant` names the prompt variant
+every call is held to (`value`, absent when the rules pick one per call) and its `origin`, and each
+entry of `resources.applied` says whether the file comes from the home (`origin: "user"`) or the
+workspace (`"workspace"`).
 
 Writes follow git's rule: run inside a workspace and the value lands in that workspace's
 `.storyboard/config.json`; add `--global` to write `~/.storyboard/config.json` instead. Outside a

@@ -51,7 +51,7 @@ interface ParameterRow {
 
 async function parameters(): Promise<{
   readonly parameters: ParameterRow[];
-  readonly resources: { applied: { kind: string; file: string }[] };
+  readonly resources: { applied: { kind: string; file: string; origin: string }[] };
 }> {
   const result = await new CommandDispatcher(deps()).dispatch(['params', 'show', '--json']);
 
@@ -178,6 +178,47 @@ describe('params show', () => {
 
     const text = await new CommandDispatcher(deps()).dispatch(['params', 'show']);
     expect(text.stdout).toMatch(/prompt\.grammarCheck\.maxTokens +2500 +프로바이더 미지원\n/);
+  });
+
+  it('names the prompt variant every call is held to and where it comes from', async () => {
+    const unset = await new CommandDispatcher(deps()).dispatch(['params', 'show', '--json']);
+    expect(JSON.parse(unset.stdout).data.promptVariant).toEqual({ origin: 'default' });
+
+    writeFile(home, 'config.json', '{ "ai": { "prompt": { "variant": "rich" } } }');
+    const fromHome = await new CommandDispatcher(deps()).dispatch(['params', 'show', '--json']);
+    expect(JSON.parse(fromHome.stdout).data.promptVariant).toEqual({ value: 'rich', origin: 'user' });
+
+    writeFile(cwd, 'point.json', '{ "ai.prompt.variant": "xs" }');
+    const forRun = await new CommandDispatcher(deps()).dispatch([
+      'params',
+      'show',
+      '--params',
+      join(cwd, 'point.json'),
+      '--json',
+    ]);
+    expect(JSON.parse(forRun.stdout).data.promptVariant).toEqual({ value: 'xs', origin: 'run' });
+
+    const text = await new CommandDispatcher(deps()).dispatch(['params', 'show']);
+    expect(text.stdout).toContain('[프롬프트 변형]');
+    expect(text.stdout).toMatch(/ai\.prompt\.variant +rich +공통\n/);
+  });
+
+  it('says whether each resource file comes from the home or the workspace', async () => {
+    writeFile(home, 'craftContract.json', '{ "motifRepeatLimit": 5 }');
+    writeFile(
+      join(cwd, '.storyboard', 'prompts'),
+      'grammarCheck.md',
+      '---\ntemperature: 0.7\nmaxTokens: 2000\n---\n## system\nx\n\n## user\n{{body}}\n',
+    );
+
+    const report = await parameters();
+
+    expect(
+      report.resources.applied.map((entry) => ({ kind: entry.kind, origin: entry.origin })),
+    ).toEqual([
+      { kind: 'craftContract', origin: 'user' },
+      { kind: 'prompt', origin: 'workspace' },
+    ]);
   });
 
   it('prints the sections and the resource files as text', async () => {

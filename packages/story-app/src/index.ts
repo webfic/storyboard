@@ -47,7 +47,11 @@ export {
   type ParameterKind,
   type ParameterOrigin,
   type ParameterReport,
+  type ParameterResourceApplied,
+  type ParameterResourceReport,
   type ParameterValueKind,
+  type PromptVariantEntry,
+  type ResourceOrigin,
   type TaskModelEntry,
 } from '#app/parameterRegistry';
 export {

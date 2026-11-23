@@ -6,8 +6,15 @@ import {
   parameterKindLabels,
   parameterOriginLabels,
 } from '@/commands/params/parameterLabels';
-import type { ParameterEntry, ParameterReport, TaskModelEntry } from '@storyboard/story-app';
+import type {
+  ParameterEntry,
+  ParameterReport,
+  PromptVariantEntry,
+  TaskModelEntry,
+} from '@storyboard/story-app';
 import { success } from '@/commands/outcomes';
+
+const promptVariantSettingKey: string = 'ai.prompt.variant';
 
 export class ParamsShowCommand implements ICommandHandler {
   public readonly spec: CommandSpec = {
@@ -47,12 +54,15 @@ export class ParamsShowCommand implements ICommandHandler {
     }
 
     lines.push(...describeTaskModels(report.tasks), '');
+    lines.push(...describePromptVariant(report.promptVariant, width), '');
     lines.push('[적용된 리소스 파일]');
     if (report.resources.applied.length === 0) {
       lines.push('(없음)');
     }
     for (const applied of report.resources.applied) {
-      lines.push(`${applied.kind.padEnd(18)}  ${applied.file.fsPath}`);
+      lines.push(
+        `${applied.kind.padEnd(18)}  ${applied.file.fsPath}  ${parameterOriginLabels[applied.origin]}`,
+      );
     }
     for (const problem of report.resources.problems) {
       lines.push(`! ${problem.message}`);
@@ -79,5 +89,14 @@ function describeTaskModels(tasks: readonly TaskModelEntry[]): string[] {
       (entry) =>
         `${entry.task.padEnd(width)}  ${entry.providerId}/${entry.model}  ${describeTaskPrice(entry)}`,
     ),
+  ];
+}
+
+function describePromptVariant(entry: PromptVariantEntry, width: number): string[] {
+  const shown: string = entry.value ?? '(작업마다 규칙으로 고름)';
+
+  return [
+    '[프롬프트 변형]',
+    `${promptVariantSettingKey.padEnd(width)}  ${shown.padEnd(12)}  ${parameterOriginLabels[entry.origin]}`,
   ];
 }

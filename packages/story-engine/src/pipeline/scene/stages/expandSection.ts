@@ -173,13 +173,26 @@ interface RejectedSectionAttempt {
   readonly text: string;
   readonly violations: readonly SectionViolation[];
   readonly weight: number;
+  readonly hasSevereViolation: boolean;
   readonly isUnderLength: boolean;
   readonly thinSpots: string | undefined;
 }
 
 interface RankedSectionText extends CheckedSectionText {
-  readonly weight: number;
+  readonly hasSevereViolation: boolean;
+  readonly score: number;
   readonly distance: number;
+}
+
+function isRankedBefore(candidate: RankedSectionText, best: RankedSectionText): boolean {
+  if (candidate.hasSevereViolation !== best.hasSevereViolation) {
+    return !candidate.hasSevereViolation;
+  }
+  if (candidate.score !== best.score) {
+    return candidate.score < best.score;
+  }
+
+  return candidate.distance < best.distance;
 }
 
 class SectionExpansionAttempts {
@@ -190,11 +203,13 @@ class SectionExpansionAttempts {
   public constructor(
     section: string,
     private readonly targetLength: number,
+    private readonly lengthDistanceWeight: number,
   ) {
     this.best = {
       text: section,
       violations: [],
-      weight: Number.POSITIVE_INFINITY,
+      hasSevereViolation: true,
+      score: Number.POSITIVE_INFINITY,
       distance: Number.POSITIVE_INFINITY,
     };
   }
@@ -204,13 +219,20 @@ class SectionExpansionAttempts {
   }
 
   public recordRejected(attempt: RejectedSectionAttempt): void {
-    const { weight } = attempt;
     const distance: number = Math.abs(attempt.text.length - this.targetLength);
-    if (
-      weight < this.best.weight ||
-      (weight === this.best.weight && distance < this.best.distance)
-    ) {
-      this.best = { text: attempt.text, violations: attempt.violations, weight, distance };
+    const distanceRatio: number = this.targetLength > 0 ? distance / this.targetLength : 0;
+    const lengthPenalty: number = attempt.hasSevereViolation
+      ? 0
+      : distanceRatio * this.lengthDistanceWeight;
+    const candidate: RankedSectionText = {
+      text: attempt.text,
+      violations: attempt.violations,
+      hasSevereViolation: attempt.hasSevereViolation,
+      score: attempt.weight + lengthPenalty,
+      distance,
+    };
+    if (isRankedBefore(candidate, this.best)) {
+      this.best = candidate;
     }
 
     this.isUnderLengthRetry = attempt.isUnderLength;
@@ -470,6 +492,7 @@ export class ExpandSectionStage implements ISceneStage {
     const attempts: SectionExpansionAttempts = new SectionExpansionAttempts(
       request.section,
       request.targetLength,
+      run.tuning.sectionLengthDistanceWeight,
     );
 
     for (let attempt: number = 0; attempt <= run.tuning.sectionRetryLimit; attempt += 1) {
@@ -499,6 +522,10 @@ export class ExpandSectionStage implements ISceneStage {
         text: expanded,
         violations,
         weight: weighViolations(violations, run.tuning.violationWeights),
+        hasSevereViolation: violations.some(
+          (violation) =>
+            run.tuning.violationWeights[violation.kind] >= run.tuning.sectionSevereViolationWeight,
+        ),
         isUnderLength,
         thinSpots: isUnderLength ? this.describeThinSpots(run, request, expanded) : undefined,
       });

@@ -57,6 +57,18 @@ export const generationParameterCatalog: readonly GenerationParameterDefinition[
     bounds: { min: 0, max: 20 },
   },
   {
+    id: 'generation.section.lengthDistanceWeight',
+    label: '재시도 저울: 목표 분량에서 떨어진 정도',
+    kind: 'weight',
+    bounds: { min: 0, max: 20 },
+  },
+  {
+    id: 'generation.section.severeViolationWeight',
+    label: '재시도 저울: 분량과 바꾸지 않는 위반의 무게',
+    kind: 'weight',
+    bounds: { min: 1, max: 10 },
+  },
+  {
     id: 'generation.skeleton.lengthRatio',
     label: '뼈대 분량 비율',
     kind: 'ratio',

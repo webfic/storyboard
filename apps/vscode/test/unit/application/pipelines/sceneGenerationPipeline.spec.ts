@@ -1189,6 +1189,28 @@ describe("runSceneGenerationPipeline — 기계 검증", () => {
     expect(result.draftBody).not.toContain("짧")
   })
 
+  it("keeps a near-target attempt with a light violation over one far too short", async () => {
+    const ai = createRecordingAiService()
+    ai.draftSceneSkeleton.mockResolvedValueOnce("엘리아가 문을 연다.")
+    ai.expandSceneSection
+      .mockResolvedValueOnce(longProse("엘리아와 지훈이 문을 연다."))
+      .mockResolvedValueOnce("짧".repeat(1500))
+      .mockResolvedValueOnce("짧".repeat(1400))
+
+    const result = await runSceneGenerationPipeline({
+      sceneStem: "01-opening",
+      context: contextFor([eliaCard, jihoonCard], "본문"),
+      aiService: ai,
+      format: "novel",
+      styleDirective: { targetWordCount: 6000 },
+      tuning: { "generation.violationWeights.cast": 2 }
+    })
+
+    expect(ai.expandSceneSection).toHaveBeenCalledTimes(3)
+    expect(result.draftBody).toContain("엘리아와 지훈이 문을 연다.")
+    expect(result.draftBody).not.toContain("짧")
+  })
+
   it("keeps the least severe attempt rather than whichever came last", async () => {
     const ai = createRecordingAiService()
     ai.draftSceneSkeleton.mockResolvedValueOnce("엘리아가 문을 연다.")

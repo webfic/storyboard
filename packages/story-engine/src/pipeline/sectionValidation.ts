@@ -118,7 +118,15 @@ export function findPlacesOffCoordinates(input: {
     ...(input.backgroundFacts ?? []),
   ].join('\n');
 
-  return spaceNouns.filter((noun) => input.expanded.includes(noun) && !allowed.includes(noun));
+  return spaceNouns.filter(
+    (noun) => startsAWordIn(input.expanded, noun) && !allowed.includes(noun),
+  );
+}
+
+const hangulSyllableBefore: string = '(?<![가-힣])';
+
+function startsAWordIn(text: string, noun: string): boolean {
+  return new RegExp(`${hangulSyllableBefore}${noun}`).test(text);
 }
 
 const quotedDialoguePatterns: Map<number, RegExp> = new Map<number, RegExp>();

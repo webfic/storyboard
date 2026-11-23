@@ -12,6 +12,8 @@ export interface PipelineDefaultsSection {
   repeatedRunWindow: number;
   repeatedRunLimit: number;
   recapPhraseLimit: number;
+  lengthDistanceWeight: number;
+  severeViolationWeight: number;
 }
 
 export interface PipelineDefaultsSkeleton {
@@ -83,6 +85,8 @@ const pipelineDefaultsSchema: z.ZodType<PipelineDefaults> = z.object({
     repeatedRunWindow: positiveInt,
     repeatedRunLimit: positiveInt,
     recapPhraseLimit: z.number().int().nonnegative(),
+    lengthDistanceWeight: z.number().nonnegative(),
+    severeViolationWeight: z.number().positive(),
   }),
   skeleton: z.object({
     lengthRatio: ratio,

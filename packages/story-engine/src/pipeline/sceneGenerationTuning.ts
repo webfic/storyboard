@@ -23,6 +23,8 @@ export interface ResolvedSceneGenerationTuning {
   readonly sectionRepeatedRunWindow: number;
   readonly sectionRecapPhraseLimit: number;
   readonly sectionRepeatedRunLimit: number;
+  readonly sectionLengthDistanceWeight: number;
+  readonly sectionSevereViolationWeight: number;
   readonly skeletonRatio: number;
   readonly skeletonRetryLimit: number;
   readonly skeletonMinimumLengthRatio: number;
@@ -103,6 +105,8 @@ export function resolveSceneGenerationTuning(
     sectionRepeatedRunWindow: knob(tuning, 'generation.section.repeatedRunWindow'),
     sectionRecapPhraseLimit: knob(tuning, 'generation.section.recapPhraseLimit'),
     sectionRepeatedRunLimit: knob(tuning, 'generation.section.repeatedRunLimit'),
+    sectionLengthDistanceWeight: knob(tuning, 'generation.section.lengthDistanceWeight'),
+    sectionSevereViolationWeight: knob(tuning, 'generation.section.severeViolationWeight'),
     skeletonRatio: knob(tuning, 'generation.skeleton.lengthRatio'),
     skeletonRetryLimit: knob(tuning, 'generation.skeleton.retryLimit'),
     skeletonMinimumLengthRatio: knob(tuning, 'generation.skeleton.minimumLengthRatio'),

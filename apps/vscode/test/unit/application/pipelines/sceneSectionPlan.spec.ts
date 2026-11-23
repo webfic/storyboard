@@ -164,6 +164,18 @@ describe("findPlacesOffCoordinates", () => {
     ).toEqual([])
   })
 
+  it("does not count a space noun inside another word", () => {
+    const expanded = "성재가 소파 한가운데를 차지하고 앉았다. 거실은 조용했다."
+
+    expect(findPlacesOffCoordinates({ expanded, section, sectionPlaces })).toEqual([])
+  })
+
+  it("counts a space noun that starts a word, with its particle", () => {
+    const expanded = "성재는 지하에 내려갔다가 계단으로 올라왔다."
+
+    expect(findPlacesOffCoordinates({ expanded, section, sectionPlaces })).toEqual(["계단", "지하"])
+  })
+
   it("judges nothing when the section has no place coordinates", () => {
     expect(findPlacesOffCoordinates({ expanded: "서재와 다락과 창고를 돌았다.", section, sectionPlaces: [] })).toEqual([])
   })

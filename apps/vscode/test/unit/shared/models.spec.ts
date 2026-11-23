@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { aiProviderIds, isHiddenProvider, listAvailableProviderIds, providerCatalog, storyboardModelCatalog, storyboardModelPricing } from '@storyboard/story-model';
+import { aiProviderIds, findModelProfile, isHiddenProvider, listAvailableProviderIds, providerCatalog, storyboardModelCatalog, storyboardModelPricing } from '@storyboard/story-model';
 import { ConfigBridge } from '@storyboard/story-ai';
 import type { AiProviderId } from '@storyboard/story-model';
 import type { StoryboardConfigurationLike } from '@storyboard/story-ai';
@@ -86,5 +86,15 @@ describe("providerCatalog internal consistency", () => {
         expect(typeof model.outputPricePerMillion, `${providerId}/${model.id} output price`).toBe("number")
       }
     }
+  })
+})
+
+describe("model profiles", () => {
+  it.each(["claude", "claude-code"])("tunes claude-sonnet-5-5 like claude-sonnet-5 on %s", (providerId) => {
+    const sonnet5 = findModelProfile(providerId, "claude-sonnet-5")
+    const sonnet55 = findModelProfile(providerId, "claude-sonnet-5-5")
+
+    expect(sonnet55?.knobs).toEqual(sonnet5?.knobs)
+    expect(sonnet55?.knobs["generation.section.outputLimit"]).toBe(4500)
   })
 })

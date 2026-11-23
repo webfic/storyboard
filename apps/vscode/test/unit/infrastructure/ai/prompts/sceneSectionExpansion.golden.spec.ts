@@ -10,6 +10,7 @@ describe("SceneSectionExpansionPrompt golden", () => {
     upcomingOpening: "준이 창가로 간다.",
     targetLength: 1500,
     backgroundFacts: ["해외 콘도 12층", "거실 통창 너머 바다"],
+    castFacts: ["하나 — 속성: 나이=17"],
     catchphraseLimits: ["하나: «말도 안 돼» 모두 합쳐 2번까지"],
     sentenceFrameLimit: "서술에서 «괜히»·«그저» 같은 틀은 각각 1번까지",
     withheldAddressTerms: ["엘리트"],

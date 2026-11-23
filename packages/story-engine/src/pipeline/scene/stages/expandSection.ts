@@ -50,6 +50,7 @@ import {
   type SentenceFrameBudget,
 } from '#engine/pipeline/sentenceFrames';
 import { scopeBackgroundFacts } from '#engine/pipeline/sectionBackgroundFacts';
+import { selectSectionCastFacts } from '#engine/pipeline/sectionCastFacts';
 import type { GenerateTextOptions } from '@storyboard/story-ai';
 import {
   formatBackgroundFactConflict,
@@ -151,6 +152,7 @@ interface SectionExpansionRequest {
   readonly upcomingOpening: string | undefined;
   readonly targetLength: number;
   readonly backgroundFacts: readonly string[];
+  readonly castFacts: readonly string[];
   readonly sceneCoordinates: readonly string[];
   readonly sectionPlaces: readonly string[];
   readonly catchphraseBudgets: readonly CatchphraseBudget[];
@@ -167,6 +169,7 @@ interface SectionExpansionPlan {
   readonly beatNumbersBySection: readonly (readonly number[])[];
   readonly scenePlaces: string[];
   readonly backgroundFacts: string[];
+  readonly castFactsBySection: string[][];
   readonly catchphraseBudgetsBySection: CatchphraseBudget[][];
   readonly sentenceFrameBudgetsBySection: (SentenceFrameBudget | undefined)[];
   readonly withheldAddressTermsBySection: string[][];
@@ -374,6 +377,9 @@ export class ExpandSectionStage implements ISceneStage {
       typeof beat === 'string' || beat.place === undefined ? [] : [beat.place],
     );
     const backgroundFacts: string[] = backgroundFactLines(run.background);
+    const castFactsBySection: string[][] = beatNumbersBySection.map((beatNumbers) =>
+      selectSectionCastFacts({ characters: run.context.characters, beats, beatNumbers }),
+    );
     const catchphraseBudgetsBySection: CatchphraseBudget[][] = planSectionCatchphraseBudgets({
       characters: run.context.characters,
       sceneLimit: beats.length * run.tuning.catchphrasePerBeatLimit,
@@ -401,6 +407,7 @@ export class ExpandSectionStage implements ISceneStage {
       beatNumbersBySection,
       scenePlaces,
       backgroundFacts,
+      castFactsBySection,
       catchphraseBudgetsBySection,
       sentenceFrameBudgetsBySection,
       withheldAddressTermsBySection,
@@ -508,6 +515,7 @@ export class ExpandSectionStage implements ISceneStage {
         plan.placesBySection[index] ?? [],
         plan.scenePlaces,
       ),
+      castFacts: plan.castFactsBySection[index] ?? [],
       sceneCoordinates: plan.coordinatesBySection[index] ?? [],
       sectionPlaces: plan.placesBySection[index] ?? [],
       catchphraseBudgets: plan.catchphraseBudgetsBySection[index] ?? [],
@@ -611,6 +619,7 @@ export class ExpandSectionStage implements ISceneStage {
         targetLength: request.targetLength,
         backgroundFacts: request.backgroundFacts,
         backgroundConflicts: run.backgroundFactConflicts.map(formatBackgroundFactConflict),
+        castFacts: request.castFacts,
         sceneCoordinates: request.sceneCoordinates,
         catchphraseLimits: request.catchphraseBudgets.map(describeCatchphraseBudget),
         ...(request.sentenceFrameBudget === undefined

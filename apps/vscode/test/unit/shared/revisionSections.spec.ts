@@ -107,6 +107,7 @@ describe("ReviseLoop by section", () => {
     format: "novel",
     intent: "",
     factLines: [],
+    castProfileLines: [],
     characterNames: [],
     characterCards: [],
     styleConstraints: [],

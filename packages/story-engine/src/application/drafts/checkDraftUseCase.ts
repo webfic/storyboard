@@ -4,6 +4,7 @@ import type { ContinuityIssue, GrammarIssue } from '@storyboard/story-ai';
 import {
   analyzeSlop,
   formatBibleFactLines,
+  formatCharacterProfileLines,
   getStoryboardProjectPaths,
   sceneContextPaths,
   scenePath,
@@ -115,6 +116,9 @@ export class CheckDraftUseCase implements IUseCase<CheckDraftRequest, CheckDraft
       context,
     );
 
-    return formatBibleFactLines(context, narrative.bibleFacts);
+    return [
+      ...formatBibleFactLines(context, narrative.bibleFacts),
+      ...context.characters.flatMap(formatCharacterProfileLines),
+    ];
   }
 }

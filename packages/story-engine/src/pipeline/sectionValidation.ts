@@ -600,7 +600,7 @@ function checkSectionLength(
   return [
     {
       kind: 'too-short',
-      detail: `목표 ${input.targetLength.toLocaleString()}자에 크게 못 미칩니다 (${input.expanded.length.toLocaleString()}자). 사건 사이에 시점 인물의 반응·해석과 행동을 서술자의 목소리로 더 쓰되 이미 쓴 문장을 되풀이하지는 마세요`,
+      detail: `목표 ${input.targetLength.toLocaleString()}자에 크게 못 미칩니다 (${input.expanded.length.toLocaleString()}자). 사건 사이에 시점 인물의 반응·해석과 행동을 서술자의 목소리로 더 쓰되 이미 쓴 문장을 되풀이하지 말고, 카드와 뼈대에 없는 신상이나 과거사를 지어내 채우지도 마세요`,
     },
   ];
 }
@@ -1010,7 +1010,7 @@ export function describeThinExpansionSpots(
   const quoted: string = spots
     .map((spot) => `“${spot.line.length > 20 ? `${spot.line.slice(0, 20)}…` : spot.line}”`)
     .join(', ');
-  return `특히 대사 ${quoted} 다음에는 서술이 거의 붙지 않았습니다. 그 자리부터 시점 인물의 반응·해석·행동을 펼치세요`;
+  return `특히 대사 ${quoted} 다음에는 서술이 거의 붙지 않았습니다. 그 자리부터 시점 인물의 반응·해석·행동을 이미 정해진 사실 안에서 펼치세요`;
 }
 
 export function findRunAheadDialogue(

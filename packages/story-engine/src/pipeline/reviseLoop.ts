@@ -55,6 +55,7 @@ export interface ReviseLoopContext {
   readonly format: DraftRevisionInput['format'];
   readonly intent: string;
   readonly factLines: readonly string[];
+  readonly castProfileLines: readonly string[];
   readonly characterNames: readonly string[];
   readonly characterCards: readonly string[];
   readonly styleConstraints: readonly string[];
@@ -555,7 +556,7 @@ export class ReviseLoop {
     const { aiService, registry, attribution, loopContext } = this.options;
 
     const [continuityIssues, critiqueIssues] = await Promise.all([
-      aiService.checkContinuity(body, loopContext.factLines, {
+      aiService.checkContinuity(body, [...loopContext.factLines, ...loopContext.castProfileLines], {
         providerId: registry.getTaskProvider('continuityCheck'),
         attribution,
       }),

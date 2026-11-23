@@ -213,6 +213,24 @@ describe('ReviseDraftUseCase thread scope', () => {
     expect(factLines.some((line) => line.includes('다른 줄기의 사실'))).toBe(false);
   });
 
+  it('checks continuity against the card description and attributes of the scene characters (#237)', async () => {
+    const fs = threadedWorkspace();
+    fs.put(
+      '/w/character/hana.card',
+      ['type: character', 'id: hana', 'name: 하나', 'role: main', 'description:', '  - 항구 마을 서점 주인', 'attributes:', '  나이: 17', ''].join('\n'),
+    );
+    fs.put(
+      '/w/scene/03-alley.card',
+      'type: scene\nid: 03-alley\nthread: ep2\nnarrator: hana\nsummary: 하나가 든 등불이 흔들린다.\n',
+    );
+
+    await reviseAlleyScene(fs);
+
+    const factLines = checkContinuityMock.mock.calls[0]?.[1] ?? [];
+
+    expect(factLines).toEqual(expect.arrayContaining(['하나 — 설명: 항구 마을 서점 주인', '하나 — 속성: 나이=17']));
+  });
+
   it('critiques with the narration the scene narrator card resolves to', async () => {
     await reviseAlleyScene(threadedWorkspace());
 

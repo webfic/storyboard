@@ -382,6 +382,27 @@ describe("runSceneGenerationPipeline — 뼈대 단계", () => {
     const expansionInput = ai.expandSceneSection.mock.calls[0]?.[0] as { backgroundFacts: readonly string[] }
     expect(expansionInput.backgroundFacts).toEqual(["오후", "12층", "거실 통창 너머 바다", "에어컨 바람 냄새"])
   })
+
+  it("hands the scene characters' card description and attributes, but no canon facts, to the expansion (#237)", async () => {
+    const ai = createRecordingAiService()
+    const profiledElia: CharacterCard = {
+      ...eliaCard,
+      description: ["항구 마을 서점 주인"],
+      attributes: { 나이: 17, 학교: "없음" }
+    }
+
+    await runSceneGenerationPipeline({
+      sceneStem: "01-opening",
+      context: contextFor([profiledElia, jihoonCard], "본문"),
+      aiService: ai,
+      format: "novel",
+      canonFactLines: ["엘리아 — 비밀: 왕족"]
+    })
+
+    const expansionInput = ai.expandSceneSection.mock.calls[0]?.[0] as { castFacts: readonly string[] }
+    expect(expansionInput.castFacts).toEqual(["엘리아 — 설명: 항구 마을 서점 주인", "엘리아 — 속성: 나이=17, 학교=없음"])
+    expect(JSON.stringify(expansionInput)).not.toContain("왕족")
+  })
 })
 
 describe("runSceneGenerationPipeline — 되짚기 경고 (#120)", () => {

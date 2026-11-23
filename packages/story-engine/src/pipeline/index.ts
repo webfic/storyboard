@@ -30,4 +30,5 @@ export * from '#engine/pipeline/sectionValidation';
 export * from '#engine/pipeline/sentenceFrames';
 export * from '#engine/pipeline/sceneStageCatalog';
 export * from '#engine/pipeline/sectionBackgroundFacts';
+export * from '#engine/pipeline/sectionCastFacts';
 export * from '#engine/pipeline/skeletonBeats';

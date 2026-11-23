@@ -205,3 +205,14 @@ export function formatCardAttributes(attributes: CharacterCard['attributes']): s
     .map(([key, value]) => `${key}=${value}`)
     .join(', ');
 }
+
+export function formatCharacterProfileLines(character: CharacterCard): string[] {
+  const profileFields: readonly (readonly [label: string, value: string])[] = [
+    ['설명', (character.description ?? []).join(' / ')],
+    ['속성', formatCardAttributes(character.attributes)],
+  ];
+
+  return profileFields
+    .filter(([, value]) => value.trim().length > 0)
+    .map(([label, value]) => `${character.name} — ${label}: ${value}`);
+}

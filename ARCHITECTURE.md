@@ -673,7 +673,7 @@ statements: []
 | `storyboard.manuscript.assemble` | `Storyboard: Assemble Manuscript` | `chapters.yaml` 순서로 `draft/*.md`를 `manuscript/` 챕터·볼륨 파일로 조립 |
 | `storyboard.manuscript.review` | `Storyboard: Review Manuscript` | 조립한 원고를 장 단위 창으로 continuity·비평 검사해 `manuscript/REVIEW.md` 보고서 생성 |
 | `storyboard.manuscript.summaries` | `Storyboard: Summarize Chapters` | 장별 AI 요약을 캐시 DB의 `chapter_summaries`에 만들고 새 편집기 탭에 보여 줌 |
-| `storyboard.draft.continuityCheck` | `Storyboard: Continuity Check (Draft)` | 초안을 카드의 `fact` 진술·이야기 상태와 대조해 설정 모순 진단 |
+| `storyboard.draft.continuityCheck` | `Storyboard: Continuity Check (Draft)` | 초안을 카드의 `fact` 진술·인물 카드의 설명과 속성·이야기 상태와 대조해 설정 모순 진단 |
 | `storyboard.draft.reviseLoop` | `Storyboard: Review & Revise Draft (Current Scene)` | 초안을 연속성·비평으로 검사하고 차단 이슈를 재작성으로 고치는 루프 |
 | `storyboard.cards.buildFromScenes` | `Storyboard: Build Story Cards from Scenes` | 씬에서 카드 변경을 제안받아 고른 것만 `statements.yaml`에 씀 (출처 `studio`) |
 | `storyboard.apiKey.set` | `Storyboard: Set API Key…` | provider 선택 → 키 입력 → `SecretStorage` |
@@ -899,6 +899,11 @@ buildPersonas
 방이 있다») `checkBackgroundFacts` 단계가 카드마다 한 번 판정해 초안 경고로 알리고, 그 짝을 뼈대와
 살붙임에 따로 실어 사건에 맞는 하나만 쓰게 한다. 판정은 캐시 DB의 `findings` 표에 남아
 `doctor`가 AI 호출 없이 읽는다.
+또 하나의 예외는 **그 구간 인물의 카드 신상**(카드 설명과 속성: 나이·학교 같은 것)이다. 살붙임이 아무것도
+모르면 분량을 채우려고 학력이나 나이를 지어냈고(#237), 그 신상이 카드와 어긋난 채 최종 원고까지 남았다.
+살붙임은 구간 비트의 `cast`에 적힌 인물(없으면 씬 인물 전원)의 설명·속성을 `[인물 사실]`로 받고, 거기와
+뼈대에 없는 신상을 지어내지 못한다. 카드의 `fact` 진술은 비밀이나 아직 공개되지 않은 사실을 담으므로 지금처럼
+뼈대에만 간다. 연속성 검사도 씬 인물의 설명·속성 줄을 사실과 함께 받는다.
 
 **대목 좌표는 장부로 넘긴다.** 뼈대는 장면 첫 줄과 `---` 다음 줄에 그 대목의 좌표를
 `⟪시각: … / 장소: … / 있는 사람: …⟫` 한 줄로 남기고, 파이프라인이 그 표식을 장부로 옮긴 뒤 본문에서

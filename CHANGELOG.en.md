@@ -12,7 +12,7 @@ after the first public release.
 
 ### Added
 
-- **`params show` reports the prompt variant every call is held to and where each resource file comes from.** The variant is picked per call by the rules (`promptVariants.params.json`), but `ai.prompt.variant` overrides every call, and nothing outside the engine could tell where that value came from: two machines measuring the same engine could run different prompts and not know it. `--json` now carries `data.promptVariant` with `value` (absent when unset) and `origin` (`run`, `workspace`, `user` or `default`), and the text output gains a «[프롬프트 변형]» line. Each applied resource file (`data.resources.applied[]`) gains `origin`: `user` for the home, `workspace` for the work.
+- **`params show` reports the prompt variant every call is held to and where each resource file comes from.** The variant is picked per call by the rules (`promptVariants.params.json`), but `ai.prompt.variant` overrides every call, and nothing outside the engine could tell where that value came from: two machines measuring the same engine could run different prompts and not know it. `--json` now carries `data.promptVariant` with `value` (absent when unset) and `origin` (`run`, `workspace`, `user` or `default`), and the text output gains a «[프롬프트 변형]» line. Each applied resource file (`data.resources.applied[]`) gains `origin`: `user` for the home, `workspace` for the work. (#248)
 
 ## [0.17.2] - 2026-11-23
 

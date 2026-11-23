@@ -15,6 +15,7 @@ import {
   type BundleDirectoryNameParts,
   type PlannedSceneBundle,
   type SceneBeat,
+  type SceneBeatDetail,
   type SceneBundleContent,
   SceneParseError,
   type SceneCard,
@@ -487,6 +488,18 @@ export class WorkspaceScenes {
       idOf: cards.lookup.idOf,
       nameOf: (id) => nameById.get(id),
     };
+  }
+
+  public async findUnknownBeatReferences(
+    workspaceRoot: StoryUri,
+    beat: SceneBeatDetail,
+  ): Promise<readonly string[]> {
+    const resolvers: SceneCastResolvers = this.resolversOf(await this.dependencies.cards.loadRoster(workspaceRoot));
+    const unknownCast: string[] = (beat.cast ?? []).filter((reference) => resolvers.characterIdOf(reference) === undefined);
+    const unknownPlace: string[] =
+      beat.place === undefined || resolvers.placeIdOf(beat.place) !== undefined ? [] : [beat.place];
+
+    return [...unknownCast, ...unknownPlace];
   }
 
   private resolversOf(cards: CardRoster): SceneCastResolvers {

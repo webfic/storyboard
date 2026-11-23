@@ -167,5 +167,6 @@ function normalizeSceneBeat(beat: SceneBeat): SceneBeat {
     ...(beat.cast === undefined ? {} : { cast: beat.cast }),
     ...(beat.place === undefined ? {} : { place: beat.place }),
     ...(beat.time === undefined ? {} : { time: beat.time }),
+    ...(beat.break === undefined ? {} : { break: beat.break }),
   };
 }

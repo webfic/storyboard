@@ -1,3 +1,4 @@
+import type { ConfigBridge } from '@storyboard/story-ai';
 import type {
   ApplyAugmentedDraftRequest,
   ApplyDraftFormatRequest,
@@ -47,6 +48,11 @@ import type {
   SetSceneTargetLengthRequest,
   SetSceneTargetLengthResult,
   SetSceneTargetLengthUseCase,
+  EditSceneBeatRequest,
+  EditSceneBeatResult,
+  EditSceneBeatUseCase,
+  ResolvedSceneGenerationTuning,
+  ScenePassage,
   SaveDraftEditRequest,
   SaveDraftEditResult,
   SaveDraftEditUseCase,
@@ -61,7 +67,9 @@ import type {
   SceneRunReporter,
 } from '@storyboard/story-engine';
 import {
+  planScenePassages,
   ProjectRepository,
+  resolveSceneGenerationTuning,
   SceneContextReader,
   SceneNarrationResolver,
   type ChapterNarrationDefaults,
@@ -129,6 +137,8 @@ export interface DraftManagerDependencies {
   readonly moveSceneUseCase: MoveSceneUseCase;
   readonly removeSceneUseCase: RemoveSceneUseCase;
   readonly setSceneTargetLengthUseCase: SetSceneTargetLengthUseCase;
+  readonly editSceneBeatUseCase: EditSceneBeatUseCase;
+  readonly configBridge: ConfigBridge;
   readonly sceneSidebarRepository: ISceneSidebarRepository;
   readonly fileSystem: IFileSystem;
   readonly cards: WorkspaceCards;
@@ -374,6 +384,18 @@ export class DraftManager {
 
   public setSceneTargetLength(request: SetSceneTargetLengthRequest): Promise<SetSceneTargetLengthResult> {
     return this.deps.setSceneTargetLengthUseCase.execute(request);
+  }
+
+  public editSceneBeat(request: EditSceneBeatRequest): Promise<EditSceneBeatResult> {
+    return this.deps.editSceneBeatUseCase.execute(request);
+  }
+
+  public planScenePassages(scene: SceneFile): readonly ScenePassage[] | undefined {
+    const tuning: ResolvedSceneGenerationTuning = resolveSceneGenerationTuning(
+      this.deps.configBridge.getSceneGenerationTuning(),
+    );
+
+    return planScenePassages(scene.card.beats, (ref) => ref, tuning.sceneBreakTimeJumpMinutes);
   }
 
   public async resolveSceneTargetLength(

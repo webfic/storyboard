@@ -358,10 +358,13 @@ cast: [b3762d78-6f0b-476a-8419-9f14e1eca60b]
   cast: [<인물 uuid>, <인물 uuid>]
   place: <배경 uuid>
   time: 등교 직전
+- text: 그날 밤, 지훈의 방에서 문자가 온다
+  break: true
 ```
 
 - 직렬화는 canonical이다(고정 키 순서). 번들의 파일은 동사(`scene create`·`scene plot`·`card set`·스튜디오)로만 바뀐다.
 - 비트의 `cast`·`place`는 uuid이고, 어느 카드에도 맞지 않는 이름은 쓰지 않고 버린다.
+- 비트의 `break`는 작가가 정한 장면 전환이다. `true`면 그 비트 앞에서 끊고, `false`면 장소·시각이 바뀌어도 끊지 않는다(§ 장면 전환). `scene set <씬> --beat <n>`이 비트 하나의 `--text`·`--cast`·`--place`·`--time`·`--break`를 고치고 `scene unset <씬> --beat <n> <cast|place|time|break>`가 항목을 지운다. 비트 편집은 카드에 맞지 않는 출연·장소를 버리지 않고 거부한다.
 - 구조 진술은 프롬프트에 넣을 때 `[목적]`/`[갈등]` 라벨 블록으로 렌더링된다(`renderSceneCardBody`).
 - `summary.md`는 해석 없이 그대로 프롬프트에 붙는 창작자의 자유 메모다. 창작자가 쓴 사건과 기계가 펼친 비트를 파일 단위로 구별하기 위해 비트와 따로 둔다. 비트와 함께 있으면 `[창작자 요약]` 설계 블록으로 간다.
 - `scene create "<설명>"`이 번들을 만들고 스튜디오가 설명에서 채운다(`--name`만 주면 빈 씬, `--after <씬>`이면 그 뒤에 끼운다). `scene move`·`scene remove`는 뒤 씬의 폴더와 초안을 다시 매긴다. `scene list`는 번호·줄기·제목·상태(초안 없음/초안/낡음)를 한 줄씩 보인다.
@@ -436,7 +439,7 @@ scenes:
 - 초안: `draft/NNN-<slug>.md`.
 - 순서·번호를 바꾸는 길은 `scene create --after`·`scene move`·`scene remove`뿐이다. 엔진이 뒤 씬의 폴더와 초안을 다시 매기고, 줄이 끊기면 캐시 DB의 `journal`이 마무리한다. 번들 안의 참조가 uuid라 고칠 참조는 없다.
 - `scene rename <씬> --to <slug>`은 씬을 번호-slug·번호·slug 로 받고 새 이름은 slug 로 받아 번호는 그대로 둔다(같은 번호의 `NNN-slug` 도 받고, 다른 번호는 거부한다).
-- 씬의 목표 분량은 머리말의 `targetWordCount`다. `scene set <씬>|--all --target-words <n>`이 쓰고 `scene unset <씬>|--all target-words`가 지우며, 없으면 씬 본문의 `[목표 분량]`, 그것도 없으면 씬 글 길이 × 작법 계약의 `sceneLengthMultiplier`(2,000~20,000자)를 쓴다. `scene show`가 쓰일 값과 그 출처를 보여 준다.
+- 씬의 목표 분량은 머리말의 `targetWordCount`다. `scene set <씬>|--all --target-words <n>`이 쓰고 `scene unset <씬>|--all target-words`가 지우며, 없으면 씬 본문의 `[목표 분량]`, 그것도 없으면 씬 글 길이 × 작법 계약의 `sceneLengthMultiplier`(2,000~20,000자)를 쓴다. `scene show`가 쓰일 값과 그 출처, 그리고 좌표 비트로 정해질 장면 전환(대목마다 비트 범위)을 보여 준다.
 - 읽을 수 없는 씬은 경고와 함께 건너뛴다. `doctor`는 uuid가 겹친 폴더, 머리말과 slug가 어긋난 폴더, 구조 순서와 다른 번호의 폴더(`init --repair`가 다시 매김)를 알린다.
 
 ### 4.5 `.md` (출력 원고, `draft/`)

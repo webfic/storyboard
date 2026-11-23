@@ -13,6 +13,9 @@ after the first public release.
 ### Added
 
 - **`params show` reports the prompt variant every call is held to and where each resource file comes from.** The variant is picked per call by the rules (`promptVariants.params.json`), but `ai.prompt.variant` overrides every call, and nothing outside the engine could tell where that value came from: two machines measuring the same engine could run different prompts and not know it. `--json` now carries `data.promptVariant` with `value` (absent when unset) and `origin` (`run`, `workspace`, `user` or `default`), and the text output gains a «[프롬프트 변형]» line. Each applied resource file (`data.resources.applied[]`) gains `origin`: `user` for the home, `workspace` for the work. (#248)
+- **An author can place the scene breaks (`---`).** A scene bundle's `beats.yaml` takes `break: true|false` on a beat. `true` starts a new passage at that beat, and `false` keeps it in the passage before even when its place or time changes. The engine already followed this flag, but the format refused the key, so a scene with `break` could not be read. A work that uses the key does not open in 0.17.2 or earlier. (#241)
+- **`scene set <scene> --beat <n>` changes one beat.** It takes `--text`, `--cast` (comma separated), `--place`, `--time` and `--break true|false`, and `scene unset <scene> --beat <n> <cast|place|time|break>` removes one field. The other beats stay as they are, and a cast or place that matches no card is refused. Until now changing one beat meant regenerating them all with `scene plot --force` or editing `beats.yaml` by hand. (#241)
+- **`scene show` shows where the scene breaks will fall.** When the beats carry a place, a time or a `break`, it lists each passage with its beats («씬 나눔: 대목 1 (비트 1–5) / 대목 2 (비트 6–12)»), and `--json` gives them as `data.passages`, so the breaks can be checked and changed before a generation. (#241)
 
 ## [0.17.2] - 2026-11-23
 

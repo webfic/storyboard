@@ -117,6 +117,7 @@ export interface Beat {
   readonly cast?: readonly string[];
   readonly place?: string;
   readonly time?: string;
+  readonly break?: boolean;
 }
 
 export const beatSchema: z.ZodType<Beat> = z
@@ -125,5 +126,6 @@ export const beatSchema: z.ZodType<Beat> = z
     cast: z.array(elementIdSchema).readonly().optional(),
     place: elementIdSchema.optional(),
     time: headerTextSchema.optional(),
+    break: z.boolean().optional(),
   })
   .strict();

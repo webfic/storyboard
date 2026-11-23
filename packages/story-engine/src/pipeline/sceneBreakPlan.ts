@@ -235,6 +235,28 @@ export function planSceneBreaks(
   };
 }
 
+export interface ScenePassage {
+  readonly passageNumber: number;
+  readonly firstBeat: number;
+  readonly lastBeat: number;
+  readonly coordinate: string | undefined;
+}
+
+export function planScenePassages(
+  beats: readonly SceneBeat[] | undefined,
+  castName: (ref: string) => string,
+  jumpMinutes: number,
+): readonly ScenePassage[] | undefined {
+  const plan: SceneBreakPlan | undefined = planSceneBreaks(beats, castName, jumpMinutes);
+
+  return plan?.segments.map((segment, index): ScenePassage => ({
+    passageNumber: index + 1,
+    firstBeat: (segment.beats[0] ?? 0) + 1,
+    lastBeat: (segment.beats.at(-1) ?? 0) + 1,
+    coordinate: segment.coordinate,
+  }));
+}
+
 export function renderPlannedNarrative(
   beats: readonly SceneBeat[],
   plan: SceneBreakPlan,

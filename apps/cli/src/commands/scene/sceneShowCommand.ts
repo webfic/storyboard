@@ -12,7 +12,7 @@ import {
   type SceneTargetLength,
   type SceneTargetLengthOrigin,
 } from '@storyboard/story-model';
-import type { SceneThreadContext } from '@storyboard/story-engine';
+import type { ScenePassage, SceneThreadContext } from '@storyboard/story-engine';
 
 const targetLengthOriginLabels: Readonly<Record<SceneTargetLengthOrigin, string>> = {
   'scene-card': '씬 카드',
@@ -26,19 +26,34 @@ interface NumberedSceneBeat {
   readonly cast?: readonly string[];
   readonly place?: string;
   readonly time?: string;
+  readonly break?: boolean;
 }
 
 function numberSceneBeats(beats: readonly SceneBeat[] | undefined): NumberedSceneBeat[] {
   return (beats ?? []).map((beat, index) => {
-    const detail: Omit<SceneBeatDetail, 'text' | 'break'> = typeof beat === 'string' ? {} : beat;
+    const detail: Omit<SceneBeatDetail, 'text'> = typeof beat === 'string' ? {} : beat;
     return {
       number: index + 1,
       text: sceneBeatText(beat),
       ...(detail.cast === undefined ? {} : { cast: detail.cast }),
       ...(detail.place === undefined ? {} : { place: detail.place }),
       ...(detail.time === undefined ? {} : { time: detail.time }),
+      ...(detail.break === undefined ? {} : { break: detail.break }),
     };
   });
+}
+
+function describePassages(passages: readonly ScenePassage[] | undefined): string {
+  if (passages === undefined) {
+    return '씬 나눔: 비트에 장소·시각·break 가 없어 생성할 때 정합니다';
+  }
+
+  const ranges: string[] = passages.map((passage) =>
+    passage.firstBeat === passage.lastBeat
+      ? `대목 ${passage.passageNumber} (비트 ${passage.firstBeat})`
+      : `대목 ${passage.passageNumber} (비트 ${passage.firstBeat}–${passage.lastBeat})`,
+  );
+  return `씬 나눔: ${ranges.join(' / ')}`;
 }
 
 function describeTargetLength(targetLength: SceneTargetLength | undefined): string {
@@ -81,12 +96,15 @@ export class SceneShowCommand implements ICommandHandler {
       scene,
     );
 
+    const passages: readonly ScenePassage[] | undefined = container.drafts.planScenePassages(scene);
+
     return success(
       [
         `${scene.card.title ?? stem} (${stem})`,
         `시점: ${narration}`,
         `줄기: ${thread}`,
         describeTargetLength(targetLength),
+        describePassages(passages),
         ...(scene.card.characters && scene.card.characters.length > 0
           ? [`인물: ${scene.card.characters.join(', ')}`]
           : []),
@@ -104,6 +122,7 @@ export class SceneShowCommand implements ICommandHandler {
         targetLength: targetLength?.targetLength ?? null,
         targetLengthOrigin: targetLength?.origin ?? null,
         beats: numberSceneBeats(scene.card.beats),
+        passages: passages ?? null,
       },
     );
   }

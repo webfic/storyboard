@@ -59,6 +59,8 @@ export const cardKinds: readonly CardKind[] = [...bibleSubjectKinds, 'narrator']
 
 export { draftCheckKinds, type DraftCheckKind } from '@storyboard/story-engine';
 
+export { sceneBeatFields, type SceneBeatField } from '@storyboard/story-engine';
+
 export type NoteSource = 'notion';
 
 export const noteSources: readonly NoteSource[] = ['notion'];
@@ -217,6 +219,12 @@ export const flagCatalog: readonly FlagSpec[] = [
   { name: 'focal', valueLabel: '<id>', summary: 'card create narrator: 초점 인물 카드 slug' },
   { name: 'voice', valueLabel: '<text>', summary: 'card create narrator: 서술자 목소리 (쉼표로 구분)' },
   { name: 'target-words', valueLabel: '<n>', summary: '작품 계약: 목표 분량(자) / scene set: 그 씬의 목표 분량(자)' },
+  { name: 'beat', valueLabel: '<n>', summary: 'scene set/unset: 고칠 비트 번호 (1부터)' },
+  { name: 'text', valueLabel: '<text>', summary: 'scene set --beat: 비트 내용' },
+  { name: 'cast', valueLabel: '<ids>', summary: 'scene set --beat: 비트에 나오는 인물 카드 (쉼표로 구분)' },
+  { name: 'place', valueLabel: '<card>', summary: 'scene set --beat: 비트가 벌어지는 배경 카드' },
+  { name: 'time', valueLabel: '<text>', summary: 'scene set --beat: 비트의 시각' },
+  { name: 'break', valueLabel: '<true|false>', summary: 'scene set --beat: true 면 이 비트 앞에서 씬을 나누고(---), false 면 장소·시각이 바뀌어도 나누지 않습니다' },
   { name: 'chapters', valueLabel: '<n>', summary: '작품 계약: 장 수' },
   { name: 'scenes-per-chapter', valueLabel: '<n>', summary: '작품 계약: 장당 씬 수' },
   { name: 'concept', valueLabel: '<text>', summary: '작품 계약: 한 줄 콘셉트' },

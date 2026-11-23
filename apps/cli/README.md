@@ -299,12 +299,25 @@ A scene's target length is the `targetWordCount` of its card header. `scene set 
 writes it (`--all` for every scene), and `scene unset <scene> target-words` removes it, after which the
 `[목표 분량]` line of the scene text or a length derived from the scene's text is used. `scene show`
 prints the target length in force and where it came from; under `--json` it also lists the beats as
-`{ number, text, cast?, place?, time? }` (cast as card ids, place as the background card's name).
+`{ number, text, cast?, place?, time?, break? }` (cast as card ids, place as the background card's name).
+It also prints where the scene breaks (`---`) will fall — the passages and the beats each covers,
+`passages` under `--json` — when the beats carry a place, a time or a break; otherwise the model
+decides them while drafting.
+
+`scene set <scene> --beat <n>` changes one beat without regenerating the others: `--text`,
+`--cast <ids>` (comma separated), `--place <card>`, `--time <text>` and `--break true|false`.
+`--break true` starts a new passage at that beat; `--break false` keeps it in the passage before
+even when its place or time changes. `scene unset <scene> --beat <n> <cast|place|time|break>` removes
+one field. A cast or place that matches no card is refused.
 
 ```bash
 storyboard scene set 3 --target-words 20000
 storyboard scene set --all --target-words 20000
 storyboard scene unset 3 target-words
+storyboard scene set 3 --beat 12 --break true
+storyboard scene set 3 --beat 7 --break false
+storyboard scene set 3 --beat 41 --text "불이 꺼진다" --cast hana,jun
+storyboard scene unset 3 --beat 12 break
 ```
 
 Notes kept in Obsidian or Notion come in with `notes absorb`. It reads a vault folder (or one note)

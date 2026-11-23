@@ -59,6 +59,7 @@ import {
   MoveSceneUseCase,
   RemoveSceneUseCase,
   SetSceneTargetLengthUseCase,
+  EditSceneBeatUseCase,
   SaveDraftEditUseCase,
   SceneBatchRepository,
   SceneCacheRepository,
@@ -198,6 +199,7 @@ interface EngineGraph {
   readonly moveSceneUseCase: MoveSceneUseCase;
   readonly removeSceneUseCase: RemoveSceneUseCase;
   readonly setSceneTargetLengthUseCase: SetSceneTargetLengthUseCase;
+  readonly editSceneBeatUseCase: EditSceneBeatUseCase;
   readonly reviewManuscriptUseCase: ReviewManuscriptUseCase;
   readonly revisionPlanRecorder: RevisionPlanRecorder;
   readonly reviseAfterGenerateGate: ReviseAfterGenerateGate;
@@ -473,6 +475,7 @@ function buildServices(
     moveSceneUseCase: new MoveSceneUseCase(host),
     removeSceneUseCase: new RemoveSceneUseCase(host),
     setSceneTargetLengthUseCase: new SetSceneTargetLengthUseCase(host),
+    editSceneBeatUseCase: new EditSceneBeatUseCase(host),
     reviewManuscriptUseCase: new ReviewManuscriptUseCase(host, ai, repositories),
     revisionPlanRecorder,
     reviseAfterGenerateGate,

@@ -1501,6 +1501,72 @@ describe('scene set and scene unset', () => {
   });
 });
 
+describe('scene set and scene unset --beat (#241)', () => {
+  async function writeBeatedScene(): Promise<void> {
+    await run('card create', args(['card', 'create'], { name: '하나', id: 'hana' }, ['character', '궁수']));
+    await writeSceneBundleFromYaml(
+      workspace,
+      ['type: scene', 'id: 001-harbor', 'beats:', '  - 하나가 항구에 선다.', '  - 하나가 등대에 오른다.', '  - 불이 켜진다.', ''].join('\n'),
+    );
+  }
+
+  function readBeatsFile(): string {
+    return readFileSync(join(workspace, 'scene', '001-harbor.card', 'beats.yaml'), 'utf8');
+  }
+
+  it('writes one beat, a break included, and scene show lists the passages it plans', async () => {
+    await writeBeatedScene();
+
+    const broken = await run('scene set', args(['scene', 'set'], { beat: '2', break: 'true' }, ['001-harbor']));
+    expect(broken).toMatchObject({ ok: true, data: { beatNumber: 2, beat: { text: '하나가 등대에 오른다.', break: true } } });
+    const castAndTime = await run('scene set', args(['scene', 'set'], { beat: '3', cast: 'hana', time: '저녁', text: '등불이 켜진다.' }, ['001-harbor']));
+    expect(castAndTime).toMatchObject({ ok: true, data: { beat: { text: '등불이 켜진다.', cast: ['hana'], time: '저녁' } } });
+    expect(readBeatsFile()).toContain('- text: 하나가 등대에 오른다.\n  break: true\n');
+
+    const shown = await run('scene show', args(['scene', 'show'], {}, ['001-harbor']));
+    expect(shown.message).toContain('씬 나눔: 대목 1 (비트 1) / 대목 2 (비트 2–3)');
+    expect(shown.data).toMatchObject({
+      beats: [{ number: 1 }, { number: 2, break: true }, { number: 3, time: '저녁' }],
+      passages: [
+        { passageNumber: 1, firstBeat: 1, lastBeat: 1 },
+        { passageNumber: 2, firstBeat: 2, lastBeat: 3 },
+      ],
+    });
+
+    const unset = await run('scene unset', args(['scene', 'unset'], { beat: '2' }, ['001-harbor', 'break']));
+    expect(unset).toMatchObject({ ok: true, data: { beat: { text: '하나가 등대에 오른다.' } } });
+    expect(readBeatsFile()).not.toContain('break');
+  });
+
+  it('keeps a break: false beat in the passage before it even when its time jumps', async () => {
+    await writeBeatedScene();
+    await run('scene set', args(['scene', 'set'], { beat: '1', time: '아침' }, ['001-harbor']));
+    await run('scene set', args(['scene', 'set'], { beat: '2', time: '밤', break: 'false' }, ['001-harbor']));
+
+    const shown = await run('scene show', args(['scene', 'show'], {}, ['001-harbor']));
+
+    expect(shown.data).toMatchObject({ passages: [{ passageNumber: 1, firstBeat: 1, lastBeat: 3 }] });
+  });
+
+  it('refuses a beat that is not there, a bad break value, an unknown card and nothing to change', async () => {
+    await writeBeatedScene();
+
+    expect(await run('scene set', args(['scene', 'set'], { beat: '9', break: 'true' }, ['001-harbor']))).toMatchObject({
+      ok: false,
+      message: '001-harbor 에는 비트 9번이 없습니다 (비트 3개).',
+    });
+    expect((await run('scene set', args(['scene', 'set'], { beat: '0', break: 'true' }, ['001-harbor']))).ok).toBe(false);
+    expect((await run('scene set', args(['scene', 'set'], { beat: '2', break: 'maybe' }, ['001-harbor']))).ok).toBe(false);
+    expect(await run('scene set', args(['scene', 'set'], { beat: '2', cast: 'ghost' }, ['001-harbor']))).toMatchObject({
+      ok: false,
+      message: '카드가 없는 인물·장소입니다: ghost',
+    });
+    expect((await run('scene set', args(['scene', 'set'], { beat: '2' }, ['001-harbor']))).ok).toBe(false);
+    expect((await run('scene unset', args(['scene', 'unset'], { beat: '2' }, ['001-harbor', 'text']))).ok).toBe(false);
+    expect(readBeatsFile()).not.toContain('break');
+  });
+});
+
 describe('doctor: interrupted scene rename', () => {
   async function writeScene(stem: string, title = '야시장'): Promise<void> {
     await writeSceneBundleFromYaml(workspace, `type: scene\nid: ${stem}\ntitle: ${title}\n`);

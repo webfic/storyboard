@@ -59,7 +59,8 @@ function slugsOf(ids: readonly string[] | undefined, lookup: ElementSlugLookup):
 function projectBeat(beat: Beat, lookup: SceneProjectionLookup): SceneBeat {
   const cast: string[] = slugsOf(beat.cast, lookup);
   const place: string | undefined = beat.place === undefined ? undefined : lookup.nameOf(beat.place);
-  const hasDetail: boolean = cast.length > 0 || place !== undefined || beat.time !== undefined;
+  const hasDetail: boolean =
+    cast.length > 0 || place !== undefined || beat.time !== undefined || beat.break !== undefined;
   if (!hasDetail) {
     return { text: beat.text };
   }
@@ -69,6 +70,7 @@ function projectBeat(beat: Beat, lookup: SceneProjectionLookup): SceneBeat {
     ...(cast.length > 0 ? { cast } : {}),
     ...(place === undefined ? {} : { place }),
     ...(beat.time === undefined ? {} : { time: beat.time }),
+    ...(beat.break === undefined ? {} : { break: beat.break }),
   };
 }
 
@@ -200,6 +202,7 @@ function planBeat(
     ...(cast.length > 0 ? { cast } : {}),
     ...(place === undefined ? {} : { place }),
     ...(detail.time === undefined ? {} : { time: detail.time }),
+    ...(detail.break === undefined ? {} : { break: detail.break }),
   };
 }
 

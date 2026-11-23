@@ -40,6 +40,7 @@ export * from '#engine/application/drafts/renameSceneUseCase';
 export * from '#engine/application/drafts/moveSceneUseCase';
 export * from '#engine/application/drafts/removeSceneUseCase';
 export * from '#engine/application/drafts/setSceneTargetLengthUseCase';
+export * from '#engine/application/drafts/editSceneBeatUseCase';
 export * from '#engine/application/drafts/draftHistoryArchiver';
 export * from '#engine/application/drafts/saveDraftEditUseCase';
 export * from '#engine/application/project/compositionPresets';

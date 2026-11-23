@@ -85,6 +85,7 @@ function createRecordingAiService(): SceneGenerationPipelineAiService & {
   readonly attributeSceneDialogue: ReturnType<typeof vi.fn>
   readonly proofreadSceneText: ReturnType<typeof vi.fn>
   readonly expandSceneSection: ReturnType<typeof vi.fn>
+  readonly locateBeatParagraphs: ReturnType<typeof vi.fn>
 } {
   return {
     createCharacterPersona: vi.fn(async () => "p"),
@@ -106,7 +107,8 @@ function createRecordingAiService(): SceneGenerationPipelineAiService & {
       }))
     ),
     proofreadSceneText: vi.fn(async () => []),
-    expandSceneSection: vi.fn(async () => longProse("살붙인 본문"))
+    expandSceneSection: vi.fn(async () => longProse("살붙인 본문")),
+    locateBeatParagraphs: vi.fn(async () => new Map<number, number>())
   }
 }
 
@@ -397,7 +399,7 @@ describe("runSceneGenerationPipeline — 되짚기 경고 (#120)", () => {
     })
 
     expect(draftWarningMessages(result.warnings).filter((warning) => warning.includes("되짚는 표현"))).toHaveLength(1)
-    expect(draftWarningMessages(result.warnings).find((warning) => warning.includes("되짚는 표현"))).toMatch(/^1구간: 앞 장면을 «아까 …»로 되짚는 표현이 \d+회입니다 \(허용 3회\)/)
+    expect(draftWarningMessages(result.warnings).find((warning) => warning.includes("되짚는 표현"))).toMatch(/^살붙임 1구간: 앞 장면을 «아까 …»로 되짚는 표현이 \d+회입니다 \(허용 3회\)/)
   })
 
   it("tags each expansion call with its section, attempt and the reason it was asked again", async () => {
@@ -412,17 +414,17 @@ describe("runSceneGenerationPipeline — 되짚기 경고 (#120)", () => {
     })
 
     const tags = ai.expandSceneSection.mock.calls.map(
-      (call) => (call[1] as { traceTag?: { sectionIndex?: number; attempt?: number; retryReason?: string } }).traceTag
+      (call) => (call[1] as { traceTag?: { expansionSectionIndex?: number; attempt?: number; retryReason?: string } }).traceTag
     )
-    expect(tags[0]).toEqual({ sectionIndex: 1, attempt: 1 })
-    expect(tags[1]).toMatchObject({ sectionIndex: 1, attempt: 2 })
+    expect(tags[0]).toEqual({ expansionSectionIndex: 1, attempt: 1 })
+    expect(tags[1]).toMatchObject({ expansionSectionIndex: 1, attempt: 2 })
     expect(tags[1]?.retryReason?.length).toBeGreaterThan(0)
   })
 
   it("reports the rejected attempt, the section lengths and each warning to the observer", async () => {
     const ai = createRecordingAiService()
     ai.expandSceneSection.mockResolvedValueOnce("짧다.").mockResolvedValue(longProse("살붙인 본문"))
-    const events: { kind: string; sectionIndex?: number; attempt?: number; lengths?: Record<string, number>; message?: string }[] = []
+    const events: { kind: string; expansionSectionIndex?: number; attempt?: number; lengths?: Record<string, number>; message?: string }[] = []
 
     const result = await runSceneGenerationPipeline({
       sceneStem: "01-opening",
@@ -434,8 +436,8 @@ describe("runSceneGenerationPipeline — 되짚기 경고 (#120)", () => {
 
     const rejected = events.find((event) => event.kind === "output-rejected")
     const measured = events.find((event) => event.kind === "section-measured")
-    expect(rejected).toMatchObject({ sectionIndex: 1, attempt: 1 })
-    expect(measured?.sectionIndex).toBe(1)
+    expect(rejected).toMatchObject({ expansionSectionIndex: 1, attempt: 1 })
+    expect(measured?.expansionSectionIndex).toBe(1)
     expect(Object.keys(measured?.lengths ?? {}).sort()).toEqual(["expanded", "final", "skeleton", "target"])
     const stageLengths = events.filter((event) => event.kind === "text-measured").map((event) => event.lengths)
     expect(stageLengths.length).toBeGreaterThan(0)
@@ -859,7 +861,7 @@ describe("runSceneGenerationPipeline — 장면 전환 계획 (#115, #112)", () 
     ai.draftSceneSkeleton.mockResolvedValueOnce(
       ["⟪대목 1⟫", "엘리아가 밥을 먹었다.", "", "---", "", "엘리아가 설거지를 했다.", "", "⟪대목 2⟫", "엘리아가 교문을 나섰다."].join("\n")
     )
-    const measured: { sectionIndex?: number; beatNumbers?: readonly number[]; startOffset?: number }[] = []
+    const measured: { expansionSectionIndex?: number; beatNumbers?: readonly number[]; startOffset?: number }[] = []
 
     const result = await runSceneGenerationPipeline({
       sceneStem: "01-opening",
@@ -880,6 +882,73 @@ describe("runSceneGenerationPipeline — 장면 전환 계획 (#115, #112)", () 
     expect(expansionOptions.traceTag?.beatIds).toEqual(measured[0]?.beatNumbers?.map(String))
     expect(result.beatSegments?.flat()).toEqual([1, 2, 3])
     expect(result.beatSegments).toHaveLength(2)
+  })
+
+  it("tells each expansion section the beats it writes from where the skeleton beats start (#239)", async () => {
+    const ai = createRecordingAiService()
+    ai.draftSceneSkeleton.mockResolvedValueOnce(
+      ["⟪대목 1⟫", "엘리아가 밥을 먹었다.", "", "---", "", "엘리아가 설거지를 했다.", "", "⟪대목 2⟫", "엘리아가 교문을 나섰다."].join("\n")
+    )
+    ai.locateBeatParagraphs.mockResolvedValueOnce(new Map([[1, 1], [2, 2], [3, 3]]))
+    ai.expandSceneSection.mockImplementation(async () => "짧은 본문")
+    const measured: { expansionSectionIndex?: number; beatNumbers?: readonly number[] }[] = []
+    const kept: { expansionSectionIndex?: number; attempt?: number }[] = []
+
+    const result = await runSceneGenerationPipeline({
+      sceneStem: "01-opening",
+      context: plannedScene(contextFor([eliaCard], "본문")),
+      aiService: ai,
+      format: "novel",
+      styleDirective: { targetWordCount: 6000 },
+      sectionOutputLimit: 2000,
+      observer: {
+        onPlan: () => {},
+        onStageStart: () => {},
+        onStageEnd: () => {},
+        onEvent: (event) => {
+          if (event.kind === "section-measured") measured.push(event)
+          if (event.kind === "output-kept-despite-violations") kept.push(event)
+        }
+      }
+    })
+
+    const sectionBeats = measured.map((event) => event.beatNumbers ?? [])
+    expect(sectionBeats.length).toBeGreaterThan(1)
+    expect(sectionBeats.flat()).toEqual([1, 2, 3])
+    const tags = ai.expandSceneSection.mock.calls.map((call) => (call[1] as { traceTag?: { expansionSectionIndex?: number; beatIds?: readonly string[] } }).traceTag)
+    expect(tags[0]?.beatIds).toEqual(sectionBeats[0]?.map(String))
+    expect(kept[0]?.attempt).toBeGreaterThanOrEqual(1)
+
+    const firstWarning = result.warnings.find((warning) => warning.sectionUnit === "expansion")
+    expect(firstWarning).toMatchObject({ sectionNumber: 1, sectionUnit: "expansion", passageNumbers: [1] })
+    expect(firstWarning?.message).toMatch(/^살붙임 1구간 \(비트 1(–\d)?\): /)
+  })
+
+  it("falls back to the beats of each skeleton call when the skeleton beats cannot be located", async () => {
+    const ai = createRecordingAiService()
+    ai.draftSceneSkeleton.mockResolvedValueOnce(
+      ["⟪대목 1⟫", "엘리아가 밥을 먹었다.", "", "---", "", "엘리아가 설거지를 했다.", "", "⟪대목 2⟫", "엘리아가 교문을 나섰다."].join("\n")
+    )
+    ai.locateBeatParagraphs.mockRejectedValueOnce(new AiProviderError("generation-failed", "mock", "위치 실패"))
+    const warnings: string[] = []
+
+    const result = await runSceneGenerationPipeline({
+      sceneStem: "01-opening",
+      context: plannedScene(contextFor([eliaCard], "본문")),
+      aiService: ai,
+      format: "novel",
+      observer: {
+        onPlan: () => {},
+        onStageStart: () => {},
+        onStageEnd: () => {},
+        onEvent: (event) => void (event.kind === "warning" && warnings.push(event.message ?? ""))
+      }
+    })
+
+    expect(result.draftBody.length).toBeGreaterThan(0)
+    expect(warnings.some((message) => message.startsWith("뼈대 비트 위치를 찾지 못해"))).toBe(true)
+    const tag = (ai.expandSceneSection.mock.calls[0]?.[1] as { traceTag?: { beatIds?: readonly string[] } }).traceTag
+    expect(tag?.beatIds).toEqual(["1", "2", "3"])
   })
 
   it("keeps a missing-beat warning the whole-skeleton recheck confirms", async () => {
@@ -1127,7 +1196,7 @@ describe("runSceneGenerationPipeline — 기계 검증", () => {
     expect(ai.expandSceneSection).toHaveBeenCalledTimes(3)
     expect(result.draftBody).toContain("엘리아와 지훈이 문을 연다.")
     expect(draftWarningMessages(result.warnings)).toHaveLength(1)
-    expect(draftWarningMessages(result.warnings)[0]).toContain("1구간")
+    expect(draftWarningMessages(result.warnings)[0]).toContain("살붙임 1구간")
     expect(draftWarningMessages(result.warnings)[0]).toContain("지훈")
   })
 
@@ -1229,7 +1298,7 @@ describe("runSceneGenerationPipeline — 기계 검증", () => {
 
     expect(ai.expandSceneSection).toHaveBeenCalledTimes(3)
     expect(result.draftBody).toContain("엘리아가 문을 천천히 열었다.")
-    expect(draftWarningMessages(result.warnings).find((warning) => warning.startsWith("1구간"))).toContain(
+    expect(draftWarningMessages(result.warnings).find((warning) => warning.startsWith("살붙임 1구간"))).toContain(
       "크게 못 미칩니다"
     )
   })

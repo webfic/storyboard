@@ -23,6 +23,7 @@ export const sceneStageCatalog = [
     isOptIn: true,
   },
   { id: 'polishDialogue', label: '대사 다듬기', requires: ['draftSkeleton'] },
+  { id: 'locateSkeletonBeats', label: '뼈대 비트 위치', requires: ['draftSkeleton'] },
   { id: 'expandSection', label: '살붙임', required: true, requires: ['draftSkeleton'] },
   { id: 'proofreadDraft', label: '교정', requires: ['expandSection'] },
   { id: 'attributeDialogue', label: '화자 붙이기', requires: ['expandSection'] },

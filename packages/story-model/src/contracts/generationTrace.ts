@@ -25,10 +25,16 @@ export interface TraceRunHeader {
   readonly failureMessage?: string;
 }
 
-export interface TraceCallTag {
+export interface TraceSectionIndexes {
+  readonly skeletonCallIndex?: number;
+  readonly expansionSectionIndex?: number;
+  readonly revisionSectionIndex?: number;
+  readonly sectionIndex?: number;
+}
+
+export interface TraceCallTag extends TraceSectionIndexes {
   readonly stage?: string;
   readonly subject?: string;
-  readonly sectionIndex?: number;
   readonly beatIds?: readonly string[];
   readonly attempt?: number;
   readonly retryReason?: string;
@@ -169,12 +175,11 @@ export interface TraceDialogueLineChange {
 
 export type TraceSectionLengthName = 'target' | 'skeleton' | 'expanded' | 'final' | 'before' | 'after';
 
-export interface TraceEventRecord {
+export interface TraceEventRecord extends TraceSectionIndexes {
   readonly sequence: number;
   readonly kind: TraceEventKind;
   readonly recordedAt: string;
   readonly stage?: string;
-  readonly sectionIndex?: number;
   readonly attempt?: number;
   readonly rule?: string;
   readonly reasons?: readonly string[];
@@ -197,6 +202,9 @@ const traceTextRefShape: { hash: z.ZodString; charCount: z.ZodNumber } = {
 const traceCallTagSchema: z.ZodType<TraceCallTag> = z.object({
   stage: z.string().optional(),
   subject: z.string().optional(),
+  skeletonCallIndex: z.number().int().optional(),
+  expansionSectionIndex: z.number().int().optional(),
+  revisionSectionIndex: z.number().int().optional(),
   sectionIndex: z.number().int().optional(),
   beatIds: z.array(z.string()).optional(),
   attempt: z.number().int().optional(),
@@ -287,6 +295,9 @@ export const traceEventRecordSchema: z.ZodType<TraceEventRecord> = z.object({
   ]),
   recordedAt: z.string(),
   stage: z.string().optional(),
+  skeletonCallIndex: z.number().int().optional(),
+  expansionSectionIndex: z.number().int().optional(),
+  revisionSectionIndex: z.number().int().optional(),
   sectionIndex: z.number().int().optional(),
   attempt: z.number().int().optional(),
   rule: z.string().optional(),

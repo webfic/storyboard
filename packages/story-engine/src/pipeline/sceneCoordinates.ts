@@ -106,6 +106,12 @@ function sectionSegmentRanges(sections: readonly string[]): SegmentRange[] {
   });
 }
 
+export function sectionPassageNumbers(sections: readonly string[]): number[][] {
+  return sectionSegmentRanges(sections).map((range) =>
+    Array.from({ length: range.last - range.first + 1 }, (_, offset) => range.first + offset + 1),
+  );
+}
+
 function sectionBeats(
   ledger: SceneCoordinateLedger,
   range: SegmentRange,
@@ -176,22 +182,6 @@ export function segmentBeatNumbers(ledger: SceneCoordinateLedger): number[][] | 
   }
 
   return ledger.beats.map((indexes) => indexes.map((index) => index + 1));
-}
-
-export function sectionBeatNumbers(
-  ledger: SceneCoordinateLedger,
-  sections: readonly string[],
-): number[][] {
-  const beatsBySegment: readonly (readonly number[])[] | undefined = ledger.beats;
-  if (beatsBySegment === undefined || !ledger.isAlignedWithBreaks) {
-    return sections.map(() => []);
-  }
-
-  return sectionSegmentRanges(sections).map((range) =>
-    beatsBySegment
-      .slice(range.first, range.last + 1)
-      .flatMap((indexes) => indexes.map((index) => index + 1)),
-  );
 }
 
 export function placeWordSet(places: readonly string[]): Set<string> {

@@ -69,7 +69,7 @@ function observeCall(prompt: string, responseText: string): AiCallObservation {
       isTruncated: true,
       stopReason: 'max_tokens',
     },
-    traceTag: { stage: 'expandSection', sectionIndex: 3, attempt: 2, retryReason: '분량 미달' },
+    traceTag: { stage: 'expandSection', expansionSectionIndex: 3, attempt: 2, retryReason: '분량 미달' },
   };
 }
 
@@ -130,11 +130,25 @@ describe('GenerationTraceRecorder', () => {
       providerId: 'mock',
       parameters: { maxTokens: 8000 },
       response: { isTruncated: true, stopReason: 'max_tokens', charCount: '둘째 본문'.length },
-      tag: { sectionIndex: 3, attempt: 2, retryReason: '분량 미달' },
+      tag: { expansionSectionIndex: 3, attempt: 2, retryReason: '분량 미달' },
     });
     expect(readFileSync(join(runDirectory, 'blobs', `${userPromptHash}.txt`), 'utf8')).toBe('구간 2');
     expect(readFileSync(join(runDirectory, 'blobs', `${second.response?.hash}.txt`), 'utf8')).toBe('둘째 본문');
     expect(readdirSync(join(runDirectory, 'blobs'))).toHaveLength(5);
+  });
+
+  it('still reads an event an earlier version recorded with one section index for every stage', () => {
+    const earlier: TraceEventRecord = traceEventRecordSchema.parse({
+      sequence: 1,
+      kind: 'output-rejected',
+      recordedAt: '2026-11-20T00:00:00.000Z',
+      stage: 'expandSection',
+      sectionIndex: 2,
+      attempt: 1,
+    });
+
+    expect(earlier).toMatchObject({ sectionIndex: 2, attempt: 1 });
+    expect(earlier.expansionSectionIndex).toBeUndefined();
   });
 
   it('records the plan and each stage with the calls made inside it', async () => {
@@ -181,7 +195,7 @@ describe('GenerationTraceRecorder', () => {
       errorMessage: '출력 한도',
     });
     expect(readCall('00001.json').tag).toEqual({ stage: 'draftSkeleton' });
-    expect(readCall('00003.json').tag).toMatchObject({ stage: 'expandSection', sectionIndex: 3 });
+    expect(readCall('00003.json').tag).toMatchObject({ stage: 'expandSection', expansionSectionIndex: 3 });
   });
 
   it('keeps every call when many share one prompt at the same moment', async () => {
@@ -279,14 +293,14 @@ describe('GenerationTraceRecorder', () => {
     await recorder.recordCall(root, observeCall('구간 2', '본문과 앞당겨 쓴 대사'));
     await recorder.recordEvent(root, {
       kind: 'text-trimmed',
-      sectionIndex: 2,
+      expansionSectionIndex: 2,
       rule: 'runs-ahead',
       beforeText: '본문과 앞당겨 쓴 대사',
       afterText: '본문',
     });
     await recorder.recordEvent(root, {
       kind: 'section-measured',
-      sectionIndex: 2,
+      expansionSectionIndex: 2,
       lengths: { target: 6667, skeleton: 2310, expanded: 7396, final: 5590 },
     });
     await recorder.leaveStage(root);
@@ -296,7 +310,7 @@ describe('GenerationTraceRecorder', () => {
       traceEventRecordSchema.parse(readJson(join(runDirectory, 'events', name)));
     const trimmed: TraceEventRecord = readEvent('00001.json');
 
-    expect(trimmed).toMatchObject({ kind: 'text-trimmed', stage: 'expandSection', sectionIndex: 2, rule: 'runs-ahead' });
+    expect(trimmed).toMatchObject({ kind: 'text-trimmed', stage: 'expandSection', expansionSectionIndex: 2, rule: 'runs-ahead' });
     expect(readFileSync(join(runDirectory, 'blobs', `${trimmed.before?.hash}.txt`), 'utf8')).toBe('본문과 앞당겨 쓴 대사');
     expect(readFileSync(join(runDirectory, 'blobs', `${trimmed.after?.hash}.txt`), 'utf8')).toBe('본문');
     expect(readEvent('00002.json').lengths).toEqual({ target: 6667, skeleton: 2310, expanded: 7396, final: 5590 });

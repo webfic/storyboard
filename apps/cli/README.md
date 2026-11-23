@@ -370,8 +370,11 @@ keeps the right people in the right place and the pipeline can decide the scene 
 from them; a name the model uses that matches no card stays as written and `doctor` reports it.
 
 `draft generate` prints the draft's warnings (a short draft, for instance) on stderr and, under
-`--json`, in `data.warnings` as `{ message, stage?, kinds?, sectionNumber?, beatNumbers? }` (the stage that raised
-it, the violation kinds, the section and the beats that section covers, when known); the exit code stays 0. `data.usage` lists
+`--json`, in `data.warnings` as `{ message, stage?, kinds?, sectionNumber?, sectionUnit?, passageNumbers?, beatNumbers? }`
+(the stage that raised it, the violation kinds, and when known the section: `sectionUnit` says what
+`sectionNumber` counts — `skeleton` for a skeleton call, `expansion` for an expansion section —
+`passageNumbers` the passages of the final text it touches and `beatNumbers` the beats it writes); the
+message names the unit too («살붙임 2구간 (비트 8–16): …»). The exit code stays 0. `data.usage` lists
 the run's model calls by stage and task (calls, tokens, and the cost when every price is known),
 `data.cached` says whether the existing draft was kept, and with `trace.enabled` on
 `data.traceRunId` names the trace run. With `ai.seed` set (usually in a `--params` file)
@@ -462,7 +465,7 @@ scenes and costs several times the calls, so route its three tasks like the skel
 
 ```yaml
 version: 1
-stages: [buildPersonas, describeBackground, checkBackgroundFacts, collectVoiceSamples, actBeats, polishDialogue, expandSection, proofreadDraft, attributeDialogue]
+stages: [buildPersonas, describeBackground, checkBackgroundFacts, collectVoiceSamples, actBeats, polishDialogue, locateSkeletonBeats, expandSection, proofreadDraft, attributeDialogue]
 ```
 
 ```bash

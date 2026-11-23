@@ -65,7 +65,9 @@ interface OpenTraceRun {
 
 export interface TraceEventObservation {
   readonly kind: TraceEventKind;
-  readonly sectionIndex?: number;
+  readonly skeletonCallIndex?: number;
+  readonly expansionSectionIndex?: number;
+  readonly revisionSectionIndex?: number;
   readonly attempt?: number;
   readonly rule?: string;
   readonly reasons?: readonly string[];

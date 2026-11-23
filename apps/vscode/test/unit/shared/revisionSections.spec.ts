@@ -200,8 +200,8 @@ describe("ReviseLoop by section", () => {
     expect(judgements[0]?.candidateText).toBe("짧")
     expect(judgements[1]?.candidateText).toBe(`${judgements[1]?.originalText} 고쳤다.`)
     expect(reviseDraft.mock.calls.map((call) => call[1].traceTag)).toEqual([
-      { sectionIndex: 1, attempt: 1 },
-      { sectionIndex: 3, attempt: 1 }
+      { revisionSectionIndex: 1, attempt: 1 },
+      { revisionSectionIndex: 3, attempt: 1 }
     ])
   })
 

@@ -1,3 +1,4 @@
+import type { SkeletonCallParagraphs } from '#engine/pipeline/skeletonBeats';
 import {
   planSceneBreaks,
   renderPlannedNarrative,
@@ -55,6 +56,8 @@ export class SceneGenerationRun {
   public skeleton: string;
   public sceneCoordinates: SceneCoordinateLedger;
   public polishedText: string;
+  public skeletonCallParagraphs: readonly SkeletonCallParagraphs[];
+  public skeletonBeatStarts: ReadonlyMap<number, number> | undefined;
   public dialoguePolish: DialoguePolishSummary | undefined;
   public readonly warnings: SceneWarning[];
   public draftBody: string;
@@ -85,6 +88,8 @@ export class SceneGenerationRun {
     this.skeleton = '';
     this.sceneCoordinates = { segments: [], isAlignedWithBreaks: true };
     this.polishedText = '';
+    this.skeletonCallParagraphs = [];
+    this.skeletonBeatStarts = undefined;
     this.dialoguePolish = undefined;
     this.warnings = [];
     this.draftBody = '';

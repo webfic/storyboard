@@ -356,6 +356,7 @@ export class GenerateDraftUseCase implements IUseCase<GenerateDraftRequest, Gene
       sceneDialoguePolish: this.ai.gateway.getTaskProvider('sceneDialoguePolish'),
       sceneDialogueAttribution: this.ai.gateway.getTaskProvider('sceneDialogueAttribution'),
       sceneSectionExpansion: this.ai.gateway.getTaskProvider('sceneSectionExpansion'),
+      beatLocation: this.ai.gateway.getTaskProvider('beatLocation'),
       sceneProofread: this.ai.gateway.getTaskProvider('sceneProofread'),
     };
   }

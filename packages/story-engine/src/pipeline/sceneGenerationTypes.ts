@@ -33,6 +33,7 @@ export type SceneGenerationPipelineAiService = Pick<
   | 'attributeSceneDialogue'
   | 'proofreadSceneText'
   | 'expandSceneSection'
+  | 'locateBeatParagraphs'
 >;
 
 export type SceneGenerationPipelineStage =
@@ -53,6 +54,7 @@ export interface SceneGenerationPipelineTaskProviders {
   readonly sceneDialoguePolish?: AiProviderId;
   readonly sceneDialogueAttribution?: AiProviderId;
   readonly sceneSectionExpansion?: AiProviderId;
+  readonly beatLocation?: AiProviderId;
   readonly sceneProofread?: AiProviderId;
 }
 
@@ -97,7 +99,9 @@ export interface RunSceneGenerationPipelineInput {
 
 export interface ScenePipelineEvent {
   readonly kind: TraceEventKind;
-  readonly sectionIndex?: number;
+  readonly skeletonCallIndex?: number;
+  readonly expansionSectionIndex?: number;
+  readonly revisionSectionIndex?: number;
   readonly attempt?: number;
   readonly rule?: string;
   readonly reasons?: readonly string[];
@@ -125,10 +129,14 @@ export interface DialoguePolishSummary {
   readonly contestedCount: number;
 }
 
+export type SceneSectionUnit = 'skeleton' | 'expansion';
+
 export interface SceneWarning {
   readonly message: string;
   readonly kinds?: readonly SectionViolationKind[];
   readonly sectionNumber?: number;
+  readonly sectionUnit?: SceneSectionUnit;
+  readonly passageNumbers?: readonly number[];
   readonly beatNumbers?: readonly number[];
 }
 

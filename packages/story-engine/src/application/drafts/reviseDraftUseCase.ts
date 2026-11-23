@@ -509,7 +509,7 @@ export class ReviseDraftUseCase {
       onSectionJudged: (judgement): void => {
         void this.ai.traceRecorder.recordEvent(request.workspaceUri, {
           kind: judgement.rejectionReason === undefined ? 'revision-accepted' : 'revision-rejected',
-          sectionIndex: judgement.section + 1,
+          revisionSectionIndex: judgement.section + 1,
           attempt: judgement.round,
           ...(judgement.rejectionReason === undefined ? {} : { rule: judgement.rejectionReason }),
           beforeText: judgement.originalText,

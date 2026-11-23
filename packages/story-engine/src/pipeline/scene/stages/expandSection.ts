@@ -3,7 +3,13 @@ import type { ISceneStage } from '#engine/pipeline/scene/sceneStage';
 import { curlDialogueQuotes } from '#engine/pipeline/dialogueQuotes';
 import { weighViolations } from '#engine/pipeline/scene/skeletonChecks';
 import { countSceneBreakLines, restoreSceneBreaks } from '#engine/pipeline/sceneBreakPlan';
-import { sectionBeatNumbers, sectionPlaces, sectionSceneCoordinates } from '#engine/pipeline/sceneCoordinates';
+import { sectionPassageNumbers, sectionPlaces, sectionSceneCoordinates } from '#engine/pipeline/sceneCoordinates';
+import { splitDraftParagraphs, type ParagraphSpan } from '#engine/pipeline/beatLocations';
+import {
+  beatsByParagraphFromCalls,
+  beatsByParagraphFromStarts,
+  sectionOwnBeatNumbers,
+} from '#engine/pipeline/skeletonBeats';
 import {
   assertNotCancelled,
   buildGenerateOptions,
@@ -58,6 +64,7 @@ import {
 export interface CheckedSectionText {
   readonly text: string;
   readonly violations: readonly SectionViolation[];
+  readonly keptAttempt?: number;
 }
 
 export function backgroundFactLines(background: Background): string[] {
@@ -156,12 +163,46 @@ interface SectionExpansionPlan {
   readonly targetLengths: number[];
   readonly coordinatesBySection: string[][];
   readonly placesBySection: string[][];
-  readonly beatNumbersBySection: number[][];
+  readonly passageNumbersBySection: number[][];
+  readonly beatNumbersBySection: readonly (readonly number[])[];
   readonly scenePlaces: string[];
   readonly backgroundFacts: string[];
   readonly catchphraseBudgetsBySection: CatchphraseBudget[][];
   readonly sentenceFrameBudgetsBySection: (SentenceFrameBudget | undefined)[];
   readonly withheldAddressTermsBySection: string[][];
+}
+
+interface SectionLocation {
+  readonly index: number;
+  readonly beatNumbers: readonly number[];
+  readonly passageNumbers: readonly number[];
+}
+
+function describeBeatRange(beatNumbers: readonly number[]): string {
+  const first: number | undefined = beatNumbers[0];
+  const last: number | undefined = beatNumbers.at(-1);
+  if (first === undefined || last === undefined) {
+    return '';
+  }
+
+  return first === last ? ` (비트 ${first})` : ` (비트 ${first}–${last})`;
+}
+
+function describeExpansionSection(sectionNumber: number, beatNumbers: readonly number[]): string {
+  return `살붙임 ${sectionNumber}구간${describeBeatRange(beatNumbers)}`;
+}
+
+function findSectionOwnBeats(run: SceneGenerationRun, sections: readonly string[]): readonly (readonly number[])[] {
+  const paragraphs: readonly ParagraphSpan[] = splitDraftParagraphs(run.polishedText);
+  const beatCount: number = run.context.scene.card?.beats?.length ?? 0;
+  const fromStarts: readonly (readonly number[])[] | undefined =
+    run.skeletonBeatStarts === undefined
+      ? undefined
+      : beatsByParagraphFromStarts(beatCount, paragraphs, run.skeletonBeatStarts);
+  const beatsByParagraph: readonly (readonly number[])[] | undefined =
+    fromStarts ?? beatsByParagraphFromCalls(run.skeletonCallParagraphs, paragraphs.length);
+
+  return sectionOwnBeatNumbers(sections, beatsByParagraph) ?? sections.map(() => []);
 }
 
 interface SectionRetryHint {
@@ -170,6 +211,7 @@ interface SectionRetryHint {
 }
 
 interface RejectedSectionAttempt {
+  readonly attemptNumber: number;
   readonly text: string;
   readonly violations: readonly SectionViolation[];
   readonly weight: number;
@@ -225,6 +267,7 @@ class SectionExpansionAttempts {
       ? 0
       : distanceRatio * this.lengthDistanceWeight;
     const candidate: RankedSectionText = {
+      keptAttempt: attempt.attemptNumber,
       text: attempt.text,
       violations: attempt.violations,
       hasSevereViolation: attempt.hasSevereViolation,
@@ -243,7 +286,11 @@ class SectionExpansionAttempts {
   }
 
   public toBestOutcome(): CheckedSectionText {
-    return { text: this.best.text, violations: this.best.violations };
+    return {
+      text: this.best.text,
+      violations: this.best.violations,
+      ...(this.best.keptAttempt === undefined ? {} : { keptAttempt: this.best.keptAttempt }),
+    };
   }
 }
 
@@ -256,7 +303,7 @@ function describeAttemptForTrace(
   retry: SectionRetryHint,
 ): TraceCallTag {
   return {
-    sectionIndex: request.sectionNumber,
+    expansionSectionIndex: request.sectionNumber,
     ...(request.beatNumbers.length === 0 ? {} : { beatIds: request.beatNumbers.map(String) }),
     attempt: attemptNumber,
     ...(retry.retryReasons.length === 0
@@ -282,7 +329,15 @@ export class ExpandSectionStage implements ISceneStage {
         expandedSections,
       );
       expandedSections.push(repaired.text);
-      this.addSectionWarnings(run, { index, beatNumbers: plan.beatNumbersBySection[index] ?? [] }, repaired);
+      this.addSectionWarnings(
+        run,
+        {
+          index,
+          beatNumbers: plan.beatNumbersBySection[index] ?? [],
+          passageNumbers: plan.passageNumbersBySection[index] ?? [],
+        },
+        repaired,
+      );
       assertNotCancelled(run.shouldCancel);
     }
 
@@ -313,7 +368,8 @@ export class ExpandSectionStage implements ISceneStage {
       castNameOf(run.context),
     );
     const placesBySection: string[][] = sectionPlaces(run.sceneCoordinates, sections, beats);
-    const beatNumbersBySection: number[][] = sectionBeatNumbers(run.sceneCoordinates, sections);
+    const passageNumbersBySection: number[][] = sectionPassageNumbers(sections);
+    const beatNumbersBySection: readonly (readonly number[])[] = findSectionOwnBeats(run, sections);
     const scenePlaces: string[] = beats.flatMap((beat) =>
       typeof beat === 'string' || beat.place === undefined ? [] : [beat.place],
     );
@@ -341,6 +397,7 @@ export class ExpandSectionStage implements ISceneStage {
       targetLengths,
       coordinatesBySection,
       placesBySection,
+      passageNumbersBySection,
       beatNumbersBySection,
       scenePlaces,
       backgroundFacts,
@@ -380,7 +437,7 @@ export class ExpandSectionStage implements ISceneStage {
     const beatNumbers: readonly number[] = plan.beatNumbersBySection[index] ?? [];
     run.report({
       kind: 'section-measured',
-      sectionIndex: index + 1,
+      expansionSectionIndex: index + 1,
       ...(beatNumbers.length === 0 ? {} : { beatNumbers }),
       startOffset,
       lengths: {
@@ -408,7 +465,8 @@ export class ExpandSectionStage implements ISceneStage {
     if (outcome.violations.length > 0) {
       run.report({
         kind: 'output-kept-despite-violations',
-        sectionIndex: sectionNumber,
+        expansionSectionIndex: sectionNumber,
+        ...(outcome.keptAttempt === undefined ? {} : { attempt: outcome.keptAttempt }),
         reasons: outcome.violations.map((violation) => violation.detail),
         afterText: outcome.text,
       });
@@ -416,7 +474,7 @@ export class ExpandSectionStage implements ISceneStage {
     if (trimmed.text !== outcome.text) {
       run.report({
         kind: 'text-trimmed',
-        sectionIndex: sectionNumber,
+        expansionSectionIndex: sectionNumber,
         rule: 'runs-ahead',
         beforeText: outcome.text,
         afterText: trimmed.text,
@@ -425,7 +483,7 @@ export class ExpandSectionStage implements ISceneStage {
     if (restored.text !== trimmed.text) {
       run.report({
         kind: 'scene-breaks-restored',
-        sectionIndex: sectionNumber,
+        expansionSectionIndex: sectionNumber,
         rule: 'scene-breaks',
         beforeText: trimmed.text,
         afterText: restored.text,
@@ -460,17 +518,20 @@ export class ExpandSectionStage implements ISceneStage {
 
   private addSectionWarnings(
     run: SceneGenerationRun,
-    section: { readonly index: number; readonly beatNumbers: readonly number[] },
+    section: SectionLocation,
     repaired: CheckedSectionText,
   ): void {
     const sectionNumber: number = section.index + 1;
-    const location: Pick<SceneWarning, 'sectionNumber' | 'beatNumbers'> = {
+    const label: string = describeExpansionSection(sectionNumber, section.beatNumbers);
+    const location: Pick<SceneWarning, 'sectionNumber' | 'sectionUnit' | 'passageNumbers' | 'beatNumbers'> = {
       sectionNumber,
+      sectionUnit: 'expansion',
+      ...(section.passageNumbers.length === 0 ? {} : { passageNumbers: section.passageNumbers }),
       ...(section.beatNumbers.length === 0 ? {} : { beatNumbers: section.beatNumbers }),
     };
     run.warnings.push(
       ...repaired.violations.map((violation) => ({
-        message: `${sectionNumber}구간: ${violation.detail}`,
+        message: `${label}: ${violation.detail}`,
         kinds: [violation.kind],
         ...location,
       })),
@@ -478,7 +539,7 @@ export class ExpandSectionStage implements ISceneStage {
     const recaps: number = countRecapPhrases(repaired.text);
     if (recaps > run.tuning.sectionRecapPhraseLimit) {
       run.warnings.push({
-        message: `${sectionNumber}구간: 앞 장면을 «아까 …»로 되짚는 표현이 ${recaps}회입니다 (허용 ${run.tuning.sectionRecapPhraseLimit}회). 새 반응·논평·대사로 채우는 쪽이 낫습니다`,
+        message: `${label}: 앞 장면을 «아까 …»로 되짚는 표현이 ${recaps}회입니다 (허용 ${run.tuning.sectionRecapPhraseLimit}회). 새 반응·논평·대사로 채우는 쪽이 낫습니다`,
         ...location,
       });
     }
@@ -511,7 +572,7 @@ export class ExpandSectionStage implements ISceneStage {
 
       run.report({
         kind: 'output-rejected',
-        sectionIndex: request.sectionNumber,
+        expansionSectionIndex: request.sectionNumber,
         attempt: attempt + 1,
         reasons: violations.map((violation) => violation.detail),
         afterText: expanded,
@@ -519,6 +580,7 @@ export class ExpandSectionStage implements ISceneStage {
 
       const isUnderLength: boolean = violations.some((violation) => violation.kind === 'too-short');
       attempts.recordRejected({
+        attemptNumber: attempt + 1,
         text: expanded,
         violations,
         weight: weighViolations(violations, run.tuning.violationWeights),

@@ -673,7 +673,7 @@ export class ReviseLoop {
       {
         providerId: registry.getTaskProvider('draftRevision'),
         attribution,
-        traceTag: { sectionIndex: plan.section + 1, attempt: this.roundInProgress },
+        traceTag: { revisionSectionIndex: plan.section + 1, attempt: this.roundInProgress },
       },
     );
 

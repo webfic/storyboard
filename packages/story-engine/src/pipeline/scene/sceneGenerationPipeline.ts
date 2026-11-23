@@ -8,6 +8,7 @@ import { CollectVoiceSamplesStage } from '#engine/pipeline/scene/stages/collectV
 import { DescribeBackgroundStage } from '#engine/pipeline/scene/stages/describeBackground';
 import { DraftSkeletonStage } from '#engine/pipeline/scene/stages/draftSkeleton';
 import { ExpandSectionStage } from '#engine/pipeline/scene/stages/expandSection';
+import { LocateSkeletonBeatsStage } from '#engine/pipeline/scene/stages/locateSkeletonBeats';
 import { PolishDialogueStage } from '#engine/pipeline/scene/stages/polishDialogue';
 import { ProofreadDraftStage } from '#engine/pipeline/scene/stages/proofreadDraft';
 import { listSceneCoordinates, segmentBeatNumbers } from '#engine/pipeline/sceneCoordinates';
@@ -27,6 +28,7 @@ export const sceneStages: Readonly<Record<SceneStageId, ISceneStage>> = {
   draftSkeleton: new DraftSkeletonStage(),
   actBeats: new ActBeatsStage(),
   polishDialogue: new PolishDialogueStage(),
+  locateSkeletonBeats: new LocateSkeletonBeatsStage(),
   expandSection: new ExpandSectionStage(),
   proofreadDraft: new ProofreadDraftStage(),
   attributeDialogue: new AttributeDialogueStage(),

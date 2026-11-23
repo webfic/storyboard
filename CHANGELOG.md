@@ -16,6 +16,11 @@ Storyboard의 주요 변경 사항을 한국어로 기록합니다.
 - **`scene set <씬> --beat <n>` 으로 비트 하나만 고칩니다.** `--text`·`--cast`(쉼표로 구분)·`--place`·`--time`·`--break true|false` 를 받고, `scene unset <씬> --beat <n> <cast|place|time|break>` 가 항목 하나를 지웁니다. 나머지 비트는 그대로이고, 카드에 없는 인물·장소는 거부합니다. 지금까지는 비트 하나를 고치려면 `scene plot --force` 로 모든 비트를 다시 뽑거나 `beats.yaml` 을 손으로 고쳐야 했습니다. (#241)
 - **`scene show` 가 씬 나눔 계획을 보여 줍니다.** 비트에 장소·시각·`break` 가 있으면 «씬 나눔: 대목 1 (비트 1–5) / 대목 2 (비트 6–12)» 처럼 대목마다 비트 범위를 보여 주고, `--json` 은 `data.passages` 로 냅니다. 생성하기 전에 나눔을 보고 고칠 수 있습니다. (#241)
 
+### 바뀜
+
+- **살붙임 경고가 그 구간이 쓴 비트를 적고, 무엇을 세는 «구간»인지 밝힙니다.** 경고 문구는 «2구간: …» 대신 «살붙임 2구간 (비트 8–16): …»이 됩니다. `--json` 경고에는 `sectionUnit`(`skeleton` 은 뼈대 호출, `expansion` 은 살붙임 구간)과 `passageNumbers`(최종 원고에서 걸친 대목)가 더해지고, `beatNumbers` 는 그 구간이 걸친 대목의 비트 전부가 아니라 그 구간이 실제로 쓴 비트입니다. 이를 위해 뼈대를 다듬은 뒤 비트마다 시작 문단을 찾는 `locateSkeletonBeats` 단계가 씬마다 호출을 하나 더 씁니다(`beatLocation` 작업). 찾지 못하면 뼈대 호출마다 쓴 문단으로 대신 셉니다. 본문은 바뀌지 않습니다. (#239)
+- **생성 추적 기록의 구간 번호가 단계마다 따로 적힙니다.** 호출 태그와 사건 기록의 `sectionIndex` 하나가 뼈대 호출·살붙임 구간·검수 구간을 모두 뜻하던 것을 `skeletonCallIndex`·`expansionSectionIndex`·`revisionSectionIndex` 로 나눴습니다. 살붙임 호출의 `beatIds` 는 그 구간이 쓴 비트이고, `output-kept-despite-violations` 는 남긴 판의 시도 번호(`attempt`)를 적습니다. 0.17.2 까지의 추적 기록도 그대로 읽힙니다. (#239)
+
 ## [0.17.2] - 2026-11-23
 
 ### 추가

@@ -17,6 +17,11 @@ after the first public release.
 - **`scene set <scene> --beat <n>` changes one beat.** It takes `--text`, `--cast` (comma separated), `--place`, `--time` and `--break true|false`, and `scene unset <scene> --beat <n> <cast|place|time|break>` removes one field. The other beats stay as they are, and a cast or place that matches no card is refused. Until now changing one beat meant regenerating them all with `scene plot --force` or editing `beats.yaml` by hand. (#241)
 - **`scene show` shows where the scene breaks will fall.** When the beats carry a place, a time or a `break`, it lists each passage with its beats («씬 나눔: 대목 1 (비트 1–5) / 대목 2 (비트 6–12)»), and `--json` gives them as `data.passages`, so the breaks can be checked and changed before a generation. (#241)
 
+### Changed
+
+- **An expansion warning names the beats its section writes and which «구간» it counts.** The message reads «살붙임 2구간 (비트 8–16): …» instead of «2구간: …». A `--json` warning adds `sectionUnit` (`skeleton` for a skeleton call, `expansion` for an expansion section) and `passageNumbers` (the passages of the final text it touches), and its `beatNumbers` are the beats the section writes rather than every beat of the passages it touches. For this a `locateSkeletonBeats` stage, after the dialogue polish, asks once per scene where each beat starts in the skeleton (the `beatLocation` task); when it finds nothing, the paragraphs each skeleton call wrote stand in. The text does not change. (#239)
+- **The generation trace numbers each stage's sections in a field of its own.** The one `sectionIndex` of call tags and event records, which meant a skeleton call, an expansion section or a revise section depending on the stage, is now `skeletonCallIndex`, `expansionSectionIndex` and `revisionSectionIndex`. An expansion call's `beatIds` are the beats that section writes, and `output-kept-despite-violations` records the attempt it kept (`attempt`). Traces written by 0.17.2 or earlier still read. (#239)
+
 ## [0.17.2] - 2026-11-23
 
 ### Added

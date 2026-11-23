@@ -285,7 +285,7 @@ describe('draft generate --json with beat location on', () => {
     const generated: GeneratedSceneData = await generateScene();
 
     expect(generated.beatLocations).toBeUndefined();
-    expect(generated.usage.some((row) => row.task === 'beatLocation')).toBe(false);
+    expect(generated.usage.some((row) => row.stage === 'locateBeats')).toBe(false);
   });
 
   it('carries the locations per scene in a batch', async () => {

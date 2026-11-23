@@ -1,3 +1,4 @@
+import { splitDraftParagraphs } from '#engine/pipeline/beatLocations';
 import { curlDialogueQuotes } from '#engine/pipeline/dialogueQuotes';
 import { characterSpeechToOthers } from '#engine/pipeline/scene/characterVoices';
 import { castNameOf, type SceneGenerationRun } from '#engine/pipeline/scene/sceneGenerationRun';
@@ -240,6 +241,9 @@ export class SkeletonDrafter {
       options,
       beats.map((beat) => beatText(beat) ?? ''),
     );
+    run.skeletonCallParagraphs = [
+      { beatNumbers: everyBeat.map((beatIndex) => beatIndex + 1), paragraphCount: splitDraftParagraphs(whole.text).length },
+    ];
 
     return {
       text: whole.text,
@@ -277,7 +281,7 @@ export class SkeletonDrafter {
         options,
         call.beats.map((beat) => beatText(beats[beat]) ?? ''),
         call.markers,
-        { sectionIndex: index + 1, beatIds: call.beats.map((beat) => String(beat + 1)) },
+        { skeletonCallIndex: index + 1, beatIds: call.beats.map((beat) => String(beat + 1)) },
       );
       parts.push(skeletonDraft.text);
       drafts.push(skeletonDraft);
@@ -299,6 +303,10 @@ export class SkeletonDrafter {
         }),
       });
     }
+    run.skeletonCallParagraphs = calls.map((call, index) => ({
+      beatNumbers: call.beats.map((beat) => beat + 1),
+      paragraphCount: splitDraftParagraphs(parts[index] ?? '').length,
+    }));
     return { text, warnings: this.describeCallWarnings(drafts, stillMissing) };
   }
 
@@ -317,6 +325,7 @@ export class SkeletonDrafter {
         message: `${label}: ${violation.detail}`,
         kinds: [violation.kind],
         sectionNumber,
+        sectionUnit: 'skeleton',
       }));
     });
   }
@@ -431,7 +440,7 @@ export class SkeletonDrafter {
       coverage.missingBeats.includes(text) ? 'missing' : coverage.reversedBeats.includes(text) ? 'reversed' : 'present';
     this.run.report({
       kind: 'beats-checked',
-      ...(tag.sectionIndex === undefined ? {} : { sectionIndex: tag.sectionIndex }),
+      ...(tag.skeletonCallIndex === undefined ? {} : { skeletonCallIndex: tag.skeletonCallIndex }),
       ...(tag.attempt === undefined ? {} : { attempt: tag.attempt }),
       beats: beats.map((text, index) => ({
         number: Number(tag.beatIds?.[index] ?? index + 1),

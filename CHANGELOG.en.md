@@ -10,6 +10,8 @@ after the first public release.
 
 ## [Unreleased]
 
+## [0.17.2] - 2026-11-23
+
 ### Added
 
 - **`draft generate --json` can give each beat its range in the draft (`generation.beats.locate`).** When on, one more call per scene reads the saved draft (after the revise loop when it follows) for the paragraph where each beat starts, and `data.beatLocations` holds, per beat, `beat`, `isLocated` and, when found, the range in the body (`start` inclusive, `end` exclusive, from that paragraph to the one before the next beat starts). A beat the answer left out, or one whose order against the others cannot be settled, is not guessed but left `isLocated: false`. It works for a scene without places and times too, a warning whose beats are all located gets their range (`start`, `end`), and `--all --json` gives the same field per scene. The draft does not change, and the setting is off by default. (#226)

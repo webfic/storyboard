@@ -80,6 +80,7 @@ export * from '#ai/ai/providers/GrokProvider';
 export * from '#ai/ai/providers/MockAiProvider';
 export * from '#ai/ai/providers/OllamaProvider';
 export * from '#ai/ai/providers/OpenAiProvider';
+export * from '#ai/ai/providers/transportFailure';
 export * from '#ai/ports/cliRunner';
 export * from '#ai/ports/ConfigBridge';
 export * from '#ai/ports/SecretStore';

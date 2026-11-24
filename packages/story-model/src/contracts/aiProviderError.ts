@@ -6,6 +6,7 @@ export type AiProviderErrorCode =
   | 'missing-model'
   | 'connection-failed'
   | 'generation-failed'
+  | 'transport-failed'
   | 'output-limit'
   | 'provider-not-enabled'
   | 'risk-not-acknowledged'
@@ -31,4 +32,8 @@ export class AiProviderError extends Error {
 
 export function isTimeoutErrorCode(code: AiProviderErrorCode): boolean {
   return code === 'cli-timeout' || code === 'request-timeout';
+}
+
+export function isRetryableErrorCode(code: AiProviderErrorCode): boolean {
+  return isTimeoutErrorCode(code) || code === 'transport-failed';
 }

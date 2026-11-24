@@ -15,7 +15,7 @@ import {
 import { runTui } from '@/tui/index';
 import { extractErrorMessage } from '@storyboard/story-model';
 
-const version: string = '0.17.3';
+const version: string = '0.17.4';
 
 declare const storyboardBuildIdentity: BuildIdentity | undefined;
 const buildIdentity: BuildIdentity =

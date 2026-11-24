@@ -10,6 +10,8 @@ after the first public release.
 
 ## [Unreleased]
 
+## [0.17.4] - 2026-11-24
+
 ### Added
 
 - **A `draft generate` run that fails or stops part-way can be continued.** Until now, one dropped call during the expansion meant running every call again from the skeleton. A run that stops on an error, Ctrl+C or a usage limit now keeps its finished stages' output and each accepted expansion section in the work's cache database, and generating the same scene again without `--force` continues from the first unfinished stage or the next section — before the cached draft is considered, even when an older draft still matches the inputs. When the scene's inputs, the context of the earlier scenes, a task's provider or model, the tuning (model profile, `--params`), the stage order (`pipelines/scene.yaml`), the prompt resources or the Storyboard version changed, it says what changed and starts over. `--force` still discards everything. A failed run's message names the stage and section it stopped in and ends with «--force 없이 다시 실행하면 이어서 합니다»; the `--json` result carries `failedStage`, `failedSection` and `isResumable`, and a continued run carries what it reused (`reused`). Usage counts only the new calls. The generation trace records a `stage-reused` event for each skipped stage and a `section-reused` event for each reused section. The skeleton is not kept per call, so a run that stops inside the skeleton drafts it again. (#250)

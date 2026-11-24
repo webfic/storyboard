@@ -1,4 +1,6 @@
 import type {
+  Background,
+  BackgroundFactConflict,
   ProjectFormat,
   SceneContext,
   SceneDialogueRecord,
@@ -19,6 +21,7 @@ import type {
 import type { StoryboardAiService } from '@storyboard/story-ai';
 import type { SceneGenerationTuning } from '#engine/pipeline/sceneGenerationTuning';
 import type { SceneStageId } from '#engine/pipeline/sceneStageCatalog';
+import type { SkeletonCallParagraphs } from '#engine/pipeline/skeletonBeats';
 export type SceneGenerationPipelineAiService = Pick<
   StoryboardAiService,
   | 'createCharacterPersona'
@@ -95,6 +98,8 @@ export interface RunSceneGenerationPipelineInput {
   readonly backgroundRecentExcerpt?: string;
   readonly stages?: readonly SceneStageId[];
   readonly observer?: IScenePipelineObserver;
+  readonly resumeFrom?: SceneRunCheckpoint;
+  readonly onCheckpoint?: SaveSceneRunCheckpoint;
 }
 
 export interface ScenePipelineEvent {
@@ -156,3 +161,38 @@ export interface RunSceneGenerationPipelineResult {
   readonly dialogueRecord?: SceneDialogueRecord;
   readonly dialoguePolish?: DialoguePolishSummary;
 }
+
+export interface SceneCoordinateSnapshot {
+  readonly segments: readonly (string | null)[];
+  readonly isAlignedWithBreaks: boolean;
+  readonly beats?: readonly (readonly number[])[];
+}
+
+export interface SceneRunSnapshot {
+  readonly personasUsed: readonly (readonly [string, string])[];
+  readonly background: Background;
+  readonly backgroundFactConflicts: readonly BackgroundFactConflict[];
+  readonly voiceSamples: readonly (readonly [string, readonly string[]])[];
+  readonly skeleton: string;
+  readonly sceneCoordinates: SceneCoordinateSnapshot;
+  readonly polishedText: string;
+  readonly skeletonCallParagraphs: readonly SkeletonCallParagraphs[];
+  readonly skeletonBeatStarts?: readonly (readonly [number, number])[];
+  readonly dialoguePolish?: DialoguePolishSummary;
+  readonly draftBody: string;
+  readonly dialogueRecord?: SceneDialogueRecord;
+}
+
+export interface SceneExpansionProgress {
+  readonly sections: readonly string[];
+  readonly warnings: readonly SceneWarning[];
+}
+
+export interface SceneRunCheckpoint {
+  readonly finishedStages: readonly SceneStageId[];
+  readonly warnings: readonly SceneStageWarning[];
+  readonly run: SceneRunSnapshot;
+  readonly expansion?: SceneExpansionProgress;
+}
+
+export type SaveSceneRunCheckpoint = (checkpoint: SceneRunCheckpoint) => Promise<void>;

@@ -30,6 +30,8 @@ import {
   type ISceneDialogueCorpus,
   type SceneGenerationPipelineAiService,
   type SceneGenerationPipelineStage,
+  type SceneRunCheckpoint,
+  SceneGenerationPipelineCancelledError,
 } from '@storyboard/story-engine';
 
 function longProse(prefix: string, length = 3000): string {
@@ -1101,6 +1103,57 @@ describe("runSceneGenerationPipeline — 살붙임 단계", () => {
       expect(input.targetLength).toBe(budgets[index])
     }
     expect(inputs.reduce((sum, input) => sum + input.targetLength, 0)).toBe(15000)
+  })
+
+  it("saves the accepted sections before a cancel stops the run, and continues from there", async () => {
+    const createExpandingAi = (): ReturnType<typeof createRecordingAiService> => {
+      const ai = createRecordingAiService()
+      ai.draftSceneSkeleton.mockResolvedValue(longSkeleton)
+      ai.expandSceneSection.mockImplementation(
+        async (input) => longProse(`확장:${(input as { section: string }).section.slice(0, 5)}`)
+      )
+      return ai
+    }
+    const ai = createExpandingAi()
+    const checkpoints: SceneRunCheckpoint[] = []
+    const baseInput = {
+      sceneStem: "01-opening",
+      context: contextFor([eliaCard], "본문"),
+      format: "novel" as const,
+      styleDirective: { targetWordCount: 15000 }
+    }
+
+    await expect(
+      runSceneGenerationPipeline({
+        ...baseInput,
+        aiService: ai,
+        shouldCancel: () => ai.expandSceneSection.mock.calls.length >= 1,
+        onCheckpoint: async (checkpoint) => {
+          checkpoints.push(checkpoint)
+        }
+      })
+    ).rejects.toBeInstanceOf(SceneGenerationPipelineCancelledError)
+    const saved = checkpoints.at(-1) as SceneRunCheckpoint
+    expect(saved.expansion?.sections).toHaveLength(1)
+    expect(saved.finishedStages).toContain("draftSkeleton")
+    expect(saved.finishedStages).not.toContain("expandSection")
+
+    const resumedAi = createExpandingAi()
+    const resumed = await runSceneGenerationPipeline({
+      ...baseInput,
+      aiService: resumedAi,
+      resumeFrom: JSON.parse(JSON.stringify(saved)) as SceneRunCheckpoint
+    })
+    const uninterrupted = await runSceneGenerationPipeline({ ...baseInput, aiService: createExpandingAi() })
+
+    expect(resumedAi.createCharacterPersona).not.toHaveBeenCalled()
+    expect(resumedAi.draftSceneSkeleton).not.toHaveBeenCalled()
+    expect(resumedAi.expandSceneSection).toHaveBeenCalledTimes(2)
+    expect((resumedAi.expandSceneSection.mock.calls[0]?.[0] as { previousSection?: string }).previousSection).toBe(
+      saved.expansion?.sections[0]
+    )
+    expect(resumed.draftBody).toBe(uninterrupted.draftBody)
+    expect(resumed.warnings).toEqual(uninterrupted.warnings)
   })
 
   it("hands the previous finished section to the next call, and none to the first", async () => {

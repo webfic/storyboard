@@ -45,12 +45,20 @@ export class SceneGenerationPipeline {
   public async run(): Promise<RunSceneGenerationPipelineResult> {
     const run: SceneGenerationRun = SceneGenerationRun.create(this.input);
     const plan: readonly SceneStageId[] = this.input.stages ?? resolveScenePipelinePlan();
-    const warnings: SceneStageWarning[] = [];
+    const warnings: SceneStageWarning[] = [...run.checkpoints.restoreInto(run)];
 
     this.input.observer?.onPlan(plan);
     for (const stage of plan) {
-      const stageWarnings: readonly SceneWarning[] = await this.runObservedStage(stage, run);
-      warnings.push(...stageWarnings.map((warning) => ({ ...warning, stage })));
+      if (run.checkpoints.isFinished(stage)) {
+        run.report({ kind: 'stage-reused', subject: stage });
+        continue;
+      }
+
+      const stageWarnings: readonly SceneStageWarning[] = (await this.runObservedStage(stage, run)).map(
+        (warning) => ({ ...warning, stage }),
+      );
+      warnings.push(...stageWarnings);
+      await run.checkpoints.finishStage(run, stage, stageWarnings);
     }
 
     const beatSegments: readonly (readonly number[])[] | undefined = segmentBeatNumbers(
@@ -77,6 +85,7 @@ export class SceneGenerationPipeline {
   ): Promise<readonly SceneWarning[]> {
     this.input.observer?.onStageStart(id);
     const warningCountBeforeStage: number = run.warnings.length;
+    run.checkpoints.beginStage(warningCountBeforeStage);
     const lengthBeforeStage: number = workingTextLength(run);
 
     try {

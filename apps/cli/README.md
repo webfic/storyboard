@@ -392,6 +392,21 @@ scene without places and times as well. `draft generate --all --json` carries th
 `data.usage`. `--verbose` also logs each pipeline stage as it runs, which
 is how you tell a 20-minute scene apart from a hung one.
 
+A run that stops part-way — an error, Ctrl+C, or a provider's usage limit — keeps what its finished
+stages produced and each expansion section it accepted in the work's cache. Running `draft generate`
+for that scene again without `--force` continues from the first unfinished stage or section instead
+of paying for the finished ones again, even when an older draft of the scene is current; `--force`
+discards it and starts over. It continues only when nothing the run depends on changed: the scene's
+inputs, the context of the scenes before it, the provider and model of each task, the tuning (model
+profile, `--params`), the stage order (`pipelines/scene.yaml`), the prompt resources and the
+Storyboard version. Otherwise it says what changed and starts over. A failed run's message names the
+stage and section it stopped in and ends with «--force 없이 다시 실행하면 이어서 합니다»; under `--json`
+the result carries `data.failedStage`, `data.failedSection` (expansion only) and `data.isResumable`.
+A continued run's `data.reused` lists the stages it reused and `expansionSections`, how many
+expansion sections; `data.usage` counts only the calls it made, and its trace records a
+`stage-reused` or `section-reused` event for each. A skeleton is not kept per call: a run that stops
+inside the skeleton drafts the skeleton again.
+
 `--workspace <path>` picks the workspace (default: the current directory). `--json` puts a single
 JSON object on stdout — for failures too (`{"ok":false,"message":…}`), so an agent never has to
 parse loose text; progress and warnings always go to stderr. Exit code is 0 on success and non-zero

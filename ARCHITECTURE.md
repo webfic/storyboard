@@ -630,7 +630,7 @@ statements: []
 | 표 | 담는 것 |
 |---|---|
 | `sessions` | 스튜디오 대화(카드·씬 uuid별, 캐시를 지울 때까지 모두 보관)와 인터뷰 세션, 노트 흡수 세션, 대기 중인 제안 |
-| `runs` | 중단된 장편 생성이 이어 갈 진행 상태 |
+| `runs` | 중단된 장편 생성이 이어 갈 진행 상태와, 도중에 멈춘 씬 초안 생성의 저장 지점(씬마다 한 행, `kind: scene-draft`) |
 | `usage` | 호출마다의 사용량 원장(CLI와 확장 모두 기록) |
 | `element_index` | 카드·씬 인덱스 |
 | `lock` | 작품 하나에 쓰는 앱 하나만 두는 실행 잠금(확장이나 다른 CLI가 쥐고 있으면 쓰기 동사는 exit 1) |
@@ -640,6 +640,16 @@ statements: []
 | `revision_plans` | 씬 단위 검수·재작성 계획 |
 
 장 요약이 빠져 있으면(캐시를 지웠거나 낡은 요약을 지웠다면) 앞 장들을 씬 초안을 쓰기 직전에 다시 요약한다. `draft generate --all`과 `novel generate`의 실행 확인은 다시 만들 요약 수를 알린다.
+
+#### 멈춘 초안 생성 이어 하기
+
+씬 파이프라인은 스테이지가 끝날 때마다, 살붙임은 구간 하나를 받아들일 때마다 저장 지점을 넘기고(파이프라인은 I/O 없이 콜백만 부른다), 초안 유스케이스가 그것을 `runs` 표에 씬마다 한 행으로 쓴다. 담기는 것은 끝난 스테이지 목록과 그 경고, 스테이지가 남긴 결과(페르소나·배경·말투 표본·뼈대·좌표 장부·다듬은 뼈대·비트 시작 문단·대사 기록·본문)와 받아들인 살붙임 구간과 그 경고다. 뼈대는 호출 단위로 남기지 않으므로 뼈대 도중에 멈추면 뼈대를 처음부터 다시 쓴다.
+
+- 오류로 실패하든, 취소(Ctrl+C)되든, 사용 한도에 걸려 멈추든 저장 지점은 남는다. 초안을 저장하면 지운다.
+- `--force` 없이 다시 실행하면 저장 지점이 캐시 적중보다 먼저다. 끝난 스테이지는 건너뛰고 첫 미완 스테이지(살붙임이면 다음 구간)부터 돈다. `--force` 는 저장 지점을 버리고 처음부터 한다.
+- 이어 하려면 지문이 같아야 한다: 프로그램 버전, 씬 입력(입력 해시·문체 지시·확정 사실), 직전 씬 맥락(앞 씬 맥락·인물별로 아는 것과 관계·배경의 최근 발췌), 작업별 프로바이더와 모델, 조정값(모델 프로필과 `--params` 를 합친 생성 손잡이·살붙임 구간 상한·맥락 압축·씨앗), 단계 구성(`pipelines/scene.yaml`), 프롬프트 리소스(본문과 샘플링 값). 하나라도 다르면 저장 지점을 지우고 무엇이 달라서인지 경고한 뒤 처음부터 한다.
+- 실패 결과는 멈춘 스테이지(`failedStage`)와 살붙임 구간(`failedSection`), 이어 할 수 있는지(`isResumable`)를 싣는다. 이어 한 실행의 결과는 그대로 쓴 스테이지와 구간 수를 `reused` 로 싣고, 사용량은 새로 나간 호출만 센다.
+- `state.yaml` 의 `stale` 은 실패 때문에 붙지 않는다. 생성 전 감사(§4.10)가 붙이고, 초안을 저장한 뒤 `updateStoryState` 가 그 씬의 `state.yaml` 을 새로 써야 사라진다. 생성이 도중에 멈추면 표시가 남는데 뜻은 같다 — 그 항목은 아직 지금 입력으로 다시 세워지지 않았다. 이어 한 실행이 끝나면 사라진다.
 
 ### 4.12 `.storyboard/cache/traces/<run>/` (생성 추적)
 
@@ -651,7 +661,7 @@ statements: []
 | `plan.json` | 씬 파이프라인이 돌았을 때: 적용된 스테이지 순서(`stageIds`)와 그 시점의 스테이지 카탈로그(이름·필수·선택·대체·선행 조건). 순서에 없는 카탈로그 행이 실행되지 않은 스테이지다 |
 | `stages/NNNNN.json` | 스테이지 또는 파이프라인 앞뒤 단계(`resolveSceneBeats`·`refreshChapterSummaries`·`updateStoryState`·`reviseLoop`) 한 번의 실행: 순번, 스테이지 id, `completed`·`failed`, 시작 시각·소요, 그 안에서 나간 첫 호출 번호와 호출 수, 실패 메시지 |
 | `calls/NNNNN.json` | 호출 한 건: 작업 이름, 프로바이더·모델, 요청 파라미터, 메시지별 본문 해시와 글자 수, 응답 해시·글자 수·끊김 여부와 프로바이더가 준 종료 사유 원문 `stopReason`(또는 오류 메시지), 토큰·비용, 시작 시각·소요, 태그(스테이지 안에서 나간 호출은 `tag.stage` 에 스테이지 id; 뼈대는 호출 번호 `skeletonCallIndex`·비트 번호 `beatIds`·`attempt`, 대사 다듬기는 인물 이름 `subject`·`attempt`, 살붙임은 구간 번호 `expansionSectionIndex`·그 구간이 쓴 비트 `beatIds`·`attempt`, 검수 재작성은 `revisionSectionIndex`·`attempt`; 재시도면 `retryReason`. 0.17.2 까지의 기록은 단계와 상관없이 `sectionIndex` 하나를 썼다) |
-| `events/NNNNN.json` | 호출 사이에 본문에 일어난 일 한 건: `output-rejected`(반려된 시도와 그 까닭, 반려된 본문), `output-kept-despite-violations`(재시도가 다해 위반이 남은 채 채택한 판, `attempt` 가 그 판의 시도 번호), `text-trimmed`(잘라내기 전후 본문과 규칙), `scene-breaks-restored`(장면 구분을 되살린 전후), `section-measured`(구간의 목표·뼈대·살붙임·최종 글자 수와, 그 구간이 쓴 비트 번호 `beatNumbers`. 비트는 `locateSkeletonBeats` 가 찾은 뼈대 문단에서 셈하고, 찾지 못하면 뼈대 호출마다 쓴 문단으로 대신 센다(호출 하나의 비트가 두 구간에 모두 적힐 수 있다). `startOffset` 은 살붙임이 끝난 원고에서 그 구간이 시작하는 글자 위치), `text-measured`(스테이지가 작업 중인 원고의 길이를 바꿨을 때 그 전후 글자 수 `lengths.before`·`after`. 검수 루프도 시작과 끝의 길이를 한 건 남긴다), `beats-checked`(뼈대가 비트를 담았는지 본 판정: 비트 번호·글·`present`/`missing`/`reversed`. 뼈대 기준이다. `trace.checkFinalBeats` 를 켜면 끝난 원고 기준의 판정이 `rule: final-draft` 로 한 건 더 남는다. 검수 루프가 이어지는 생성에서는 그 루프가 끝난 원고가 대상이고, 루프가 중단되거나 실패하면 판정하지 않는다), `dialogue-polished`(인물 한 명의 대사 다듬기 응답 하나: `subject` 가 인물, `lines` 에 번호별 뼈대 대사·다듬은 대사·반영 여부와 줄 단위 반려 까닭, `reasons` 에 장면 단위 반려 까닭), `revision-checked`(검수 회차의 검사 결과 한 줄과 재작성 지시, `attempt` 가 회차), `revision-accepted`·`revision-rejected`(검수가 다시 쓴 구간의 전후 본문과, 기각이면 `rule` 에 까닭; `revisionSectionIndex` 는 장면 구분으로 나눈 검수 구간 번호), `warning`(스테이지가 낸 경고 한 줄). 스테이지 id·그 단계의 구간 번호(`skeletonCallIndex`·`expansionSectionIndex`·`revisionSectionIndex`)·시도 번호가 붙는다 |
+| `events/NNNNN.json` | 호출 사이에 본문에 일어난 일 한 건: `output-rejected`(반려된 시도와 그 까닭, 반려된 본문), `output-kept-despite-violations`(재시도가 다해 위반이 남은 채 채택한 판, `attempt` 가 그 판의 시도 번호), `text-trimmed`(잘라내기 전후 본문과 규칙), `scene-breaks-restored`(장면 구분을 되살린 전후), `section-measured`(구간의 목표·뼈대·살붙임·최종 글자 수와, 그 구간이 쓴 비트 번호 `beatNumbers`. 비트는 `locateSkeletonBeats` 가 찾은 뼈대 문단에서 셈하고, 찾지 못하면 뼈대 호출마다 쓴 문단으로 대신 센다(호출 하나의 비트가 두 구간에 모두 적힐 수 있다). `startOffset` 은 살붙임이 끝난 원고에서 그 구간이 시작하는 글자 위치), `text-measured`(스테이지가 작업 중인 원고의 길이를 바꿨을 때 그 전후 글자 수 `lengths.before`·`after`. 검수 루프도 시작과 끝의 길이를 한 건 남긴다), `beats-checked`(뼈대가 비트를 담았는지 본 판정: 비트 번호·글·`present`/`missing`/`reversed`. 뼈대 기준이다. `trace.checkFinalBeats` 를 켜면 끝난 원고 기준의 판정이 `rule: final-draft` 로 한 건 더 남는다. 검수 루프가 이어지는 생성에서는 그 루프가 끝난 원고가 대상이고, 루프가 중단되거나 실패하면 판정하지 않는다), `dialogue-polished`(인물 한 명의 대사 다듬기 응답 하나: `subject` 가 인물, `lines` 에 번호별 뼈대 대사·다듬은 대사·반영 여부와 줄 단위 반려 까닭, `reasons` 에 장면 단위 반려 까닭), `revision-checked`(검수 회차의 검사 결과 한 줄과 재작성 지시, `attempt` 가 회차), `revision-accepted`·`revision-rejected`(검수가 다시 쓴 구간의 전후 본문과, 기각이면 `rule` 에 까닭; `revisionSectionIndex` 는 장면 구분으로 나눈 검수 구간 번호), `stage-reused`(멈춘 실행을 이어 할 때 건너뛴 스테이지 하나, `subject` 가 스테이지 id), `section-reused`(이어 한 살붙임이 그대로 쓴 구간 하나, `expansionSectionIndex`), `warning`(스테이지가 낸 경고 한 줄). 스테이지 id·그 단계의 구간 번호(`skeletonCallIndex`·`expansionSectionIndex`·`revisionSectionIndex`)·시도 번호가 붙는다 |
 | `blobs/<sha256>.txt` | 프롬프트·응답 본문. 같은 본문은 한 번만 저장한다 |
 
 생성 직후 이어 도는 검수 루프는 같은 run 에 이어 적는다. 모델 호출이 한 번도 없던 run(캐시 적중 등)은 끝날 때 지운다. 호출이 끝날 때마다 파일 하나를 쓰므로 실패하거나 중단된 run 도 그때까지의 기록이 남는다. 본문에 원고가 들어가므로 캐시에만 두며, 같은 종류·같은 씬의 run 은 최근 `trace.keepRuns`(기본 3)회만 남긴다. 기록은 생성에 영향을 주지 않고, 쓰지 못하면 경고만 남기고 생성은 계속된다. 형식의 스키마는 `packages/story-model/src/contracts/generationTrace.ts` 에 있다.

@@ -20,6 +20,8 @@ import {
   type ReviseOutcome,
   type StageUsage,
   type BeatRange,
+  type DraftRunReuse,
+  type GenerateDraftResult,
   addBeatSpansToWarnings,
 } from '@storyboard/story-engine';
 import type { GenerateAndReviseDraftResult, ReadyDraft } from '@storyboard/story-app';
@@ -101,7 +103,7 @@ export class DraftGenerateCommand implements ICommandHandler {
       });
 
     if (!generation.ok) {
-      return failure(generation.kind === 'failed' ? generation.message : '취소했습니다.');
+      return describeStoppedRun(generation);
     }
 
     return this.describeGeneratedScene(container, {
@@ -127,8 +129,9 @@ export class DraftGenerateCommand implements ICommandHandler {
     }
 
     const isCached: boolean = draft.kind === 'cache_hit';
+    const reused: DraftRunReuse | undefined = draft.kind === 'generated' ? draft.reused : undefined;
     return success(
-      isCached ? '입력이 같아 기존 초안을 씁니다.' : '초안을 생성했습니다.',
+      describeGeneratedMessage({ isCached, reused }),
       {
         draft: (draft.draftUri as StoryUri).fsPath,
         cached: isCached,
@@ -139,6 +142,7 @@ export class DraftGenerateCommand implements ICommandHandler {
         ...(draft.kind === 'generated' && draft.traceRunId !== undefined
           ? { traceRunId: draft.traceRunId }
           : {}),
+        ...(reused === undefined ? {} : { reused }),
         warnings: revise?.warning
           ? [...warnings, { message: revise.warning, stage: reviseStage }]
           : warnings,
@@ -183,4 +187,48 @@ function describeBatchSummary(summary: GenerateAllDraftsSummary): CommandOutcome
         : `${failures}건 실패 (생성 ${generated}건, 캐시 ${cacheHits}건): ${failureLabels.join(', ')}`,
     data: summary,
   };
+}
+
+type StoppedDraftRun = Extract<GenerateDraftResult, { readonly ok: false }>;
+
+const resumeHint: string = '--force 없이 다시 실행하면 이어서 합니다.';
+
+function describeStopPoint(stopped: StoppedDraftRun): string | undefined {
+  if (stopped.failedStage === undefined) {
+    return undefined;
+  }
+
+  const stageLabel: string = sceneStageLabels[stopped.failedStage] ?? stopped.failedStage;
+  const section: string = stopped.failedSection === undefined ? '' : ` ${stopped.failedSection}구간`;
+  return `${stageLabel}${section}에서 멈췄습니다.`;
+}
+
+function describeStoppedRun(stopped: StoppedDraftRun): CommandOutcome {
+  const reason: string = stopped.kind === 'failed' ? stopped.message : '취소했습니다.';
+  const message: string = [
+    reason,
+    describeStopPoint(stopped),
+    stopped.isResumable === true ? resumeHint : undefined,
+  ]
+    .filter((part): part is string => part !== undefined)
+    .join(' ');
+
+  return failure(message, {
+    ...(stopped.failedStage === undefined ? {} : { failedStage: stopped.failedStage }),
+    ...(stopped.failedSection === undefined ? {} : { failedSection: stopped.failedSection }),
+    isResumable: stopped.isResumable === true,
+  });
+}
+
+function describeGeneratedMessage(run: { readonly isCached: boolean; readonly reused: DraftRunReuse | undefined }): string {
+  if (run.isCached) {
+    return '입력이 같아 기존 초안을 씁니다.';
+  }
+  if (run.reused === undefined) {
+    return '초안을 생성했습니다.';
+  }
+
+  const sections: string =
+    run.reused.expansionSections === 0 ? '' : `, 살붙임 ${run.reused.expansionSections}구간`;
+  return `멈춘 실행을 이어 초안을 생성했습니다 (그대로 쓴 단계 ${run.reused.stages.length}개${sections}).`;
 }

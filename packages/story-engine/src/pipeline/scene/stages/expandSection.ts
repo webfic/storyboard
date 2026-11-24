@@ -34,7 +34,7 @@ import {
   type SectionViolation,
 } from '#engine/pipeline/sectionValidation';
 import type { SceneStageId } from '#engine/pipeline/sceneStageCatalog';
-import type { SceneWarning } from '#engine/pipeline/sceneGenerationTypes';
+import type { SceneExpansionProgress, SceneWarning } from '#engine/pipeline/sceneGenerationTypes';
 import {
   describeCatchphraseBudget,
   planSectionCatchphraseBudgets,
@@ -320,9 +320,9 @@ export class ExpandSectionStage implements ISceneStage {
 
   public async run(run: SceneGenerationRun): Promise<void> {
     const plan: SectionExpansionPlan = this.planSectionExpansion(run);
-    const expandedSections: string[] = [];
+    const expandedSections: string[] = this.reuseAcceptedSections(run);
 
-    for (let index: number = 0; index < plan.sections.length; index += 1) {
+    for (let index: number = expandedSections.length; index < plan.sections.length; index += 1) {
       run.onProgress?.('expandSection', index + 1, plan.sections.length);
 
       const repaired: CheckedSectionText = await this.expandAndRepairSection(
@@ -341,6 +341,7 @@ export class ExpandSectionStage implements ISceneStage {
         },
         repaired,
       );
+      await run.checkpoints.recordExpansion(run, expandedSections);
       assertNotCancelled(run.shouldCancel);
     }
 
@@ -354,6 +355,19 @@ export class ExpandSectionStage implements ISceneStage {
     run.warnings.push(
       ...catchphraseOveruse.map((message): SceneWarning => ({ message, kinds: ['catchphrase'] })),
     );
+  }
+
+  private reuseAcceptedSections(run: SceneGenerationRun): string[] {
+    const resumed: SceneExpansionProgress | undefined = run.checkpoints.takeResumedExpansion();
+    if (resumed === undefined) {
+      return [];
+    }
+
+    run.warnings.push(...resumed.warnings);
+    resumed.sections.forEach((_section, index) => {
+      run.report({ kind: 'section-reused', expansionSectionIndex: index + 1 });
+    });
+    return [...resumed.sections];
   }
 
   private planSectionExpansion(run: SceneGenerationRun): SectionExpansionPlan {

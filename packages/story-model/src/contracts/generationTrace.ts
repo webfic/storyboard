@@ -140,6 +140,8 @@ export type TraceEventKind =
   | 'revision-checked'
   | 'revision-accepted'
   | 'revision-rejected'
+  | 'stage-reused'
+  | 'section-reused'
   | 'warning';
 
 export const traceEventKinds: readonly TraceEventKind[] = [
@@ -154,6 +156,8 @@ export const traceEventKinds: readonly TraceEventKind[] = [
   'revision-checked',
   'revision-accepted',
   'revision-rejected',
+  'stage-reused',
+  'section-reused',
   'warning',
 ];
 

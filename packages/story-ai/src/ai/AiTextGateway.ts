@@ -8,7 +8,7 @@ import type {
   AiTaskName,
 } from '@storyboard/story-model';
 import {
-  isTimeoutErrorCode,
+  isRetryableErrorCode,
   AiProviderError,
   emptyTruncatedResponseMessage,
   projectUsageAttribution,
@@ -24,14 +24,14 @@ import type {
 } from '#ai/ai/aiServiceTypes';
 import type { TaskAiConfigResolved } from '#ai/ports/ConfigBridge';
 
-const timedOutCallAttemptLimit: number = 2;
+const retryableCallAttemptLimit: number = 2;
 
 function isEmptyTruncatedResponse(response: AiGenerateResponse): boolean {
   return response.isTruncated === true && response.text.trim().length === 0;
 }
 
-function isTimedOutCall(error: unknown): boolean {
-  return error instanceof AiProviderError && isTimeoutErrorCode(error.code);
+function isRetryableCall(error: unknown): boolean {
+  return error instanceof AiProviderError && isRetryableErrorCode(error.code);
 }
 
 export class AiTextGateway {
@@ -45,11 +45,9 @@ export class AiTextGateway {
     messages: readonly AiMessage[],
     options: GenerateTextOptions,
   ): Promise<AiGenerateResponse> {
-    const response: AiGenerateResponse = await this.observeCall(taskName, messages, options, () =>
-      this.retryTimedOutCall(
-        () => this.requestGeneration(taskName, messages, options),
-        timedOutCallAttemptLimit,
-      ),
+    const response: AiGenerateResponse = await this.sendWithRetry(
+      () => this.observeCall(taskName, messages, options, () => this.requestGeneration(taskName, messages, options)),
+      retryableCallAttemptLimit,
     );
 
     this.emitUsageIfNeeded(taskName, response, options.attribution);
@@ -165,19 +163,19 @@ export class AiTextGateway {
     });
   }
 
-  private async retryTimedOutCall(
+  private async sendWithRetry(
     send: () => Promise<AiGenerateResponse>,
     attemptsLeft: number,
   ): Promise<AiGenerateResponse> {
     try {
       return await send();
     } catch (error) {
-      const canRetry: boolean = attemptsLeft > 1 && isTimedOutCall(error);
+      const canRetry: boolean = attemptsLeft > 1 && isRetryableCall(error);
       if (!canRetry) {
         throw error;
       }
 
-      return await this.retryTimedOutCall(send, attemptsLeft - 1);
+      return await this.sendWithRetry(send, attemptsLeft - 1);
     }
   }
 

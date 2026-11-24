@@ -18,6 +18,7 @@ import {
 } from '@storyboard/story-model';
 import { type OpenAiChatCompletionResponse, type OpenAiClientLike } from '#ai/ai/providers/OpenAiProvider';
 import { requestOptionsOf } from '#ai/ai/requestDeadline';
+import { generationFailureCodeOf } from '#ai/ai/providers/transportFailure';
 import { registerProviderFactory, resolveApiKeyProviderOptions } from '#ai/ai/providerFactory';
 
 export const grokApiBaseUrl: string = providerCatalog.grok.defaultBaseUrl;
@@ -91,7 +92,7 @@ export class GrokProvider implements AiProvider {
       });
     } catch (error) {
       throw new AiProviderError(
-        'generation-failed',
+        generationFailureCodeOf(error),
         this.id,
         generationFailedMessage(this.id, error),
         error,

@@ -14,6 +14,7 @@ import {
   missingModelMessage,
 } from '@storyboard/story-model';
 import { requestOptionsOf, type AiRequestOptions } from '#ai/ai/requestDeadline';
+import { generationFailureCodeOf } from '#ai/ai/providers/transportFailure';
 import { registerProviderFactory } from '#ai/ai/providerFactory';
 import type { ProviderModelConfig } from '#ai/ports/ConfigBridge';
 
@@ -135,7 +136,7 @@ export class OllamaProvider implements AiProvider {
       });
     } catch (error) {
       throw new AiProviderError(
-        'generation-failed',
+        generationFailureCodeOf(error),
         this.id,
         error instanceof ThinkingExhaustedOutputError ? error.message : generationFailedMessage(this.id, error),
         error,

@@ -10,6 +10,10 @@ after the first public release.
 
 ## [Unreleased]
 
+### Fixed
+
+- **A connection dropped during a model call no longer fails the whole draft run.** Only a timed-out call used to be sent again; a stream cut off midway (`terminated`), a reset connection or a server error (5xx, overloaded) ended the run on that one call and threw away every earlier stage. The Claude, OpenAI, Gemini, Grok and Ollama providers now report such a transport failure on its own, and it is sent again within the same limit as a timeout (once more). A rejected request, a failed authentication or a usage limit still fails at once. The generation trace keeps one call record per attempt, so the error of a failed first attempt shows too. (#249)
+
 ## [0.17.3] - 2026-11-24
 
 ### Added

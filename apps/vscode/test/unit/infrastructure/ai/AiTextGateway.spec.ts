@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { AiTextGateway, type AiProviderRegistry } from '@storyboard/story-ai';
+import { AiTextGateway, type AiCallObservation, type AiProviderRegistry } from '@storyboard/story-ai';
 import { AiProviderError, type AiGenerateResponse, type UsageRecord } from '@storyboard/story-model';
 
 const response: AiGenerateResponse = {
@@ -14,16 +14,24 @@ function timeout(): AiProviderError {
   return new AiProviderError('cli-timeout', 'claude-code', '시간 안에 끝나지 않아 중단했습니다.');
 }
 
+function droppedStream(): AiProviderError {
+  return new AiProviderError('transport-failed', 'claude', 'Claude 텍스트 생성에 실패했습니다: terminated');
+}
+
 function createGateway(
   generate: () => Promise<AiGenerateResponse>,
   usage: UsageRecord[] = [],
+  calls: AiCallObservation[] = [],
 ): AiTextGateway {
   const registry: AiProviderRegistry = {
     generate: vi.fn(generate),
     generateWithProvider: vi.fn(generate),
   } as unknown as AiProviderRegistry;
 
-  return new AiTextGateway(registry, { onUsage: (record: UsageRecord): void => void usage.push(record) });
+  return new AiTextGateway(registry, {
+    onUsage: (record: UsageRecord): void => void usage.push(record),
+    onCall: (call: AiCallObservation): void => void calls.push(call),
+  });
 }
 
 describe('AiTextGateway', () => {
@@ -47,6 +55,35 @@ describe('AiTextGateway', () => {
       code: 'cli-timeout',
     });
     expect(generate).toHaveBeenCalledTimes(2);
+  });
+
+  it('sends a call whose stream dropped once more and records both attempts (#249)', async () => {
+    const generate = vi.fn<() => Promise<AiGenerateResponse>>()
+      .mockRejectedValueOnce(droppedStream())
+      .mockResolvedValueOnce(response);
+    const usage: UsageRecord[] = [];
+    const calls: AiCallObservation[] = [];
+
+    await expect(
+      createGateway(generate, usage, calls).generate('sceneSectionExpansion', [], { maxTokens: 8000 }),
+    ).resolves.toBe(response);
+    expect(generate).toHaveBeenCalledTimes(2);
+    expect(usage).toHaveLength(1);
+    expect(calls.map((call) => ({ hasError: call.error !== undefined, hasResponse: call.response !== undefined }))).toEqual([
+      { hasError: true, hasResponse: false },
+      { hasError: false, hasResponse: true },
+    ]);
+  });
+
+  it('gives up after the second dropped stream with the provider error', async () => {
+    const generate = vi.fn<() => Promise<AiGenerateResponse>>().mockRejectedValue(droppedStream());
+    const calls: AiCallObservation[] = [];
+
+    await expect(createGateway(generate, [], calls).generate('sceneBeats', [], {})).rejects.toMatchObject({
+      code: 'transport-failed',
+    });
+    expect(generate).toHaveBeenCalledTimes(2);
+    expect(calls).toHaveLength(2);
   });
 
   it.each(['cli-usage-limit', 'usage-limit', 'generation-failed'] as const)(

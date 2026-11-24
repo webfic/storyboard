@@ -16,6 +16,7 @@ import {
   missingModelMessage,
 } from '@storyboard/story-model';
 import { requestOptionsOf, type AiRequestOptions } from '#ai/ai/requestDeadline';
+import { generationFailureCodeOf } from '#ai/ai/providers/transportFailure';
 import { registerProviderFactory, resolveApiKeyProviderOptions } from '#ai/ai/providerFactory';
 
 interface GoogleGenerativeModelLike {
@@ -130,7 +131,7 @@ export class GoogleProvider implements AiProvider {
       });
     } catch (error) {
       throw new AiProviderError(
-        'generation-failed',
+        generationFailureCodeOf(error),
         this.id,
         generationFailedMessage(this.id, error),
         error,

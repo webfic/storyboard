@@ -1,6 +1,7 @@
 import { stubFileSystem } from "../../../stubs/fileSystem"
 import { stubScenes, type StubSceneStates } from "../../../stubs/scenes"
 import { stubCards } from "../../../stubs/cards"
+import { createMemoryCaches } from "../../../stubs/caches"
 import * as vscode from "vscode"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -157,6 +158,7 @@ interface ConfigBridgeStub {
   readonly getSectionOutputLimit: () => number
   readonly getSceneGenerationTuning: () => Record<string, number>
   readonly isBeatLocationEnabled: () => boolean
+  readonly getSeed: () => number | undefined
 }
 
 function createConfigBridge(overrides: Partial<ConfigBridgeStub> = {}): ConfigBridgeStub {
@@ -169,6 +171,7 @@ function createConfigBridge(overrides: Partial<ConfigBridgeStub> = {}): ConfigBr
     getSectionOutputLimit: () => 7000,
     getSceneGenerationTuning: () => ({}),
     isBeatLocationEnabled: () => false,
+    getSeed: () => undefined,
     ...overrides
   }
 }
@@ -208,6 +211,7 @@ interface DependencyOverrides {
   readonly writeBeats?: ReturnType<typeof vi.fn>
   readonly sceneRepository?: unknown
   readonly sceneStates?: StubSceneStates
+  readonly caches?: ReturnType<typeof createMemoryCaches>
 }
 
 function createDependencies(overrides: DependencyOverrides = {}): GenerateDraftServices {
@@ -219,6 +223,7 @@ function createDependencies(overrides: DependencyOverrides = {}): GenerateDraftS
       logger: overrides.logger ?? createLogger(),
       scenes: stubScenes([fakeScene], undefined, overrides.sceneStates),
       cards: stubCards(),
+      caches: overrides.caches ?? createMemoryCaches(),
       workspaceLocator: {
         folders: () => workspace.workspaceFolders ?? [],
         folderFor: (uri: never) => workspace.getWorkspaceFolder(uri)
@@ -418,7 +423,7 @@ describe("GenerateDraftUseCase", () => {
 
       const result = await execute(dependencies, createRequest({ force: true }))
 
-      expect(result).toEqual({ ok: false, kind: "cancelled" })
+      expect(result).toEqual({ ok: false, kind: "cancelled", isResumable: false })
       expect(logger.error).not.toHaveBeenCalled()
       expect(logger.show).not.toHaveBeenCalled()
       expect(draftRepository.write).not.toHaveBeenCalled()
@@ -438,7 +443,8 @@ describe("GenerateDraftUseCase", () => {
       expect(result).toEqual({
         ok: false,
         kind: "failed",
-        message: "초안 생성에 실패했습니다: AI 응답 없음"
+        message: "초안 생성에 실패했습니다: AI 응답 없음",
+        isResumable: false
       })
       expect(logger.error).toHaveBeenCalledTimes(1)
       expect(logger.error).toHaveBeenCalledWith("Draft generation failed", pipelineError)
@@ -470,7 +476,8 @@ describe("GenerateDraftUseCase", () => {
       expect(result).toEqual({
         ok: false,
         kind: "failed",
-        message: "초안 생성에 실패했습니다: provider offline"
+        message: "초안 생성에 실패했습니다: provider offline",
+        isResumable: false
       })
     })
   })

@@ -1,4 +1,5 @@
 import type { SkeletonCallParagraphs } from '#engine/pipeline/skeletonBeats';
+import { SceneRunCheckpoints, type SceneRunState } from '#engine/pipeline/scene/sceneRunCheckpoint';
 import {
   planSceneBreaks,
   renderPlannedNarrative,
@@ -34,7 +35,7 @@ import {
   type StyleDirective,
 } from '@storyboard/story-model';
 
-export class SceneGenerationRun {
+export class SceneGenerationRun implements SceneRunState {
   public readonly context: SceneContext;
   public readonly aiService: SceneGenerationPipelineAiService;
   public readonly format: ProjectFormat;
@@ -49,6 +50,7 @@ export class SceneGenerationRun {
   public readonly condensedPreviousContext: string | undefined;
   public readonly sceneRef: EntityRef;
   public readonly detectedCharacters: string[];
+  public readonly checkpoints: SceneRunCheckpoints;
   public personasUsed: Map<string, string>;
   public background: Background;
   public backgroundFactConflicts: readonly BackgroundFactConflict[];
@@ -81,6 +83,7 @@ export class SceneGenerationRun {
     this.condensedPreviousContext = resolved.condensedPreviousContext;
     this.sceneRef = resolved.sceneRef;
     this.detectedCharacters = resolved.detectedCharacters;
+    this.checkpoints = new SceneRunCheckpoints(input.resumeFrom, input.onCheckpoint);
     this.personasUsed = new Map();
     this.background = createEmptyBackground('scene-default', '미정');
     this.backgroundFactConflicts = [];

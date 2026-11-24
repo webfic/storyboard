@@ -38,7 +38,14 @@ import {
   SceneDialogueStore,
 } from '#engine/persistence/cardMemoryStores';
 import { DraftRepository } from '#engine/persistence/repositories/draftRepository';
-import type { StoryboardAiService, TaskAiConfigResolved } from '@storyboard/story-ai';
+import {
+  promptResourceFingerprint,
+  promptTuning,
+  promptTuningKeys,
+  type PromptConfig,
+  type StoryboardAiService,
+  type TaskAiConfigResolved,
+} from '@storyboard/story-ai';
 import { SceneGenerationPipeline } from '#engine/pipeline/scene/sceneGenerationPipeline';
 import {
   SceneGenerationPipelineCancelledError,
@@ -52,6 +59,8 @@ import {
   type GenerateDraftRequest,
   type GenerateDraftResult,
   type BeatLocationSource,
+  type DraftRunReuse,
+  type DraftRunStop,
 } from '#engine/application/drafts/draftGenerationContract';
 import {
   SceneGenerationInputsLoader,
@@ -66,9 +75,45 @@ import type {
   GenerationTraceRecorder,
   TraceRunSession,
 } from '#engine/persistence/generationTraceRecorder';
-import { sceneStageCatalog } from '#engine/pipeline/sceneStageCatalog';
+import { resolveScenePipelinePlan, sceneStageCatalog } from '#engine/pipeline/sceneStageCatalog';
+import {
+  computeDraftRunFingerprint,
+  SceneDraftCheckpoints,
+  type DraftRunFingerprint,
+  type SceneDraftCheckpointRun,
+} from '#engine/application/drafts/sceneDraftCheckpoints';
 
 const scenePipelineTraceName: string = 'scene';
+
+interface ScenePipelineSetup {
+  readonly aiService: StoryboardAiService;
+  readonly providers: SceneGenerationPipelineTaskProviders;
+  readonly styleDirective: StyleDirective | undefined;
+  readonly backgroundRecentExcerpt: string | undefined;
+  readonly checkpoint: SceneDraftCheckpointRun;
+}
+
+interface PromptFingerprint {
+  readonly key: string;
+  readonly resource: string;
+  readonly temperature: number;
+  readonly maxTokens: number;
+  readonly reasoningEffort: string | null;
+}
+
+function describePromptFingerprints(): readonly PromptFingerprint[] {
+  return promptTuningKeys().map((key) => {
+    const config: PromptConfig = promptTuning(key);
+
+    return {
+      key,
+      resource: promptResourceFingerprint(key),
+      temperature: config.temperature,
+      maxTokens: config.maxTokens,
+      reasoningEffort: config.reasoningEffort ?? null,
+    };
+  });
+}
 
 export type { GenerateDraftRequest, GenerateDraftResult } from '#engine/application/drafts/draftGenerationContract';
 
@@ -77,6 +122,7 @@ export class GenerateDraftUseCase implements IUseCase<GenerateDraftRequest, Gene
   private readonly storyStateRecorder: StoryStateRecorder;
   private readonly summaryRefresher: ChapterSummaryRefresher;
   private readonly failureReporter: WorkflowFailureReporter;
+  private readonly checkpoints: SceneDraftCheckpoints;
 
   public constructor(
     private readonly host: HostAdapters,
@@ -87,6 +133,7 @@ export class GenerateDraftUseCase implements IUseCase<GenerateDraftRequest, Gene
     this.summaryRefresher = new ChapterSummaryRefresher({ host, ai, repositories });
     this.storyStateRecorder = new StoryStateRecorder({ host, ai });
     this.failureReporter = new WorkflowFailureReporter(host.logger);
+    this.checkpoints = new SceneDraftCheckpoints({ caches: host.caches, logger: host.logger });
   }
 
   public async execute(request: GenerateDraftRequest): Promise<GenerateDraftResult> {
@@ -316,34 +363,79 @@ export class GenerateDraftUseCase implements IUseCase<GenerateDraftRequest, Gene
     inputs: SceneGenerationInputs,
     request: GenerateDraftRequest,
   ): Promise<GenerateDraftResult> {
-    const aiService: StoryboardAiService = this.ai.gateway.createService(
-      inputs.workspaceFolder.uri,
-    );
-    const pipelineProviders: SceneGenerationPipelineTaskProviders = this.resolvePipelineProviders();
-    const cacheProviders: Partial<Record<AiTaskName, AiProviderId>> = pipelineProviders;
-
-    const backgroundRecentExcerpt: string | undefined =
-      await this.findBackgroundRecentExcerpt(inputs);
+    const setup: ScenePipelineSetup = await this.prepareScenePipeline(inputs);
+    const cacheProviders: Partial<Record<AiTaskName, AiProviderId>> = setup.providers;
 
     try {
       const pipelineResult: RunSceneGenerationPipelineResult = await this.createScenePipeline(
         inputs,
         request,
-        aiService,
-        pipelineProviders,
-        backgroundRecentExcerpt,
+        setup,
       ).run();
 
-      return await this.persistGeneratedDraft(
+      const persisted: GenerateDraftResult = await this.persistGeneratedDraft(
         inputs,
         request,
-        aiService,
+        setup.aiService,
         pipelineResult,
         cacheProviders,
       );
+      setup.checkpoint.discard();
+      return withDraftReuse(persisted, setup.checkpoint);
     } catch (error) {
-      return this.describeGenerationFailure(error, request);
+      return this.describeGenerationFailure(error, request, setup.checkpoint.describeStop());
     }
+  }
+
+  private async prepareScenePipeline(inputs: SceneGenerationInputs): Promise<ScenePipelineSetup> {
+    const providers: SceneGenerationPipelineTaskProviders = this.resolvePipelineProviders();
+    const styleDirective: StyleDirective | undefined = this.buildSceneStyleDirective(inputs);
+    const backgroundRecentExcerpt: string | undefined = await this.findBackgroundRecentExcerpt(inputs);
+    const checkpoint: SceneDraftCheckpointRun = await this.checkpoints.open({
+      workspaceRoot: inputs.paths.workspaceRoot,
+      sceneStem: inputs.scene.stem,
+      fingerprint: this.computeRunFingerprint(inputs, { providers, styleDirective, backgroundRecentExcerpt }),
+    });
+
+    return {
+      aiService: this.ai.gateway.createService(inputs.workspaceFolder.uri),
+      providers,
+      styleDirective,
+      backgroundRecentExcerpt,
+      checkpoint,
+    };
+  }
+
+  private computeRunFingerprint(
+    inputs: SceneGenerationInputs,
+    setup: Pick<ScenePipelineSetup, 'providers' | 'styleDirective' | 'backgroundRecentExcerpt'>,
+  ): DraftRunFingerprint {
+    const { configBridge } = this.host;
+    const tasks: readonly AiTaskName[] = Object.keys(setup.providers) as AiTaskName[];
+
+    return computeDraftRunFingerprint({
+      program: this.host.generator,
+      sceneInput: {
+        inputHash: inputs.inputHash,
+        styleDirective: setup.styleDirective,
+        canonFactLines: inputs.canonFactLines,
+      },
+      previousScenes: {
+        previousContext: inputs.previousContext,
+        characterKnowledge: inputs.characterKnowledge,
+        characterRelations: inputs.characterRelations,
+        backgroundRecentExcerpt: setup.backgroundRecentExcerpt,
+      },
+      models: tasks.map((task) => [task, this.ai.gateway.getTaskAiConfig(task)]),
+      tuning: {
+        knobs: configBridge.getSceneGenerationTuning(),
+        sectionOutputLimit: configBridge.getSectionOutputLimit(),
+        isContextCondensed: configBridge.isAiContextCondenseEnabled(),
+        seed: configBridge.getSeed() ?? null,
+      },
+      stages: resolveScenePipelinePlan(),
+      prompts: describePromptFingerprints(),
+    });
   }
 
   private resolvePipelineProviders(): SceneGenerationPipelineTaskProviders {
@@ -379,18 +471,17 @@ export class GenerateDraftUseCase implements IUseCase<GenerateDraftRequest, Gene
   private createScenePipeline(
     inputs: SceneGenerationInputs,
     request: GenerateDraftRequest,
-    aiService: StoryboardAiService,
-    providers: SceneGenerationPipelineTaskProviders,
-    backgroundRecentExcerpt: string | undefined,
+    setup: ScenePipelineSetup,
   ): SceneGenerationPipeline {
     const { paths, threadPaths, scene, project, context, previousContext } = inputs;
+    const { aiService, providers, styleDirective, backgroundRecentExcerpt, checkpoint } = setup;
 
     return new SceneGenerationPipeline({
       sceneStem: scene.stem,
       context,
       aiService,
       format: project.format,
-      styleDirective: this.buildSceneStyleDirective(inputs),
+      styleDirective,
       previousContext,
       canonFactLines: inputs.canonFactLines,
       characterKnowledge: inputs.characterKnowledge,
@@ -404,7 +495,7 @@ export class GenerateDraftUseCase implements IUseCase<GenerateDraftRequest, Gene
         request.onPipelineProgress?.(stage, current, total);
       },
       shouldCancel: request.shouldCancel,
-      observer: this.tracePipelineStages(paths.workspaceRoot),
+      observer: this.tracePipelineStages(paths.workspaceRoot, checkpoint),
       useContextCondense: this.host.configBridge.isAiContextCondenseEnabled(),
       sectionOutputLimit: this.host.configBridge.getSectionOutputLimit(),
       tuning: this.host.configBridge.getSceneGenerationTuning(),
@@ -416,6 +507,8 @@ export class GenerateDraftUseCase implements IUseCase<GenerateDraftRequest, Gene
       ),
       dialogueCorpus: new SceneDialogueStore(this.host, threadPaths),
       backgroundRecentExcerpt,
+      ...(checkpoint.resumeFrom === undefined ? {} : { resumeFrom: checkpoint.resumeFrom }),
+      onCheckpoint: checkpoint.save,
     });
   }
 
@@ -433,22 +526,24 @@ export class GenerateDraftUseCase implements IUseCase<GenerateDraftRequest, Gene
   private describeGenerationFailure(
     error: unknown,
     request: GenerateDraftRequest,
+    stop: DraftRunStop,
   ): GenerateDraftResult {
     if (error instanceof SceneGenerationPipelineCancelledError) {
-      return { ok: false, kind: 'cancelled' };
+      return { ok: false, kind: 'cancelled', ...stop };
     }
 
     if (error instanceof AiProviderError && error.code === 'usage-limit') {
-      return { ok: false, kind: 'failed', reason: 'usage-limit', message: error.message };
+      return { ok: false, kind: 'failed', reason: 'usage-limit', message: error.message, ...stop };
     }
 
     const message: string = extractErrorMessage(error);
-    return this.failureReporter.report(
+    const reported: GenerateDraftResult = this.failureReporter.report(
       request,
       'Draft generation failed',
       error,
       `초안 생성에 실패했습니다: ${message}`,
     );
+    return { ...reported, ...stop };
   }
 
   private async generateDraftForWorkspaceSceneWorkflow(
@@ -464,7 +559,7 @@ export class GenerateDraftUseCase implements IUseCase<GenerateDraftRequest, Gene
 
     const inputs: SceneGenerationInputs = loaded.inputs;
 
-    if (!request.force && (await this.isCacheHit(inputs))) {
+    if (await this.isCurrentDraftReusable(inputs, request)) {
       return await this.openCachedDraft(inputs.draftUri);
     }
 
@@ -475,7 +570,24 @@ export class GenerateDraftUseCase implements IUseCase<GenerateDraftRequest, Gene
     return refreshed.ok ? await this.runAndPersistDraft(refreshed.inputs, request) : refreshed.result;
   }
 
-  private tracePipelineStages(workspaceRoot: StoryUri): IScenePipelineObserver {
+  private async isCurrentDraftReusable(
+    inputs: SceneGenerationInputs,
+    request: GenerateDraftRequest,
+  ): Promise<boolean> {
+    const workspaceRoot: StoryUri = inputs.paths.workspaceRoot;
+    if (request.force) {
+      await this.checkpoints.discard(workspaceRoot, inputs.scene.stem);
+      return false;
+    }
+
+    const hasInterruptedRun: boolean = await this.checkpoints.exists(workspaceRoot, inputs.scene.stem);
+    return !hasInterruptedRun && (await this.isCacheHit(inputs));
+  }
+
+  private tracePipelineStages(
+    workspaceRoot: StoryUri,
+    checkpoint: SceneDraftCheckpointRun,
+  ): IScenePipelineObserver {
     const recorder: GenerationTraceRecorder = this.ai.traceRecorder;
 
     return {
@@ -489,8 +601,12 @@ export class GenerateDraftUseCase implements IUseCase<GenerateDraftRequest, Gene
       onEvent: (event): void => {
         void recorder.recordEvent(workspaceRoot, event);
       },
-      onStageStart: (stageId): void => recorder.enterStage(workspaceRoot, stageId),
-      onStageEnd: (_stageId, failure): void => {
+      onStageStart: (stageId): void => {
+        checkpoint.noteStageStart(stageId);
+        recorder.enterStage(workspaceRoot, stageId);
+      },
+      onStageEnd: (stageId, failure): void => {
+        checkpoint.noteStageEnd(stageId, failure);
         void recorder.leaveStage(workspaceRoot, failure);
       },
     };
@@ -547,4 +663,13 @@ function withTraceRunId(result: GenerateDraftResult, traceRunId: string | undefi
   }
 
   return { ...result, traceRunId };
+}
+
+function withDraftReuse(result: GenerateDraftResult, checkpoint: SceneDraftCheckpointRun): GenerateDraftResult {
+  const reused: DraftRunReuse | undefined = checkpoint.describeReuse();
+  if (result.kind !== 'generated' || reused === undefined) {
+    return result;
+  }
+
+  return { ...result, reused };
 }

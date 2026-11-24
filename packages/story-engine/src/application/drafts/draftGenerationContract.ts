@@ -3,6 +3,7 @@ import type {
   SceneGenerationPipelineStage,
   SceneWarning,
 } from '#engine/pipeline/sceneGenerationTypes';
+import type { SceneStageId } from '#engine/pipeline/sceneStageCatalog';
 
 export function emptyDraftBodyMessage(sceneStem: string): string {
   return `모델이 빈 본문을 돌려줘 초안을 저장하지 않았습니다. 기존 초안은 그대로입니다: ${sceneStem}`;
@@ -24,6 +25,17 @@ export interface GenerateDraftRequest {
 }
 
 export type ReviseFollowing = 'always' | 'when-enabled';
+
+export interface DraftRunReuse {
+  readonly stages: readonly SceneStageId[];
+  readonly expansionSections: number;
+}
+
+export interface DraftRunStop {
+  readonly failedStage?: SceneStageId;
+  readonly failedSection?: number;
+  readonly isResumable: boolean;
+}
 
 export interface DraftWarning extends SceneWarning {
   readonly stage?: string;
@@ -50,12 +62,13 @@ export type GenerateDraftResult =
       readonly traceRunId?: string;
       readonly beatSegments?: readonly (readonly number[])[];
       readonly beatsToLocate?: BeatLocationSource;
+      readonly reused?: DraftRunReuse;
     }
   | { readonly ok: true; readonly kind: 'cache_hit'; readonly draftUri: StoryUri }
-  | {
+  | ({
       readonly ok: false;
       readonly kind: 'failed';
       readonly message: string;
       readonly reason?: 'usage-limit';
-    }
-  | { readonly ok: false; readonly kind: 'cancelled' };
+    } & Partial<DraftRunStop>)
+  | ({ readonly ok: false; readonly kind: 'cancelled' } & Partial<DraftRunStop>);

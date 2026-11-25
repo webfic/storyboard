@@ -23,6 +23,12 @@ import type {
   UsageAttribution,
 } from '@storyboard/story-model';
 
+import {
+  findWithheldAddressTermsUsed,
+  formatWithheldAddressFact,
+  formatWithheldAddressInstruction,
+  planRevisionWithheldAddressTerms,
+} from '#engine/pipeline/addressTerms';
 import { resolveSceneGenerationTuning } from '#engine/pipeline/sceneGenerationTuning';
 import {
   validateDraftCandidate,
@@ -63,6 +69,7 @@ export interface ReviseLoopContext {
   readonly styleDirective: StyleDirective | undefined;
   readonly characters: readonly ReviseLoopCharacter[];
   readonly targetLength?: number;
+  readonly coinedAddressTerms?: readonly string[];
 }
 
 export interface ReviseSeedIssues {
@@ -554,9 +561,17 @@ export class ReviseLoop {
 
   private async runReviewChecks(body: string): Promise<ReviewCheckResults> {
     const { aiService, registry, attribution, loopContext } = this.options;
+    const addressFact: string | undefined = formatWithheldAddressFact(
+      (loopContext.coinedAddressTerms ?? []).filter((term) => body.includes(term)),
+    );
+    const continuityFacts: string[] = [
+      ...loopContext.factLines,
+      ...loopContext.castProfileLines,
+      ...(addressFact === undefined ? [] : [addressFact]),
+    ];
 
     const [continuityIssues, critiqueIssues] = await Promise.all([
-      aiService.checkContinuity(body, [...loopContext.factLines, ...loopContext.castProfileLines], {
+      aiService.checkContinuity(body, continuityFacts, {
         providerId: registry.getTaskProvider('continuityCheck'),
         attribution,
       }),
@@ -583,9 +598,13 @@ export class ReviseLoop {
     currentBody: string,
     onSection: (done: number, total: number) => void,
   ): Promise<SectionRevisionOutcome> {
-    const tally: SectionRevisionTally = new SectionRevisionTally(
-      splitDraftSections(currentBody, this.sectionSplitOptions()),
-    );
+    const split: DraftSections = splitDraftSections(currentBody, this.sectionSplitOptions());
+    const tally: SectionRevisionTally = new SectionRevisionTally(split);
+    const withheldBySection: string[][] = planRevisionWithheldAddressTerms({
+      body: currentBody,
+      sections: split.sections,
+      terms: this.options.loopContext.coinedAddressTerms ?? [],
+    });
 
     for (const [done, plan] of plans.entries()) {
       if (this.isCancelled()) {
@@ -594,7 +613,12 @@ export class ReviseLoop {
 
       onSection(done + 1, plans.length);
 
-      const shouldContinue: boolean = await this.reviseSection(plan, currentBody, tally);
+      const shouldContinue: boolean = await this.reviseSection(
+        plan,
+        currentBody,
+        tally,
+        withheldBySection[plan.section] ?? [],
+      );
       if (!shouldContinue) {
         break;
       }
@@ -607,12 +631,13 @@ export class ReviseLoop {
     plan: SectionRevisionPlan,
     currentBody: string,
     tally: SectionRevisionTally,
+    withheldTerms: readonly string[],
   ): Promise<boolean> {
     const original: string = tally.getSection(plan.section);
     const originalText: string = original.trim();
     let answer: DraftRevisionAnswer;
     try {
-      answer = await this.requestSectionRevision(plan, originalText);
+      answer = await this.requestSectionRevision(plan, originalText, withheldTerms);
     } catch (error) {
       if (isAnswerLostAtOutputLimit(error)) {
         tally.addRejection({
@@ -632,6 +657,7 @@ export class ReviseLoop {
       originalText,
       answer,
       currentBody,
+      withheldTerms,
     );
 
     this.options.onSectionJudged?.({
@@ -659,14 +685,19 @@ export class ReviseLoop {
   private async requestSectionRevision(
     plan: SectionRevisionPlan,
     originalText: string,
+    withheldTerms: readonly string[],
   ): Promise<DraftRevisionAnswer> {
     const { aiService, registry, attribution, loopContext } = this.options;
+    const addressInstruction: string | undefined = formatWithheldAddressInstruction(withheldTerms);
 
     const revised: DraftRevisionAnswer = await aiService.reviseDraft(
       {
         body: originalText,
         format: loopContext.format,
-        instructions: plan.instructions,
+        instructions: [
+          ...plan.instructions,
+          ...(addressInstruction === undefined ? [] : [addressInstruction]),
+        ],
         intent: loopContext.intent,
         facts: loopContext.factLines,
         characterCards: loopContext.characterCards,
@@ -685,6 +716,7 @@ export class ReviseLoop {
     originalText: string,
     answer: DraftRevisionAnswer,
     currentBody: string,
+    withheldTerms: readonly string[],
   ): DraftCandidateValidation {
     const validation: DraftCandidateValidation = this.validateSectionCandidate(
       originalText,
@@ -696,8 +728,12 @@ export class ReviseLoop {
       return { ...validation, accepted: false, reason: 'truncated' };
     }
 
-    return addsBrokenHangul(originalText, answer.text)
-      ? { ...validation, accepted: false, reason: 'broken-hangul' }
+    if (addsBrokenHangul(originalText, answer.text)) {
+      return { ...validation, accepted: false, reason: 'broken-hangul' };
+    }
+
+    return findWithheldAddressTermsUsed(answer.text, withheldTerms).length > 0
+      ? { ...validation, accepted: false, reason: 'early-address' }
       : validation;
   }
 
@@ -727,6 +763,7 @@ const rejectionReasonLabels: Record<DraftCandidateRejectionReason, string> = {
   'scene-breaks-changed': '장면 구분 변경',
   truncated: '출력 한도에서 잘림',
   'broken-hangul': '깨진 한글이 새로 생김',
+  'early-address': '아직 붙지 않은 호칭',
 };
 
 export function describeReviseRound(round: ReviseRound): string {

@@ -62,6 +62,7 @@ import {
 } from '#engine/application/drafts/sceneNarrationResolver';
 import { formatAugmentCards, type StoryboardAiService } from '@storyboard/story-ai';
 import type { TaskAiConfigResolved } from '@storyboard/story-ai';
+import { findBeatCoinedAddressTerms } from '#engine/pipeline/addressTerms';
 import { type DraftCandidateRejectionReason } from '#engine/pipeline/draftCandidateValidation';
 import { listSceneCoordinates, sceneCoordinatesFromBeats } from '#engine/pipeline/sceneCoordinates';
 import { RevisionPlanRecorder } from '#engine/persistence/revisionPlanRecorder';
@@ -386,6 +387,7 @@ function buildReviseLoopContext(
     ),
     characters: context.characters,
     targetLength: resolveSceneTargetLength(scene.frontmatter.targetWordCount, scene.body),
+    coinedAddressTerms: findBeatCoinedAddressTerms(scene.card?.beats ?? [], context.characters),
   };
 }
 export class ReviseDraftUseCase {

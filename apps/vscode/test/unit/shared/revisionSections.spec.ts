@@ -7,7 +7,8 @@ import {
   planSectionRevisions,
   replaceSectionText,
   ReviseLoop,
-  splitDraftSections
+  splitDraftSections,
+  type ReviseLoopResult
 } from "@storyboard/story-engine"
 
 const body = [
@@ -305,5 +306,95 @@ describe("ReviseLoop by section", () => {
     expect(result.rounds[0]?.rewrite?.rejectedSections).toEqual([
       expect.objectContaining({ section: 0, reason: "truncated", candidateLength: 0 })
     ])
+  })
+})
+
+describe("ReviseLoop and address terms not yet given (#253)", () => {
+  const registry = { getTaskProvider: () => "mock" } as never
+  const nicknameBody = [
+    "교문 앞에서 만재가 손을 흔들며 은하야, 하고 불렀다.",
+    "---",
+    "",
+    "운동장을 가로지르는 동안 둘은 말이 없었다.",
+    "---",
+    "",
+    "옥상에서 만재가 처음으로 별똥이라고 불렀다."
+  ].join("\n")
+  const loopContext = {
+    format: "novel",
+    intent: "",
+    factLines: [],
+    castProfileLines: [],
+    characterNames: [],
+    characterCards: [],
+    styleConstraints: [],
+    qualityCriteria: [],
+    styleDirective: undefined,
+    characters: [],
+    coinedAddressTerms: ["별똥이"]
+  } as never
+
+  function serviceFlagging(original: string, rewrite: (section: string) => string): never {
+    return {
+      checkContinuity: vi
+        .fn()
+        .mockResolvedValueOnce([{ original, reason: "설정상 별명으로만 부른다", severity: "high" }])
+        .mockResolvedValue([]),
+      critiqueDraft: vi.fn().mockResolvedValue([]),
+      reviseDraft: vi.fn(async (input: { body: string }) => ({ text: rewrite(input.body), isTruncated: false }))
+    } as never
+  }
+
+  function runLoop(aiService: never): Promise<ReviseLoopResult> {
+    return new ReviseLoop({
+      aiService,
+      registry,
+      attribution: { primary: { kind: "scene", id: "01" } },
+      loopContext,
+      body: nicknameBody,
+      maxIterations: 1,
+      reviseScoreThreshold: 0,
+      maxCompressionPercent: 50
+    }).run()
+  }
+
+  it("rejects a rewrite that uses a nickname before the place the draft first gives it", async () => {
+    const aiService = serviceFlagging("은하야", (section) => section.replace("은하야", "별똥이야"))
+
+    const result = await runLoop(aiService)
+
+    expect(result.body).toBe(nicknameBody)
+    expect(result.rounds[0]?.rewrite?.rejectedSections).toEqual([
+      expect.objectContaining({ section: 0, reason: "early-address" })
+    ])
+  })
+
+  it("tells the rewrite which nickname the section must not use yet", async () => {
+    const aiService = serviceFlagging("은하야", (section) => `${section} 고쳤다.`)
+
+    const result = await runLoop(aiService)
+
+    const reviseDraft = (aiService as { reviseDraft: { mock: { calls: [{ instructions: string[] }][] } } }).reviseDraft
+    expect(reviseDraft.mock.calls[0]?.[0].instructions.at(-1)).toContain("«별똥이»")
+    expect(splitDraftSections(result.body).sections[0]).toContain("고쳤다.")
+  })
+
+  it("lets a rewrite keep the nickname in the section that gives it", async () => {
+    const aiService = serviceFlagging("별똥이라고", (section) => `${section} 별똥이는 웃었다.`)
+
+    const result = await runLoop(aiService)
+
+    const reviseDraft = (aiService as { reviseDraft: { mock: { calls: [{ instructions: string[] }][] } } }).reviseDraft
+    expect(reviseDraft.mock.calls[0]?.[0].instructions.join("\n")).not.toContain("«별똥이»")
+    expect(splitDraftSections(result.body).sections[2]).toContain("별똥이는 웃었다.")
+  })
+
+  it("tells the continuity check that the name before the nickname is not a contradiction", async () => {
+    const aiService = serviceFlagging("은하야", (section) => `${section} 고쳤다.`)
+
+    await runLoop(aiService)
+
+    const checkContinuity = (aiService as { checkContinuity: { mock: { calls: [string, string[]][] } } }).checkContinuity
+    expect(checkContinuity.mock.calls[0]?.[1].at(-1)).toContain("«별똥이»")
   })
 })

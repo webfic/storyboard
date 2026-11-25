@@ -9,7 +9,8 @@ export type DraftCandidateRejectionReason =
   | 'not-shorter'
   | 'scene-breaks-changed'
   | 'truncated'
-  | 'broken-hangul';
+  | 'broken-hangul'
+  | 'early-address';
 
 export interface DraftCandidateLengthPolicy {
   readonly maxCompressionPercent: number;

@@ -6,6 +6,7 @@ import {
   findPolishedLineViolations,
   listAddressTermsCoinedAfter,
   findKinshipAddressSubstitutions,
+  planRevisionWithheldAddressTerms,
   planSectionWithheldAddressTerms,
   validateExpandedSection
 } from "@storyboard/story-engine"
@@ -128,5 +129,25 @@ describe("validateExpandedSection address", () => {
     const details = violations.filter((violation) => violation.kind === "address").map((violation) => violation.detail)
     expect(details.join(" ")).toContain("«엘리트»")
     expect(details.join(" ")).toContain("«어머니» 대신 «엄마»")
+  })
+})
+
+describe("planRevisionWithheldAddressTerms (#253)", () => {
+  it("withholds a term from the sections before its first use in the draft", () => {
+    const sections: string[] = ["은하야, 하고 불렀다.\n", "\n말이 없었다.\n", "\n별똥이라고 불렀다."]
+
+    const withheld: string[][] = planRevisionWithheldAddressTerms({
+      body: sections.join("---"),
+      sections,
+      terms: ["별똥이"]
+    })
+
+    expect(withheld).toEqual([["별똥이"], ["별똥이"], []])
+  })
+
+  it("withholds nothing for a term the draft never uses", () => {
+    const sections: string[] = ["은하야, 하고 불렀다."]
+
+    expect(planRevisionWithheldAddressTerms({ body: sections[0] ?? "", sections, terms: ["별똥이"] })).toEqual([[]])
   })
 })

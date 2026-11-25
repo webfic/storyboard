@@ -10,6 +10,10 @@ after the first public release.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The review rewrite no longer brings forward a nickname that is not given yet (#253).** When a nickname is first given in a later beat of the scene, the review's continuity check reported an earlier line that used the name as contradicting the setting («calls her only by the nickname»), and the rewrite replaced the name with the nickname and was accepted. The continuity check and the rewrite now know where the draft first uses that term, and a rewrite of an earlier section that brings it in is rejected and the original text is kept. The revision record gives the reason `early-address`.
+
 ## [0.17.4] - 2026-11-24
 
 ### Added

@@ -149,6 +149,38 @@ export function planSectionWithheldAddressTerms(input: {
   });
 }
 
+export function planRevisionWithheldAddressTerms(input: {
+  readonly body: string;
+  readonly sections: readonly string[];
+  readonly terms: readonly string[];
+}): string[][] {
+  const termsInBody: string[] = input.terms.filter((term) => input.body.includes(term));
+
+  return planSectionWithheldAddressTerms({
+    skeleton: input.body,
+    sections: input.sections,
+    terms: termsInBody,
+  });
+}
+
+export function formatWithheldAddressFact(terms: readonly string[]): string | undefined {
+  if (terms.length === 0) {
+    return undefined;
+  }
+
+  const listed: string = terms.map((term) => `«${term}»`).join(', ');
+  return `호칭 ${listed}은(는) 이 장면에서 처음 붙는 호칭이다. 본문에서 처음 쓰인 자리보다 앞에서 상대를 이름이나 다른 말로 부르는 것은 설정 모순이 아니다.`;
+}
+
+export function formatWithheldAddressInstruction(terms: readonly string[]): string | undefined {
+  if (terms.length === 0) {
+    return undefined;
+  }
+
+  const listed: string = terms.map((term) => `«${term}»`).join(', ');
+  return `호칭 ${listed}은(는) 이 구간보다 뒤에서 처음 붙는다. 다른 지시나 설정에 적혀 있어도 이 구간의 대사와 서술에서 쓰지 말고 이름이나 다른 말로 불러라.`;
+}
+
 export function findWithheldAddressTermsUsed(
   expanded: string,
   withheldTerms: readonly string[],

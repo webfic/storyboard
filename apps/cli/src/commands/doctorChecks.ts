@@ -319,6 +319,7 @@ const bundleWarningLabels: Readonly<Record<BundleWarning['kind'], string>> = {
   'changed-outside-engine': '엔진 밖 변경',
   'slug-mismatch': '번들 slug',
   unreadable: '읽지 못한 번들',
+  'unknown-stat': '축 목록에 없는 스탯',
 };
 
 const sceneBundlePrefix: string = 'scene/';

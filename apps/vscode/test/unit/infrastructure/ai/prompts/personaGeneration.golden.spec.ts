@@ -31,6 +31,36 @@ describe("PersonaGenerationPrompt golden", () => {
     expect(PersonaGenerationPrompt.build(bare, variant)).toMatchSnapshot()
   })
 
+  it("renders each stat with its value and the meaning of that level", () => {
+    const withStats: Character = {
+      ...bare,
+      traits: ["침착함"],
+      stats: [
+        { stat: "대담함", value: 4, source: { origin: "training" } },
+        { stat: "말수", value: 2, source: { origin: "author" } }
+      ]
+    }
+
+    expect(PersonaGenerationPrompt.build(withStats).user).toBe(
+      [
+        "이름: 엘리아",
+        "특징: 침착함",
+        "스탯:",
+        "- 대담함 4/5: 망설임 없이 먼저 나서고 불리해도 버틴다",
+        "- 말수 2/5: 필요한 말만 짧게 한다"
+      ].join("\n")
+    )
+  })
+
+  it("leaves out a stat whose axis the catalog does not hold, and the heading with it", () => {
+    const withUnknownStat: Character = {
+      ...bare,
+      stats: [{ stat: "의협심", value: 4, source: { origin: "author" } }]
+    }
+
+    expect(PersonaGenerationPrompt.build(withUnknownStat).user).toBe("이름: 엘리아")
+  })
+
   it("renders each optional line alone", () => {
     expect(PersonaGenerationPrompt.build({ ...bare, voice: ["허세"] })).toMatchSnapshot()
     expect(PersonaGenerationPrompt.build({ ...bare, description: ["설명"] })).toMatchSnapshot()

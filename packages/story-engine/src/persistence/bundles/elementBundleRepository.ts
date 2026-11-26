@@ -40,7 +40,8 @@ export type BundleWarningKind =
   | 'changed-outside-engine'
   | 'slug-mismatch'
   | 'copied-id'
-  | 'unreadable';
+  | 'unreadable'
+  | 'unknown-stat';
 
 export interface BundleWarning {
   readonly kind: BundleWarningKind;

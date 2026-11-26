@@ -1,5 +1,6 @@
 import type { Character } from '@storyboard/story-model';
 import {
+  characterStatPromptLines,
   formatCardAttributes,
   joinCardText,
   personaStyleLines,
@@ -18,6 +19,8 @@ export const PersonaGenerationPrompt: PromptModule<
     variant: PromptVariantId = 'generic',
     style?: StyleDirective,
   ): PromptArtifact {
+    const statLines: readonly string[] = characterStatPromptLines(character);
+
     return renderPrompt('personaGeneration', variant, {
       view: {
         name: character.name,
@@ -28,6 +31,8 @@ export const PersonaGenerationPrompt: PromptModule<
         attributes: formatCardAttributes(character.attributes),
         hasTraits: Boolean(character.traits && character.traits.length > 0),
         traits: character.traits?.slice(0, 10).join(', '),
+        hasStats: statLines.length > 0,
+        statLines,
         styleLines: personaStyleLines(style),
       },
     });

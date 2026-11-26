@@ -3,9 +3,11 @@ import { randomUUID } from 'node:crypto';
 import {
   BundleFileError,
   bundleFileNames,
+  bundleFileRelativePath,
   bundleRelativePath,
   elementKindDirectories,
   elementKinds,
+  findStatAxisOf,
   formatBundleDirectoryName,
   isBackgroundCard,
   joinStoryPath,
@@ -15,6 +17,7 @@ import {
   projectBackgroundCard,
   projectCharacterCard,
   projectNarratorCard,
+  resolveStatAxisCatalog,
   type BackgroundHeader,
   type CharacterCard,
   type CharacterHeader,
@@ -27,6 +30,7 @@ import {
   type NarratorCard,
   type NarratorHeader,
   type Stat,
+  type StatAxisCatalog,
   type StatementSource,
   type StoryboardCard,
   type StoryUri,
@@ -142,7 +146,25 @@ const reportedWarningKinds: ReadonlySet<BundleWarning['kind']> = new Set([
   'changed-outside-engine',
   'unreadable',
   'copied-id',
+  'unknown-stat',
 ]);
+
+interface CharacterStatsReading {
+  readonly stats: readonly Stat[];
+  readonly warnings: readonly BundleWarning[];
+}
+
+function withUsableStats(card: CharacterCard, reading: CharacterStatsReading): CharacterCard {
+  return reading.stats.length > 0 ? { ...card, stats: reading.stats } : card;
+}
+
+function describeUnknownStat(statsPath: string, stat: Stat): BundleWarning {
+  return {
+    kind: 'unknown-stat',
+    paths: [statsPath],
+    message: `축 목록에 없는 스탯이라 생성에 쓰지 않습니다: ${statsPath} 의 ${stat.stat}`,
+  };
+}
 
 function isUnreadableBundleOf(warning: BundleWarning, slug: string): boolean {
   return warning.kind === 'unreadable' && warning.paths.some((path) => path.includes(`/${slug}.card/`));
@@ -183,12 +205,23 @@ export class WorkspaceCards {
       kinds,
     );
     const lookup: ElementSlugLookup = createLookup(listing.bundles);
-    this.reportWarnings(workspaceRoot, listing.warnings);
+    const characterBundles: readonly CharacterBundle[] = listing.bundles.filter(isCharacterBundle);
+    const statReadings: readonly CharacterStatsReading[] = await Promise.all(
+      characterBundles.map((bundle) => this.readCharacterStats(workspaceRoot, bundle)),
+    );
+    const warnings: readonly BundleWarning[] = [
+      ...listing.warnings,
+      ...statReadings.flatMap((reading) => reading.warnings),
+    ];
+    this.reportWarnings(workspaceRoot, warnings);
 
     return {
-      characters: listing.bundles
-        .filter(isCharacterBundle)
-        .map((bundle) => projectCharacterCard(contentOf(bundle), lookup)),
+      characters: characterBundles.map((bundle, index) =>
+        withUsableStats(
+          projectCharacterCard(contentOf(bundle), lookup),
+          statReadings[index] ?? { stats: [], warnings: [] },
+        ),
+      ),
       backgrounds: listing.bundles
         .filter(isBackgroundBundle)
         .map((bundle) => projectBackgroundCard(contentOf(bundle))),
@@ -196,9 +229,38 @@ export class WorkspaceCards {
         .filter(isNarratorBundle)
         .map((bundle) => projectNarratorCard(contentOf(bundle), lookup)),
       bundles: listing.bundles,
-      warnings: listing.warnings,
+      warnings,
       lookup,
     };
+  }
+
+  private async readCharacterStats(
+    workspaceRoot: StoryUri,
+    bundle: CharacterBundle,
+  ): Promise<CharacterStatsReading> {
+    const statsPath: string = bundleFileRelativePath(bundle.path, 'stats');
+    try {
+      const stats: readonly Stat[] = await this.readStats(workspaceRoot, bundle);
+      const catalog: StatAxisCatalog = resolveStatAxisCatalog();
+      const isUsable = (stat: Stat): boolean =>
+        findStatAxisOf(catalog, 'character', stat.stat) !== undefined;
+
+      return {
+        stats: stats.filter(isUsable),
+        warnings: stats
+          .filter((stat) => !isUsable(stat))
+          .map((stat) => describeUnknownStat(statsPath, stat)),
+      };
+    } catch (error) {
+      if (!(error instanceof BundleFileError)) {
+        throw error;
+      }
+
+      return {
+        stats: [],
+        warnings: [{ kind: 'unreadable', paths: [statsPath], message: error.message }],
+      };
+    }
   }
 
   private reportWarnings(workspaceRoot: StoryUri, warnings: readonly BundleWarning[]): void {

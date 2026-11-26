@@ -8,6 +8,7 @@ import {
   UnsetCardStatUseCase,
   WorkspaceCards,
   type BundleWarning,
+  type CardRoster,
   type ListCardStatsResult,
   type SetCardStatResult,
   type UnsetCardStatResult,
@@ -215,6 +216,58 @@ describe('ListCardStatsUseCase', () => {
     expect(listed.ok && listed.stats).toEqual([
       { stat: { stat: '의협심', value: 4, source: { origin: 'author' } } },
     ]);
+  });
+});
+
+describe('the card roster', () => {
+  it('carries the stats on the character card that generation reads', async () => {
+    await setStat('elia', '대담함', 2, 'author');
+
+    const roster: CardRoster = await cards.loadRoster(root());
+
+    expect(roster.characters.find((card) => card.id === 'elia')?.stats).toEqual([
+      { stat: '대담함', value: 2, source: { origin: 'author' } },
+    ]);
+  });
+
+  it('leaves a card without stats exactly as it was', async () => {
+    const roster: CardRoster = await cards.loadRoster(root());
+
+    expect(roster.characters.find((card) => card.id === 'elia')).not.toHaveProperty('stats');
+  });
+
+  it('keeps a stat whose axis is unknown off the card and warns about it', async () => {
+    writeFileSync(
+      statsPath('character', 'elia'),
+      [
+        '- {stat: 의협심, value: 4, source: {origin: author}}',
+        '- {stat: 말수, value: 2, source: {origin: author}}',
+        '',
+      ].join('\n'),
+    );
+
+    const roster: CardRoster = await cards.loadRoster(root());
+
+    expect(roster.characters.find((card) => card.id === 'elia')?.stats).toEqual([
+      { stat: '말수', value: 2, source: { origin: 'author' } },
+    ]);
+    expect(roster.warnings).toEqual([
+      {
+        kind: 'unknown-stat',
+        paths: ['character/elia.card/stats.yaml'],
+        message:
+          '축 목록에 없는 스탯이라 생성에 쓰지 않습니다: character/elia.card/stats.yaml 의 의협심',
+      },
+    ]);
+  });
+
+  it('warns and goes on without stats when stats.yaml cannot be read', async () => {
+    writeFileSync(statsPath('character', 'elia'), '- {stat: 대담함, value: 9}\n');
+
+    const roster: CardRoster = await cards.loadRoster(root());
+
+    expect(roster.characters.find((card) => card.id === 'elia')).not.toHaveProperty('stats');
+    expect(roster.warnings.map((warning) => warning.kind)).toEqual(['unreadable']);
   });
 });
 

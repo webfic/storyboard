@@ -2,11 +2,13 @@ import { createHash } from 'node:crypto';
 
 import {
   backgroundPlaceFacts,
+  characterStatPromptLines,
   formatCardAttributes,
   joinCardText,
 } from '#model/format/card';
 import type { BackgroundCard, CharacterCard } from '#model/format/card';
 export function computePersonaCardHash(card: CharacterCard, promptFingerprint: string): string {
+  const statLines: readonly string[] = characterStatPromptLines(card);
   const digestSource: Readonly<Record<string, unknown>> = {
     prompt: promptFingerprint,
     id: card.id,
@@ -17,6 +19,7 @@ export function computePersonaCardHash(card: CharacterCard, promptFingerprint: s
     desire: joinCardText(card.desire),
     attributes: formatCardAttributes(card.attributes),
     traits: card.traits ?? [],
+    ...(statLines.length > 0 ? { stats: statLines } : {}),
   };
   return digestCard(digestSource);
 }

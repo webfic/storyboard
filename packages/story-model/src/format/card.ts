@@ -1,6 +1,8 @@
 import { z } from 'zod';
 
 import { characterRoles, type CharacterRole } from '#model/element/character';
+import type { Stat } from '#model/element/stat';
+import { describeStatPromptLines, resolveStatAxisCatalog } from '#model/element/statAxis';
 
 export const cardIdPattern: RegExp = /^[a-z0-9][a-z0-9-]*$/;
 
@@ -90,6 +92,7 @@ export interface CharacterCard {
   desire?: string[];
   relations?: CharacterRelation[];
   arc?: string;
+  stats?: readonly Stat[];
 }
 
 interface BackgroundCardFields {
@@ -165,6 +168,10 @@ export function isBackgroundCard(card: StoryboardCard): card is BackgroundCard {
 
 export function joinCardText(value: readonly string[] | undefined): string {
   return (value ?? []).join('\n');
+}
+
+export function characterStatPromptLines(card: Pick<CharacterCard, 'stats'>): readonly string[] {
+  return describeStatPromptLines(resolveStatAxisCatalog(), 'character', card.stats ?? []);
 }
 
 export function backgroundPlaceFacts(

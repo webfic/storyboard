@@ -1,10 +1,10 @@
 import type { ICommandHandler } from '@/commands/commandHandler';
 import type { CommandContext, CommandOutcome } from '@/commands/outcome';
 import type { CommandSpec } from '@/commands/catalog';
-import { describeUnknownStatOrigin, statOriginFrom } from '@/commands/card/cardStatViews';
+import { readStatOrigin, type StatOriginReading } from '@/commands/card/cardStatViews';
 import { failure, success } from '@/commands/outcomes';
 import type { UnsetCardStatResult } from '@storyboard/story-engine';
-import { bundleFileNames, type StatOrigin } from '@storyboard/story-model';
+import { bundleFileNames } from '@storyboard/story-model';
 
 export class CardStatUnsetCommand implements ICommandHandler {
   public readonly spec: CommandSpec = {
@@ -23,16 +23,19 @@ export class CardStatUnsetCommand implements ICommandHandler {
       return failure('지울 스탯을 주세요: storyboard card stat unset <slug> <축>');
     }
 
-    const origin: StatOrigin | undefined = statOriginFrom(args.flags);
-    if (origin === undefined) {
-      return failure(describeUnknownStatOrigin());
+    const origin: StatOriginReading = readStatOrigin({
+      flags: args.flags,
+      canPersonAnswer: container.prompter !== undefined,
+    });
+    if (!origin.ok) {
+      return failure(origin.message);
     }
 
     const result: UnsetCardStatResult = await container.cards.unsetStat({
       workspaceRoot: container.workspaceRoot,
       slug,
       stat,
-      origin,
+      origin: origin.origin,
     });
 
     return result.ok

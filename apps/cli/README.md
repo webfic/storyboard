@@ -121,8 +121,9 @@ removes lines by facet (and `--key`, `--about`, or the value).
 A stat is a number beside the sentences: an axis name, a value from 1 to 5 and who wrote it, kept
 in the bundle's `stats.yaml`. `card stat axes` lists the axes with what each level means, `card
 stat set` and `card stat unset` write and remove one, and `card stat list` (or `card show`) shows
-them. A value written without `--origin` is the writer's and is locked; a training tool writes
-with `--origin training` and can change or remove only its own values. A character's stats go
+them. A value the writer gives at the terminal is the writer's and is locked; a run no person can
+answer must say who writes with `--origin author` or `--origin training`, and a training tool,
+writing with `--origin training`, can change or remove only its own values. A character's stats go
 into the persona prompt as "axis value/5: meaning"; background and narrator stats are stored but
 not used in generation yet. A `statAxes.json` under `~/.storyboard/` or the workspace's
 `.storyboard/` adds axes to the engine's list.

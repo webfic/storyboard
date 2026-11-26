@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { resolveVerb, type ParsedArguments } from '@/cliArguments';
 import type { CommandOutcome } from '@/commands/outcome';
 import { commandCatalog, findCommand } from '@/commands/index';
+import type { IPrompter } from '@/adapters/prompter';
 import type { ICommandHandler } from '@/commands/commandHandler';
 import { CommandDispatcher, type DispatchDependencies } from '@/commands/commandDispatcher';
 import type { DispatchResult } from '@/commands/dispatchContract';
@@ -25,12 +26,28 @@ const silentLogger = {
   show: () => undefined,
 };
 
-function container(): CliContainer {
+const personAtTheTerminal: IPrompter = {
+  shouldConfirmPaidRuns: false,
+  announce: () => undefined,
+  askText: async () => undefined,
+  choose: async () => undefined,
+};
+
+interface RunOptions {
+  readonly hasPersonAtTheTerminal: boolean;
+}
+
+const withPerson: RunOptions = { hasPersonAtTheTerminal: true };
+
+const withoutPerson: RunOptions = { hasPersonAtTheTerminal: false };
+
+function container(options: RunOptions): CliContainer {
   return createCliContainer({
     workspacePath: workspace,
     logger: silentLogger,
-    canPrompt: false,
+    canPrompt: options.hasPersonAtTheTerminal,
     version: '0.0.0',
+    ...(options.hasPersonAtTheTerminal ? { prompter: personAtTheTerminal } : {}),
   });
 }
 
@@ -44,6 +61,7 @@ function parse(words: readonly string[], flags: Record<string, string | boolean>
 async function run(
   words: readonly string[],
   flags: Record<string, string | boolean> = {},
+  options: RunOptions = withPerson,
 ): Promise<CommandOutcome> {
   const parsed: ParsedArguments = parse(words, flags);
   const command: ICommandHandler | undefined = findCommand(parsed.path.join(' '));
@@ -51,7 +69,7 @@ async function run(
     throw new Error(`unknown verb: ${parsed.path.join(' ')}`);
   }
 
-  return await command.execute({ container: container(), args: parsed });
+  return await command.execute({ container: container(options), args: parsed });
 }
 
 function dispatch(words: readonly string[]): Promise<DispatchResult> {
@@ -100,11 +118,32 @@ describe('card stat verbs', () => {
 });
 
 describe('card stat set', () => {
-  it('writes the author value when no origin is given, even with nobody at the terminal', async () => {
+  it('writes the author value when a person at the terminal gives no origin', async () => {
     const outcome: CommandOutcome = await run(['card', 'stat', 'set', 'elia', '대담함', '2']);
 
     expect(outcome.ok).toBe(true);
     expect(outcome.message).toContain('대담함 2 적었습니다 (출처 작가)');
+    expect(statsFile()).toBe('- {stat: 대담함, value: 2, source: {origin: author}}\n');
+  });
+
+  it('asks a run nobody can answer for the origin and writes nothing', async () => {
+    const outcome: CommandOutcome = await run(
+      ['card', 'stat', 'set', 'elia', '대담함', '2'],
+      {},
+      withoutPerson,
+    );
+
+    expect(outcome).toMatchObject({
+      ok: false,
+      message:
+        '사람이 답할 수 없는 실행에서는 적는 주체를 밝혀 주세요: --origin author 또는 --origin training',
+    });
+    expect(existsSync(join(workspace, 'character', 'elia.card', 'stats.yaml'))).toBe(false);
+  });
+
+  it('writes the author value from a run nobody can answer when it says --origin author', async () => {
+    await run(['card', 'stat', 'set', 'elia', '대담함', '2'], { origin: 'author' }, withoutPerson);
+
     expect(statsFile()).toBe('- {stat: 대담함, value: 2, source: {origin: author}}\n');
   });
 
@@ -164,7 +203,16 @@ describe('an axis the work adds', () => {
     );
 
     const axes: DispatchResult = await dispatch(['card', 'stat', 'axes']);
-    const written: DispatchResult = await dispatch(['card', 'stat', 'set', 'elia', '의협심', '4']);
+    const written: DispatchResult = await dispatch([
+      'card',
+      'stat',
+      'set',
+      'elia',
+      '의협심',
+      '4',
+      '--origin',
+      'author',
+    ]);
 
     expect(axes.stdout).toContain('의협심: 남의 억울한 일에 얼마나 나서는가');
     expect(written.exitCode).toBe(0);

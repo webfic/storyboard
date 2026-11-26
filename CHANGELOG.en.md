@@ -10,6 +10,15 @@ after the first public release.
 
 ## [Unreleased]
 
+### Added
+
+- **Cards carry stats.** A character, background or narrator bundle may hold an optional `stats.yaml`. One entry is an axis name, a value from 1 to 5, and who wrote it (`author` or `training`). `storyboard card stat set <slug> <axis> <value>` writes one and `card stat unset` removes it; `card stat list <slug>` and `card show` show the value, its writer and what that level means. A value the author wrote is locked: a training tool, writing with `--origin training`, can change or remove only the values it wrote. `card stat axes` lists the axes and the meaning of each of their five levels — for now six character personality axes (대담함, 이타심, 정직함, 유순함, 절제, 낙천성) and four speech axes (말수, 직설, 격식, 감정표현). To add axes, put a `statAxes.json` under `~/.storyboard/` or the workspace's `.storyboard/` (an existing axis cannot be redefined, and `doctor` reports a file it cannot use).
+- **A character's stats reach the persona.** When draft generation builds a character's persona it gives each stat as "axis value/5: the meaning of that level" and asks for the trait to be shown through personality and speech rather than by naming the axis or the number. Changing a stat's value rebuilds that character's persona only. An entry whose axis is not in the catalog is left out of generation and reported as a warning (`doctor` shows it too). Background and narrator stats can be written and listed but are not used in generation yet.
+
+### Changed
+
+- **Stored personas are rebuilt once.** The persona prompt gained the stat instruction, so a work that uses no stats also makes one extra persona call per cast member on its first draft generation after upgrading.
+
 ### Fixed
 
 - **The review rewrite no longer brings forward a nickname that is not given yet (#253).** When a nickname is first given in a later beat of the scene, the review's continuity check reported an earlier line that used the name as contradicting the setting («calls her only by the nickname»), and the rewrite replaced the name with the nickname and was accepted. The continuity check and the rewrite now know where the draft first uses that term, and a rewrite of an earlier section that brings it in is rejected and the original text is kept. The revision record gives the reason `early-address`.

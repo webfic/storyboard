@@ -10,18 +10,9 @@ import {
 } from '@storyboard/story-model';
 import { describe, expect, it } from 'vitest';
 
-import { testElementId } from './fixtures/cardBundles';
-
-const dokyungId: string = testElementId('character', 'dokyung');
-
 const boldness: Stat = { stat: '대담함', value: 4, source: { origin: 'training' } };
 
-const trustInDokyung: Stat = {
-  stat: '신뢰',
-  value: 2,
-  about: dokyungId,
-  source: { origin: 'author' },
-};
+const talkativeness: Stat = { stat: '말수', value: 2, source: { origin: 'author' } };
 
 function axisNamed(name: string): StatAxis {
   const axis: StatAxis | undefined = engineStatAxisCatalog.axes.find(
@@ -35,9 +26,9 @@ function axisNamed(name: string): StatAxis {
 }
 
 describe('stat schema', () => {
-  it('accepts a stat with and without a target card', () => {
+  it('accepts a stat from training and one from the author', () => {
     expect(statSchema.parse(boldness)).toEqual(boldness);
-    expect(statSchema.parse(trustInDokyung)).toEqual(trustInDokyung);
+    expect(statSchema.parse(talkativeness)).toEqual(talkativeness);
   });
 
   it.each([0, 6, 2.5])('refuses the value %s', (value) => {
@@ -48,23 +39,17 @@ describe('stat schema', () => {
     expect(statSchema.safeParse({ ...boldness, source: { origin: 'agent' } }).success).toBe(false);
   });
 
-  it('refuses a target that is not a card id', () => {
-    expect(statSchema.safeParse({ ...trustInDokyung, about: 'dokyung' }).success).toBe(false);
-  });
-
   it('refuses a field it does not know', () => {
-    expect(statSchema.safeParse({ ...boldness, since: dokyungId }).success).toBe(false);
+    expect(statSchema.safeParse({ ...boldness, about: 'dokyung' }).success).toBe(false);
   });
 });
 
 describe('stat list schema', () => {
-  it('keeps one stat toward nobody and the same stat toward a card apart', () => {
-    const trustInGeneral: Stat = { stat: '신뢰', value: 4, source: { origin: 'author' } };
-
-    expect(statListSchema.safeParse([trustInGeneral, trustInDokyung]).success).toBe(true);
+  it('accepts different stats side by side', () => {
+    expect(statListSchema.safeParse([boldness, talkativeness]).success).toBe(true);
   });
 
-  it('refuses the same stat written twice for the same target', () => {
+  it('refuses the same stat written twice', () => {
     const repeated: Stat = { ...boldness, value: 1, source: { origin: 'author' } };
 
     expect(statListSchema.safeParse([boldness, repeated]).success).toBe(false);

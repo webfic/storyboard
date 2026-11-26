@@ -23,6 +23,7 @@ export interface SceneDialoguePolishInput {
   readonly otherCharacters: readonly string[];
   readonly otherVoices?: Readonly<Record<string, string>>;
   readonly retryReasons?: readonly string[];
+  readonly retryLineNumbers?: readonly number[];
   readonly style?: StyleDirective;
 }
 
@@ -69,6 +70,8 @@ export const SceneDialoguePolishPrompt: PromptModule<[input: SceneDialoguePolish
         numberedSkeleton: input.numberedSkeleton,
         hasRetryReasons: list(input.retryReasons).length > 0,
         retryReasons: list(input.retryReasons).join(' / '),
+        hasRetryLines: (input.retryLineNumbers ?? []).length > 0,
+        retryLines: (input.retryLineNumbers ?? []).map((lineNumber) => `⟨${lineNumber}⟩`).join(', '),
       },
       partials: {
         proseConventions: proseConventionLines(input.style?.narration?.tense).join('\n'),

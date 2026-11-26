@@ -1819,6 +1819,50 @@ describe("대사 다듬기 단계", () => {
     expect(polished[0]?.lines).toMatchObject([{ number: 1, after: "가자, 지금 당장.", isKept: true }])
   })
 
+  it("retries only the rejected lines and keeps the lines the first attempt got right (#259)", async () => {
+    const ai = createRecordingAiService()
+    const skeleton = `엘리아가 말했다. "가자, 지금." 엘리아가 다시 말했다. "문을 닫아." ${"복도는 조용했다. ".repeat(20)}`
+    ai.draftSceneSkeleton.mockResolvedValueOnce(skeleton)
+    ai.polishSceneDialogue
+      .mockResolvedValueOnce(
+        polishResponse([
+          { index: 1, text: "“가자, 지금 당장.”" },
+          { index: 2, text: "“문을 닫아, быстро.”" }
+        ])
+      )
+      .mockResolvedValueOnce(
+        polishResponse([
+          { index: 1, text: "“자, 이제 가.”" },
+          { index: 2, text: "“문 좀 닫아 줘.”" }
+        ])
+      )
+    ai.expandSceneSection.mockImplementation(
+      async (input) => `${(input as { section: string }).section} ${longProse("살붙인 본문")}`
+    )
+    const polished: { attempt?: number; reasons?: readonly string[] }[] = []
+
+    const result = await runSceneGenerationPipeline({
+      sceneStem: "01-opening",
+      context: contextFor([eliaCard], "본문"),
+      aiService: ai,
+      format: "novel",
+      observer: {
+        onPlan: () => {},
+        onStageStart: () => {},
+        onStageEnd: () => {},
+        onEvent: (event) => void (event.kind === "dialogue-polished" && polished.push(event))
+      }
+    })
+
+    const retry = ai.polishSceneDialogue.mock.calls[1]?.[0] as { retryLineNumbers?: number[] }
+    expect(retry.retryLineNumbers).toEqual([2])
+    expect(result.skeleton).toContain("“가자, 지금 당장.”")
+    expect(result.skeleton).toContain("“문 좀 닫아 줘.”")
+    expect(result.skeleton).not.toContain("자, 이제 가.")
+    expect(polished[0]?.reasons).toEqual([expect.stringContaining("⟨2⟩")])
+    expect(polished[1]).toMatchObject({ attempt: 2, reasons: [] })
+  })
+
   it("calls the polish once per character with only that character's persona", async () => {
     const ai = createRecordingAiService()
     ai.draftSceneSkeleton.mockResolvedValueOnce("엘리아가 말했다. “가자, 지금.” 지훈이 답했다. “알았어.”")

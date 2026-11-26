@@ -41,6 +41,7 @@ export interface DialoguePolishOutcome {
 export interface PartialRewrites {
   rewrites: readonly SceneDialogueRewrite[];
   heldBack: number;
+  heldBackLines: readonly number[];
 }
 
 export function otherVoices(
@@ -55,6 +56,21 @@ export function otherVoices(
         : [[character.name, voice]];
     }),
   );
+}
+
+function keepRetriedLinesOnly(
+  response: SceneDialoguePolishResult,
+  earlier: PartialRewrites | undefined,
+): SceneDialoguePolishResult {
+  if (earlier === undefined) {
+    return response;
+  }
+
+  const retriedLines: Set<number> = new Set(earlier.heldBackLines);
+  return {
+    ...response,
+    rewrites: response.rewrites.filter((rewrite) => retriedLines.has(rewrite.index)),
+  };
 }
 
 interface DialoguePolishContext {
@@ -87,6 +103,10 @@ class DialoguePolishTally {
 
   public getRetryReasons(name: string): string[] | undefined {
     return this.rejected.get(name)?.map((violation) => violation.detail);
+  }
+
+  public getPartial(name: string): PartialRewrites | undefined {
+    return this.partial.get(name);
   }
 
   public recordTruncation(name: string, isTruncated: boolean): void {
@@ -237,14 +257,18 @@ export class PolishDialogueStage implements ISceneStage {
     tally: DialoguePolishTally,
     name: string,
   ): Promise<boolean> {
+    const earlier: PartialRewrites | undefined = tally.getPartial(name);
     const response: SceneDialoguePolishResult = await this.requestPolish(
       context,
       name,
       tally.getRetryReasons(name),
+      earlier?.heldBackLines,
     );
     tally.recordTruncation(name, response.isTruncated);
 
-    const judgement: RewriteJudgement = this.judgeRewrites(context, name, response);
+    const scoped: SceneDialoguePolishResult = keepRetriedLinesOnly(response, earlier);
+    const earlierRewrites: readonly SceneDialogueRewrite[] = earlier?.rewrites ?? [];
+    const judgement: RewriteJudgement = this.judgeRewrites(context, name, scoped, earlierRewrites);
     const violations: SectionViolation[] = [
       ...[...judgement.lineViolations.values()].flat(),
       ...judgement.sceneViolations,
@@ -253,12 +277,12 @@ export class PolishDialogueStage implements ISceneStage {
       kind: 'dialogue-polished',
       subject: name,
       attempt: tally.getRetryReasons(name) === undefined ? firstAttemptNumber : firstAttemptNumber + 1,
-      reasons: judgement.sceneViolations.map((violation) => violation.detail),
-      lines: this.describeLineChanges(context.numbered, response, judgement),
+      reasons: violations.map((violation) => violation.detail),
+      lines: this.describeLineChanges(context.numbered, scoped, judgement),
     });
 
     if (violations.length === 0) {
-      tally.recordAccepted(name, response.rewrites);
+      tally.recordAccepted(name, [...earlierRewrites, ...scoped.rewrites]);
       return true;
     }
 
@@ -266,7 +290,11 @@ export class PolishDialogueStage implements ISceneStage {
       name,
       violations,
       judgement.sceneViolations.length === 0
-        ? { rewrites: judgement.kept, heldBack: judgement.lineViolations.size }
+        ? {
+            rewrites: [...earlierRewrites, ...judgement.kept],
+            heldBack: judgement.lineViolations.size,
+            heldBackLines: [...judgement.lineViolations.keys()],
+          }
         : undefined,
     );
     return false;
@@ -303,6 +331,7 @@ export class PolishDialogueStage implements ISceneStage {
     context: DialoguePolishContext,
     name: string,
     retryReasons: string[] | undefined,
+    retryLineNumbers: readonly number[] | undefined,
   ): Promise<SceneDialoguePolishResult> {
     const { run }: DialoguePolishContext = context;
 
@@ -321,6 +350,7 @@ export class PolishDialogueStage implements ISceneStage {
         otherCharacters: context.speakers.filter((other) => other !== name),
         otherVoices: otherVoices(run.context.characters, name),
         ...(retryReasons === undefined ? {} : { retryReasons }),
+        ...(retryLineNumbers === undefined ? {} : { retryLineNumbers }),
       },
       {
         ...context.options,
@@ -337,6 +367,7 @@ export class PolishDialogueStage implements ISceneStage {
     context: DialoguePolishContext,
     name: string,
     response: SceneDialoguePolishResult,
+    earlierRewrites: readonly SceneDialogueRewrite[],
   ): RewriteJudgement {
     const { run, numbered }: DialoguePolishContext = context;
     const lines: Map<number, string> = new Map(
@@ -359,7 +390,7 @@ export class PolishDialogueStage implements ISceneStage {
     const solo: DialogueRewriteMerge = mergeDialogueRewrites(
       run.skeleton,
       numbered,
-      new Map([[name, kept]]),
+      new Map([[name, [...earlierRewrites, ...kept]]]),
     );
 
     return { kept, lineViolations, sceneViolations: this.validateAgainstSkeleton(run, solo.text) };

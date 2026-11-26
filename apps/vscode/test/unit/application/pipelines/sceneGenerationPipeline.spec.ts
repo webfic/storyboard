@@ -211,6 +211,23 @@ describe("runSceneGenerationPipeline — 뼈대 단계", () => {
     expect(result.detectedCharacters).toEqual(["엘리아", "지훈"])
   })
 
+  it("gives the skeleton the card facts of the scene's characters (#258)", async () => {
+    const ai = createRecordingAiService()
+
+    await runSceneGenerationPipeline({
+      sceneStem: "01-opening",
+      context: contextFor(
+        [{ ...eliaCard, description: ["지난봄 이 집에 들어왔다"] }, jihoonCard],
+        "엘리아와 지훈이 학교에 있다."
+      ),
+      aiService: ai,
+      format: "novel"
+    })
+
+    const skeletonInput = ai.draftSceneSkeleton.mock.calls[0]?.[0] as Record<string, unknown>
+    expect(skeletonInput.castFacts).toEqual(["엘리아 — 설명: 지난봄 이 집에 들어왔다"])
+  })
+
   it("feeds only the narrative, not the craft blocks, to the skeleton", async () => {
     const ai = createRecordingAiService()
     const body =

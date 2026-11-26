@@ -35,6 +35,7 @@ export interface SceneSkeletonInput {
   readonly nextBeat?: string;
   readonly withheldAddressTerms?: readonly string[];
   readonly coinedAddressNotes?: readonly string[];
+  readonly castFacts?: readonly string[];
 }
 
 export const SceneSkeletonPrompt: PromptModule<
@@ -76,6 +77,8 @@ export const SceneSkeletonPrompt: PromptModule<
         plannedBreaks: input.plannedBreaks === true,
         hasWithheldAddressTerms: (input.withheldAddressTerms ?? []).length > 0,
         withheldAddressTerms: input.withheldAddressTerms ?? [],
+        hasCastFacts: (input.castFacts ?? []).length > 0,
+        castFacts: input.castFacts ?? [],
         hasCoinedAddressNotes: (input.coinedAddressNotes ?? []).length > 0,
         coinedAddressNotes: input.coinedAddressNotes ?? [],
       },

@@ -256,7 +256,7 @@ describe('card stat axes', () => {
 
     expect(outcome.message).toContain('[성격]');
     expect(outcome.message).toContain('[말투]');
-    expect(outcome.message).toContain('    1 맞서야 할 때 물러서고 남이 나서기를 기다린다');
+    expect(outcome.message).toContain('    1 위협 앞에서 몸을 낮추고 눈을 피하며 누가 대신 나서 주기를 기다린다');
     expect(outcome.data).toMatchObject({ kind: 'character' });
   });
 

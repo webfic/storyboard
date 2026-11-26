@@ -108,6 +108,7 @@ storyboard card show hana         # one card by slug: its header and numbered st
 storyboard card interview hana    # ask the writer how 하나 acts in the next scenes (terminal, tui, or --step --json)
 storyboard card create character "무뚝뚝한 열일곱 살 궁수 하나" --id hana   # a filled bundle; --dry-run only shows the lines
 storyboard card set hana traits "몰리면 먼저 웃는다"   # one line in statements.yaml, the writer's own
+storyboard card stat set hana 대담함 4   # one stat in stats.yaml, 1 to 5 (card stat list shows them, card stat axes the axes)
 storyboard card edit hana "말투를 더 퉁명스럽게"        # the studio's edit; --propose leaves a proposal and a diff
 storyboard card apply hana        # take what waits in hana's sessions (card discard drops it)
 storyboard card remove sera       # shows what refers to sera; --force cleans it up and removes the bundle
@@ -116,6 +117,16 @@ storyboard card remove sera       # shows what refers to sera; --force cleans it
 A line written by `card set` is the writer's (`author`) and the studio never overwrites it; when
 no person can answer (an agent's run) the same verb writes an `agent` line instead. `card unset`
 removes lines by facet (and `--key`, `--about`, or the value).
+
+A stat is a number beside the sentences: an axis name, a value from 1 to 5 and who wrote it, kept
+in the bundle's `stats.yaml`. `card stat axes` lists the axes with what each level means, `card
+stat set` and `card stat unset` write and remove one, and `card stat list` (or `card show`) shows
+them. A value the writer gives at the terminal is the writer's and is locked; a run no person can
+answer must say who writes with `--origin author` or `--origin training`, and a training tool,
+writing with `--origin training`, can change or remove only its own values. A character's stats go
+into the persona prompt as "axis value/5: meaning"; background and narrator stats are stored but
+not used in generation yet. A `statAxes.json` under `~/.storyboard/` or the workspace's
+`.storyboard/` adds axes to the engine's list.
 
 `status --json` carries the same counts plus `data.next` (`step`, `command`, `reason`), so an agent
 can ask what to run next and branch on it.
@@ -426,7 +437,7 @@ storyboard draft show 001-scene-1-1 --json | jq -r .data.path
 knobs (a measured model profile over the pipeline default) and each prompt's temperature and output
 limit — with where its current value comes from, plus the author resource files in force
 (`prompts/<key>.md`, `craftContract.json`, `promptVariants.json`, `compositionPresets.json`,
-`pipelines/scene.yaml`, `pipelines/novel.yaml` under `~/.storyboard/` or the workspace's
+`statAxes.json`, `pipelines/scene.yaml`, `pipelines/novel.yaml` under `~/.storyboard/` or the workspace's
 `.storyboard/`). `storyboard doctor` fails on a resource file it cannot use and says why.
 
 `--params <file>` gives values for one run without saving them anywhere: a JSON object whose keys

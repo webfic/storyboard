@@ -69,6 +69,7 @@ MagicBoy/                         # 사용자가 VSCode로 여는 폴더 (= 1 �
 │   └── elia.card/                # 카드 번들
 │       ├── card.yaml             # 머리말 (id, slug, kind, name, role …)
 │       ├── statements.yaml       # 진술과 그 출처
+│       ├── stats.yaml            # 스탯 (있을 때만): 축 이름, 1~5의 값, 적은 주체
 │       ├── memory/
 │       │   └── main.yaml         # 줄기별 기억 (persona, cardHash, throughScene, voiceSample)
 │       └── profile.png           # 그림 한 장
@@ -281,6 +282,7 @@ role: main
 
 - **동사로만 고친다.** `card set <slug> <facet> "<값>"`·`card unset`이 한 줄을 쓰고 지우며(출처는 사람이 답할 수 있으면 `author`, 아니면 `agent`), `card edit <slug> "<지시>"`는 스튜디오의 편집으로 바로 쓰거나 `--propose`로 제안만 남긴다. `card create <character|background> "<설명>"`은 설명에서 번들을 채워 만든다.
 - **생성은 진술을 쓰지 않는다.** 초안 생성이 쓰는 것은 번들의 기억(`memory/`)과 씬의 상태(`state.yaml`)뿐이다.
+- **스탯은 진술과 따로 둔다.** 인물·배경·서술자 번들의 `stats.yaml`은 `{stat, value, source}` 목록이다. `stat`은 축 목록의 이름, `value`는 1~5의 정수, `source.origin`은 `author`나 `training`이고 한 카드에 같은 축은 한 줄이다. `card stat set <slug> <축> <값>`·`card stat unset`이 쓰고 지운다. 터미널의 사람이 `--origin` 없이 적으면 작가의 값이고, 사람이 답할 수 없는 실행은 `--origin author`나 `--origin training`을 밝혀야 한다. 작가의 값은 `--origin training`으로 바꾸거나 지울 수 없다(진술의 `author` 잠금과 같은 뜻). 축 목록은 엔진의 `statAxis.params.json`에 홈·작품의 `statAxes.json`을 더한 것이며, 축마다 묶음(성격·말투), 쓸 수 있는 카드 종류, 정의, 다섯 단계의 뜻을 갖는다. 인물의 스탯은 카드 목록이 `CharacterCard.stats`에 실어 인물 소개글 프롬프트에 «축 값/5: 그 단계의 뜻»으로 들어가고, 풀어 쓴 줄이 페르소나 해시에 들어가 값이 바뀐 인물의 소개글만 다시 만든다. 목록에 없는 축의 줄은 싣지 않고 `unknown-stat` 경고로 알린다. 배경·서술자의 스탯은 저장만 되고 생성에 쓰이지 않는다.
 - **제안은 캐시 세션에 머문다.** 노트 흡수(`notes absorb`)·인터뷰 정리·스튜디오 `--propose`가 남긴 AI 제안은 캐시 DB의 세션에서 `card apply`로 받거나 `card discard`로 버릴 때까지 기다린다. `card promote`는 `card apply`가 되었다.
 - **서술자도 카드다.** `narrator` 명사는 `card`에 합쳐졌다(`card create narrator <slug> --person …`, `card list narrator`).
 - `card remove <slug>`는 그 카드를 가리키는 곳(씬 출연·장소, 다른 카드의 관계, 서술자의 초점, 구조의 서술자·목격자)과 함께 지울 줄을 먼저 보이고, `--force`일 때만 정리하며 번들을 지운다.
@@ -750,6 +752,7 @@ OpenAI 프로바이더는 노력을 보내는 호출에는 온도를 싣지 않�
 | `craftContract.json` | 모든 생성 프롬프트에 붙는 작법 계약 기본값(적은 항목만 덮임; `project.json`의 `setting.craftContract`가 그 위에 마지막으로 적용) | `packages/story-model/src/format/craftContract.params.json` |
 | `promptVariants.json` | xs·rich 변형 선택 규칙(압축 프로바이더·모델 패턴·작업, 출력 하한·장문 작업·상위 모델 키워드) | `packages/story-ai/src/ai/prompts/promptVariants.params.json` |
 | `compositionPresets.json` | 구성 프리셋이 만드는 줄기 이름·편 수 | `packages/story-model/src/format/compositionPresets.params.json` |
+| `statAxes.json` | 스탯 축을 더한다(`{ "axes": [...] }`, 덮지 않고 엔진 축 뒤에 붙음; 이미 있는 이름은 거절) | `packages/story-model/src/element/statAxis.params.json` |
 | `pipelines/scene.yaml` | 씬 초안 파이프라인의 단계 순서(`version: 1` + `stages` 목록, `{id, enabled: false}` 로 끄기) — 필수 단계는 뺄 수 없고 앞선 단계가 있어야 하는 단계는 순서를 검사. 카탈로그 행이 `replaces`로 가리키는 필수 단계는 그 행이 켜져 있으면 빠져도 되며(둘을 함께 켜면 거부), `isOptIn` 행은 명세가 이름할 때만 돈다 | `sceneStageCatalog`(`packages/story-engine/src/pipeline/sceneStageCatalog.ts`)의 순서(opt-in 행 제외) |
 | `pipelines/novel.yaml` | 장편 파이프라인의 단계 순서 | `novelStageCatalog`(`packages/story-engine/src/application/novel/novelStageCatalog.ts`)의 순서 |
 

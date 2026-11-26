@@ -52,6 +52,42 @@ describe("persona card hash", () => {
     expect(withTags).toBe(baseHash)
   })
 
+  it("changes the persona hash when a stat is added or its value moves", () => {
+    const baseHash = computePersonaCardHash(eliaCard, personaPrompt)
+    const boldHash = computePersonaCardHash(
+      { ...eliaCard, stats: [{ stat: "대담함", value: 4, source: { origin: "training" } }] },
+      personaPrompt
+    )
+    const bolderHash = computePersonaCardHash(
+      { ...eliaCard, stats: [{ stat: "대담함", value: 5, source: { origin: "training" } }] },
+      personaPrompt
+    )
+
+    expect(boldHash).not.toBe(baseHash)
+    expect(bolderHash).not.toBe(boldHash)
+  })
+
+  it("keeps the persona hash when a card has no stat the catalog knows, or only its writer changes", () => {
+    const baseHash = computePersonaCardHash(eliaCard, personaPrompt)
+    const emptyHash = computePersonaCardHash({ ...eliaCard, stats: [] }, personaPrompt)
+    const unknownHash = computePersonaCardHash(
+      { ...eliaCard, stats: [{ stat: "의협심", value: 4, source: { origin: "author" } }] },
+      personaPrompt
+    )
+    const trainedHash = computePersonaCardHash(
+      { ...eliaCard, stats: [{ stat: "대담함", value: 4, source: { origin: "training" } }] },
+      personaPrompt
+    )
+    const authoredHash = computePersonaCardHash(
+      { ...eliaCard, stats: [{ stat: "대담함", value: 4, source: { origin: "author" } }] },
+      personaPrompt
+    )
+
+    expect(emptyHash).toBe(baseHash)
+    expect(unknownHash).toBe(baseHash)
+    expect(authoredHash).toBe(trainedHash)
+  })
+
   it("changes the persona hash when attributes change", () => {
     const baseHash = computePersonaCardHash(eliaCard, personaPrompt)
     const withAttributes = computePersonaCardHash({ ...eliaCard, attributes: { mbti: "ENFJ" } }, personaPrompt)

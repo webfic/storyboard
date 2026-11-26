@@ -6,6 +6,7 @@ import { STORYBOARD_FILE_EXTENSIONS, STORYBOARD_RELATIVE_PATHS } from '#model/fo
 export type BundleFileRole =
   | 'card'
   | 'statements'
+  | 'stats'
   | 'beats'
   | 'dialogue'
   | 'state'
@@ -16,6 +17,7 @@ export type BundleFileRole =
 export const bundleFileNames: Record<BundleFileRole, string> = {
   card: 'card.yaml',
   statements: 'statements.yaml',
+  stats: 'stats.yaml',
   beats: 'beats.yaml',
   dialogue: 'dialogue.json',
   state: 'state.yaml',
@@ -25,9 +27,9 @@ export const bundleFileNames: Record<BundleFileRole, string> = {
 };
 
 export const bundleFileRolesByKind: Record<ElementKind, readonly BundleFileRole[]> = {
-  character: ['card', 'statements', 'profileImage'],
-  background: ['card', 'statements', 'placeImage'],
-  narrator: ['card', 'statements'],
+  character: ['card', 'statements', 'stats', 'profileImage'],
+  background: ['card', 'statements', 'stats', 'placeImage'],
+  narrator: ['card', 'statements', 'stats'],
   scene: ['card', 'statements', 'beats', 'dialogue', 'state', 'summary'],
 };
 

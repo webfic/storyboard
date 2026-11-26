@@ -11,7 +11,7 @@ const workspaceAgentGuideText: string = `# Storyboard 작품 저장소 — 에�
   \`storyboard draft edit\`·\`storyboard draft augment\`·\`storyboard draft condense\`·
   \`storyboard draft expand\`. 직접 쓰면 이야기 상태와 검수가 전부 비껴간다.
 - **카드·씬 번들(\`*.card/\` 폴더)의 파일을 손으로 고치지 마라.** \`card.yaml\`(머리말)·
-  \`statements.yaml\`(진술)·\`state.yaml\`(이야기 상태)·\`memory/\`는 동사로만 바뀐다.
+  \`statements.yaml\`(진술)·\`stats.yaml\`(스탯)·\`state.yaml\`(이야기 상태)·\`memory/\`는 동사로만 바뀐다.
   \`.storyboard/cache/\`는 생성물이니 고치지 마라.
 - **작가가 확인한 것만 \`storyboard card set\`으로 쓴다**(출처 \`agent\`). 네 생각은
   \`storyboard card edit <slug> "<지시>" --propose\`로 제안만 남기고, 작가가

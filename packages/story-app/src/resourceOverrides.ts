@@ -17,6 +17,7 @@ import {
 import {
   compositionPresetOverrideSchema,
   craftContractOverrideFileSchema,
+  extendStatAxisCatalog,
   joinStoryPath,
   overrideCompositionPresetDefaults,
   parsePipelineSpec,
@@ -24,6 +25,8 @@ import {
   overrideCraftContractDefaults,
   resetCompositionPresetDefaults,
   resetCraftContractDefaults,
+  resetStatAxisCatalog,
+  statAxisAdditionFileSchema,
   type PipelineSpec,
   type StoryUri,
 } from '@storyboard/story-model';
@@ -33,6 +36,7 @@ interface ResourceLayout {
   readonly craftContractFile: string;
   readonly promptVariantsFile: string;
   readonly compositionPresetsFile: string;
+  readonly statAxesFile: string;
   readonly scenePipelineFile: string;
   readonly novelPipelineFile: string;
 }
@@ -42,6 +46,7 @@ export const resourceLayout: ResourceLayout = {
   craftContractFile: 'craftContract.json',
   promptVariantsFile: 'promptVariants.json',
   compositionPresetsFile: 'compositionPresets.json',
+  statAxesFile: 'statAxes.json',
   scenePipelineFile: 'pipelines/scene.yaml',
   novelPipelineFile: 'pipelines/novel.yaml',
 };
@@ -51,6 +56,7 @@ export type ResourceOverrideKind =
   | 'craftContract'
   | 'promptVariants'
   | 'compositionPresets'
+  | 'statAxes'
   | 'scenePipeline'
   | 'novelPipeline';
 
@@ -83,6 +89,7 @@ export async function loadResourceOverrides(
   resetCraftContractDefaults();
   resetPromptVariantRules();
   resetCompositionPresetDefaults();
+  resetStatAxisCatalog();
   resetScenePipelinePlan();
   resetNovelPipelinePlan();
 
@@ -127,6 +134,18 @@ export async function loadResourceOverrides(
         label: '구성 프리셋 파일',
         schema: compositionPresetOverrideSchema,
         apply: overrideCompositionPresetDefaults,
+      },
+    );
+    await loadJsonFile(
+      fileSystem,
+      root,
+      joinStoryPath(root, resourceLayout.statAxesFile),
+      report,
+      {
+        kind: 'statAxes',
+        label: '스탯 축 파일',
+        schema: statAxisAdditionFileSchema,
+        apply: extendStatAxisCatalog,
       },
     );
     await loadPipelineFile(

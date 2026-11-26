@@ -3,9 +3,11 @@ import { randomUUID } from 'node:crypto';
 import {
   BundleFileError,
   bundleFileNames,
+  bundleFileRelativePath,
   bundleRelativePath,
   elementKindDirectories,
   elementKinds,
+  findStatAxisOf,
   formatBundleDirectoryName,
   isBackgroundCard,
   joinStoryPath,
@@ -15,6 +17,7 @@ import {
   projectBackgroundCard,
   projectCharacterCard,
   projectNarratorCard,
+  resolveStatAxisCatalog,
   type BackgroundHeader,
   type CharacterCard,
   type CharacterHeader,
@@ -26,6 +29,8 @@ import {
   type LocationBackgroundCard,
   type NarratorCard,
   type NarratorHeader,
+  type Stat,
+  type StatAxisCatalog,
   type StatementSource,
   type StoryboardCard,
   type StoryUri,
@@ -37,6 +42,7 @@ import type { IStoryboardLogger } from '#engine/ports/logger';
 import { ElementIndexStore } from '#engine/persistence/cache/elementIndexStore';
 import { BundleFileAccess } from '#engine/persistence/bundles/bundleFileAccess';
 import { ElementMemoryRepository } from '#engine/persistence/bundles/elementMemoryRepository';
+import { ElementStatsRepository } from '#engine/persistence/bundles/elementStatsRepository';
 import type { WorkspaceCaches } from '#engine/persistence/cache/workspaceCaches';
 import {
   ElementBundleRepository,
@@ -70,6 +76,7 @@ const authorSource: StatementSource = { origin: 'author' };
 const fingerprintedBundleFiles: readonly string[] = [
   bundleFileNames.card,
   bundleFileNames.statements,
+  bundleFileNames.stats,
 ];
 
 interface CardWritePlan {
@@ -139,7 +146,25 @@ const reportedWarningKinds: ReadonlySet<BundleWarning['kind']> = new Set([
   'changed-outside-engine',
   'unreadable',
   'copied-id',
+  'unknown-stat',
 ]);
+
+interface CharacterStatsReading {
+  readonly stats: readonly Stat[];
+  readonly warnings: readonly BundleWarning[];
+}
+
+function withUsableStats(card: CharacterCard, reading: CharacterStatsReading): CharacterCard {
+  return reading.stats.length > 0 ? { ...card, stats: reading.stats } : card;
+}
+
+function describeUnknownStat(statsPath: string, stat: Stat): BundleWarning {
+  return {
+    kind: 'unknown-stat',
+    paths: [statsPath],
+    message: `축 목록에 없는 스탯이라 생성에 쓰지 않습니다: ${statsPath} 의 ${stat.stat}`,
+  };
+}
 
 function isUnreadableBundleOf(warning: BundleWarning, slug: string): boolean {
   return warning.kind === 'unreadable' && warning.paths.some((path) => path.includes(`/${slug}.card/`));
@@ -180,12 +205,23 @@ export class WorkspaceCards {
       kinds,
     );
     const lookup: ElementSlugLookup = createLookup(listing.bundles);
-    this.reportWarnings(workspaceRoot, listing.warnings);
+    const characterBundles: readonly CharacterBundle[] = listing.bundles.filter(isCharacterBundle);
+    const statReadings: readonly CharacterStatsReading[] = await Promise.all(
+      characterBundles.map((bundle) => this.readCharacterStats(workspaceRoot, bundle)),
+    );
+    const warnings: readonly BundleWarning[] = [
+      ...listing.warnings,
+      ...statReadings.flatMap((reading) => reading.warnings),
+    ];
+    this.reportWarnings(workspaceRoot, warnings);
 
     return {
-      characters: listing.bundles
-        .filter(isCharacterBundle)
-        .map((bundle) => projectCharacterCard(contentOf(bundle), lookup)),
+      characters: characterBundles.map((bundle, index) =>
+        withUsableStats(
+          projectCharacterCard(contentOf(bundle), lookup),
+          statReadings[index] ?? { stats: [], warnings: [] },
+        ),
+      ),
       backgrounds: listing.bundles
         .filter(isBackgroundBundle)
         .map((bundle) => projectBackgroundCard(contentOf(bundle))),
@@ -193,9 +229,38 @@ export class WorkspaceCards {
         .filter(isNarratorBundle)
         .map((bundle) => projectNarratorCard(contentOf(bundle), lookup)),
       bundles: listing.bundles,
-      warnings: listing.warnings,
+      warnings,
       lookup,
     };
+  }
+
+  private async readCharacterStats(
+    workspaceRoot: StoryUri,
+    bundle: CharacterBundle,
+  ): Promise<CharacterStatsReading> {
+    const statsPath: string = bundleFileRelativePath(bundle.path, 'stats');
+    try {
+      const stats: readonly Stat[] = await this.readStats(workspaceRoot, bundle);
+      const catalog: StatAxisCatalog = resolveStatAxisCatalog();
+      const isUsable = (stat: Stat): boolean =>
+        findStatAxisOf(catalog, 'character', stat.stat) !== undefined;
+
+      return {
+        stats: stats.filter(isUsable),
+        warnings: stats
+          .filter((stat) => !isUsable(stat))
+          .map((stat) => describeUnknownStat(statsPath, stat)),
+      };
+    } catch (error) {
+      if (!(error instanceof BundleFileError)) {
+        throw error;
+      }
+
+      return {
+        stats: [],
+        warnings: [{ kind: 'unreadable', paths: [statsPath], message: error.message }],
+      };
+    }
   }
 
   private reportWarnings(workspaceRoot: StoryUri, warnings: readonly BundleWarning[]): void {
@@ -462,6 +527,19 @@ export class WorkspaceCards {
     await this.memoryRepository(workspaceRoot).write(this.bundlePath(kind, slug), threadId, memory);
   }
 
+  public async readStats(workspaceRoot: StoryUri, bundle: ElementBundle): Promise<readonly Stat[]> {
+    return await this.statsRepository(workspaceRoot).read(bundle.path);
+  }
+
+  public async writeStats(
+    workspaceRoot: StoryUri,
+    bundle: ElementBundle,
+    stats: readonly Stat[],
+  ): Promise<void> {
+    this.rosters.clear();
+    await this.statsRepository(workspaceRoot).write(bundle.path, stats);
+  }
+
   public bundleUri(workspaceRoot: StoryUri, kind: CardBundleKind, slug: string): StoryUri {
     return joinStoryPath(workspaceRoot, ...this.bundlePath(kind, slug).split('/'));
   }
@@ -530,6 +608,12 @@ export class WorkspaceCards {
 
   private memoryRepository(workspaceRoot: StoryUri): ElementMemoryRepository {
     return new ElementMemoryRepository(
+      new BundleFileAccess({ fileSystem: this.dependencies.fileSystem, workspaceRoot }),
+    );
+  }
+
+  private statsRepository(workspaceRoot: StoryUri): ElementStatsRepository {
+    return new ElementStatsRepository(
       new BundleFileAccess({ fileSystem: this.dependencies.fileSystem, workspaceRoot }),
     );
   }

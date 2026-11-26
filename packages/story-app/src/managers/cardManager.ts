@@ -32,6 +32,15 @@ import type {
   UnsetCardStatementRequest,
   UnsetCardStatementResult,
   UnsetCardStatementUseCase,
+  SetCardStatRequest,
+  SetCardStatResult,
+  SetCardStatUseCase,
+  UnsetCardStatRequest,
+  UnsetCardStatResult,
+  UnsetCardStatUseCase,
+  ListCardStatsRequest,
+  ListCardStatsResult,
+  ListCardStatsUseCase,
   RemoveCardRequest,
   RemoveCardResult,
   RemoveCardUseCase,
@@ -105,6 +114,9 @@ export interface CardManagerDependencies {
   readonly cards: WorkspaceCards;
   readonly setCardStatementUseCase: SetCardStatementUseCase;
   readonly unsetCardStatementUseCase: UnsetCardStatementUseCase;
+  readonly setCardStatUseCase: SetCardStatUseCase;
+  readonly unsetCardStatUseCase: UnsetCardStatUseCase;
+  readonly listCardStatsUseCase: ListCardStatsUseCase;
   readonly removeCardUseCase: RemoveCardUseCase;
   readonly cardPendingChanges: CardPendingChangesDesk;
 }
@@ -195,6 +207,18 @@ export class CardManager {
 
   public unsetStatement(request: UnsetCardStatementRequest): Promise<UnsetCardStatementResult> {
     return this.deps.unsetCardStatementUseCase.execute(request);
+  }
+
+  public setStat(request: SetCardStatRequest): Promise<SetCardStatResult> {
+    return this.deps.setCardStatUseCase.execute(request);
+  }
+
+  public unsetStat(request: UnsetCardStatRequest): Promise<UnsetCardStatResult> {
+    return this.deps.unsetCardStatUseCase.execute(request);
+  }
+
+  public listStats(request: ListCardStatsRequest): Promise<ListCardStatsResult> {
+    return this.deps.listCardStatsUseCase.execute(request);
   }
 
   public remove(request: RemoveCardRequest): Promise<RemoveCardResult> {

@@ -54,6 +54,9 @@ import {
   StudioCreateUseCase,
   SetCardStatementUseCase,
   UnsetCardStatementUseCase,
+  SetCardStatUseCase,
+  UnsetCardStatUseCase,
+  ListCardStatsUseCase,
   RemoveCardUseCase,
   CardPendingChangesDesk,
   MoveSceneUseCase,
@@ -216,6 +219,9 @@ interface EngineGraph {
   readonly studioCreateUseCase: StudioCreateUseCase;
   readonly setCardStatementUseCase: SetCardStatementUseCase;
   readonly unsetCardStatementUseCase: UnsetCardStatementUseCase;
+  readonly setCardStatUseCase: SetCardStatUseCase;
+  readonly unsetCardStatUseCase: UnsetCardStatUseCase;
+  readonly listCardStatsUseCase: ListCardStatsUseCase;
   readonly removeCardUseCase: RemoveCardUseCase;
   readonly cardPendingChanges: CardPendingChangesDesk;
   readonly cardCollectRepository: CardCollectRepository;
@@ -486,6 +492,9 @@ function buildServices(
     ...buildStudioServices(host, ai, { revisionPlanRecorder, summaries, repositories }),
     setCardStatementUseCase: new SetCardStatementUseCase(cards),
     unsetCardStatementUseCase: new UnsetCardStatementUseCase(cards),
+    setCardStatUseCase: new SetCardStatUseCase(cards),
+    unsetCardStatUseCase: new UnsetCardStatUseCase(cards),
+    listCardStatsUseCase: new ListCardStatsUseCase(cards),
     removeCardUseCase: new RemoveCardUseCase({ cards, scenes, caches }),
     cardCollectRepository: new CardCollectRepository(fileSystem, cards),
     summarizeChaptersUseCase,

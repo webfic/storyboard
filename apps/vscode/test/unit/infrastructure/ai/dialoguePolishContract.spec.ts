@@ -40,6 +40,21 @@ describe("대사 다듬기 계약", () => {
     expect(retry.userPrefix).toBe(first.userPrefix)
     expect(retry.user).toContain("반려됐다. 이번에는 어기지 마라: 뼈대에 없는 인물이 등장합니다 (지훈)")
   })
+  it("keeps a line true to what the neighbouring lines of others say about it (#259)", () => {
+    expect(system).toContain("앞뒤 다른 인물의 대사가 그 대사에 대해 하는 말과 맞아야 한다")
+    expect(SceneDialoguePolishPrompt.build(polishInput, "xs").system).toContain("옆 인물의 대사가 이 대사에 대해 하는 말")
+  })
+
+  it("names the rejected lines on a retry that keeps the rest (#259)", () => {
+    const retry = SceneDialoguePolishPrompt.build({
+      ...polishInput,
+      retryReasons: ["⟨2⟩에 외국 문자가 섞였습니다"],
+      retryLineNumbers: [2, 5]
+    })
+
+    expect(retry.user).toContain("반려된 대사는 ⟨2⟩, ⟨5⟩뿐이다")
+    expect(SceneDialoguePolishPrompt.build({ ...polishInput, retryReasons: ["x"] }).user).not.toContain("반려된 대사는")
+  })
 })
 
 describe("페르소나 예시 대사 재사용 금지", () => {

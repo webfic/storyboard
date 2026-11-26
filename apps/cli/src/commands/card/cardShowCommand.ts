@@ -1,6 +1,7 @@
 import type { ICommandHandler } from '@/commands/commandHandler';
 import type { CommandContext, CommandOutcome } from '@/commands/outcome';
 import type { CommandSpec } from '@/commands/catalog';
+import { describeListedStat } from '@/commands/card/cardStatViews';
 import { cardCategoryLabels } from '@/commands/card/cardViews';
 import { flagBoolean } from '@/cliArguments';
 import { failure, success } from '@/commands/outcomes';
@@ -10,6 +11,8 @@ import type {
   CardPendingResult,
   CardSessionSummary,
   ElementBundle,
+  ListCardStatsResult,
+  ListedCardStat,
 } from '@storyboard/story-engine';
 import type { ElementKind, NarratorCard, Statement, StoryUri } from '@storyboard/story-model';
 import { toNarratorData } from '@/commands/card/narratorViews';
@@ -84,15 +87,33 @@ export class CardShowCommand implements ICommandHandler {
     const statementLines: string[] = await this.describeStatementLines(container, bundle.statements, {
       shouldShowSources: false,
     });
+    const stats: readonly ListedCardStat[] = await this.listStats(container, slug);
     return success(
       [
         `${reading.view.name} (${slug}) — ${cardKindLabels[kind]}`,
         ...(reading.view.facts.length > 0 ? [reading.view.facts.join(' · ')] : []),
         '',
         ...(statementLines.length > 0 ? statementLines : ['(진술 없음)']),
+        ...(stats.length > 0 ? ['', '스탯', ...stats.map((stat) => `  ${describeListedStat(stat)}`)] : []),
       ].join('\n'),
-      { ...(await this.describeCardData(container, kind, slug)), statements: bundle.statements },
+      {
+        ...(await this.describeCardData(container, kind, slug)),
+        statements: bundle.statements,
+        ...(stats.length > 0 ? { stats } : {}),
+      },
     );
+  }
+
+  private async listStats(
+    container: CliContainer,
+    slug: string,
+  ): Promise<readonly ListedCardStat[]> {
+    const listed: ListCardStatsResult = await container.cards.listStats({
+      workspaceRoot: container.workspaceRoot,
+      slug,
+    });
+
+    return listed.ok ? listed.stats : [];
   }
 
   private async describeCardData(

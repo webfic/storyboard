@@ -198,6 +198,8 @@ describe('CLI verbs and the run lock', () => {
       'draft show',
       'card list',
       'card show',
+      'card stat list',
+      'card stat axes',
       'card interview',
       'card recommend',
       'draft check',

@@ -49,6 +49,10 @@ import { CardBuildCommand } from '@/commands/card/cardBuildCommand';
 import { CardApplyCommand } from '@/commands/card/cardApplyCommand';
 import { CardSetCommand } from '@/commands/card/cardSetCommand';
 import { CardUnsetCommand } from '@/commands/card/cardUnsetCommand';
+import { CardStatSetCommand } from '@/commands/card/cardStatSetCommand';
+import { CardStatUnsetCommand } from '@/commands/card/cardStatUnsetCommand';
+import { CardStatListCommand } from '@/commands/card/cardStatListCommand';
+import { CardStatAxesCommand } from '@/commands/card/cardStatAxesCommand';
 import { CardRemoveCommand } from '@/commands/card/cardRemoveCommand';
 import { CardEditCommand } from '@/commands/card/cardEditCommand';
 import { CardDiscardCommand } from '@/commands/card/cardDiscardCommand';
@@ -117,6 +121,10 @@ const workCommands: readonly ICommandHandler[] = [
   new CardEditCommand(),
   new CardSetCommand(),
   new CardUnsetCommand(),
+  new CardStatSetCommand(),
+  new CardStatUnsetCommand(),
+  new CardStatListCommand(),
+  new CardStatAxesCommand(),
   new CardRemoveCommand(),
   new CardApplyCommand(),
   new CardDiscardCommand(),

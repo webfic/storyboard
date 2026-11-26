@@ -231,6 +231,11 @@ export const flagCatalog: readonly FlagSpec[] = [
   { name: 'description', valueLabel: '<text>', summary: '작품 계약: 설명' },
   { name: 'key', valueLabel: '<key>', summary: 'config set 이 바꿀 설정 키, card set/unset 의 진술 key' },
   { name: 'about', valueLabel: '<slug>', summary: 'card set/unset: 진술이 가리키는 상대 카드' },
+  {
+    name: 'origin',
+    valueLabel: '<author|training>',
+    summary: 'card stat set/unset: 값을 적는 주체 (기본 author, 훈련 도구는 training)',
+  },
   { name: 'sources', summary: 'card show: 진술마다 줄 번호와 출처를 보여 줍니다' },
   { name: 'history', summary: 'card show: 그 카드의 세션 기록을 보여 줍니다' },
   { name: 'propose', summary: '쓰지 않고 세션에 제안과 diff 만 남깁니다 (card apply 로 받음)' },

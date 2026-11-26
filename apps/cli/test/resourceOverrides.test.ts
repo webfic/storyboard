@@ -16,6 +16,9 @@ import {
   NodeUri,
   resolveCraftContract,
   defaultCraftContract,
+  engineStatAxisCatalog,
+  resolveStatAxisCatalog,
+  type StatAxis,
 } from '@storyboard/story-model';
 import {
   ChapterSummaryPrompt,
@@ -39,6 +42,16 @@ afterEach(async () => {
 function writePrompt(directory: string, name: string, text: string): void {
   mkdirSync(directory, { recursive: true });
   writeFileSync(join(directory, name), text);
+}
+
+function statAxisNamed(name: string): StatAxis {
+  return {
+    name,
+    group: 'personality',
+    kinds: ['character'],
+    definition: `${name}의 세기`,
+    levels: ['거의 없다', '약하다', '보통이다', '강하다', '아주 강하다'],
+  };
 }
 
 describe('loadResourceOverrides', () => {
@@ -156,6 +169,52 @@ describe('loadResourceOverrides', () => {
     await loadResourceOverrides(new NodeFileSystem(), []);
 
     expect(resolveCraftContract(undefined)).toEqual(defaultCraftContract);
+  });
+
+  it('adds the axes of statAxes.json files to the engine axes, home before workspace', async () => {
+    const home = join(root, 'home');
+    const workspace = join(root, 'ws', '.storyboard');
+    writePrompt(home, 'statAxes.json', JSON.stringify({ axes: [statAxisNamed('의협심')] }));
+    writePrompt(workspace, 'statAxes.json', JSON.stringify({ axes: [statAxisNamed('주량')] }));
+
+    const report = await loadResourceOverrides(new NodeFileSystem(), [
+      NodeUri.file(home),
+      NodeUri.file(workspace),
+    ]);
+
+    expect(report.problems).toEqual([]);
+    expect(report.applied.map((entry) => entry.kind)).toEqual(['statAxes', 'statAxes']);
+    expect(resolveStatAxisCatalog().axes.map((axis) => axis.name)).toEqual([
+      ...engineStatAxisCatalog.axes.map((axis) => axis.name),
+      '의협심',
+      '주량',
+    ]);
+
+    await loadResourceOverrides(new NodeFileSystem(), []);
+
+    expect(resolveStatAxisCatalog()).toEqual(engineStatAxisCatalog);
+  });
+
+  it('refuses a stat axis file that redefines an axis and keeps the catalog', async () => {
+    const home = join(root, 'home');
+    const workspace = join(root, 'ws', '.storyboard');
+    writePrompt(home, 'statAxes.json', JSON.stringify({ axes: [statAxisNamed('의협심')] }));
+    writePrompt(workspace, 'statAxes.json', JSON.stringify({ axes: [statAxisNamed('의협심')] }));
+    const engineRedefined = join(root, 'engine-redefined');
+    writePrompt(engineRedefined, 'statAxes.json', JSON.stringify({ axes: [statAxisNamed('대담함')] }));
+
+    const report = await loadResourceOverrides(new NodeFileSystem(), [
+      NodeUri.file(home),
+      NodeUri.file(workspace),
+      NodeUri.file(engineRedefined),
+    ]);
+
+    expect(report.applied.map((entry) => entry.kind)).toEqual(['statAxes']);
+    expect(report.problems.map((problem) => problem.message)).toEqual([
+      expect.stringContaining('이미 있는 축은 다시 정의할 수 없습니다: 의협심'),
+      expect.stringContaining('이미 있는 축은 다시 정의할 수 없습니다: 대담함'),
+    ]);
+    expect(resolveStatAxisCatalog().axes).toHaveLength(engineStatAxisCatalog.axes.length + 1);
   });
 
   it('reports a craft contract file it cannot use and keeps the defaults', async () => {

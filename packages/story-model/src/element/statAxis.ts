@@ -73,9 +73,32 @@ export const statAxisCatalogSchema: z.ZodType<StatAxisCatalog> = z
 
 export const engineStatAxisCatalog: StatAxisCatalog = statAxisCatalogSchema.parse(statAxisData);
 
+let statAxisCatalogInForce: StatAxisCatalog = engineStatAxisCatalog;
+
 export function resolveStatAxisCatalog(): StatAxisCatalog {
-  return engineStatAxisCatalog;
+  return statAxisCatalogInForce;
 }
+
+export function extendStatAxisCatalog(addition: StatAxisCatalog): void {
+  statAxisCatalogInForce = { axes: [...statAxisCatalogInForce.axes, ...addition.axes] };
+}
+
+export function resetStatAxisCatalog(): void {
+  statAxisCatalogInForce = engineStatAxisCatalog;
+}
+
+export const statAxisAdditionFileSchema: z.ZodType<StatAxisCatalog> =
+  statAxisCatalogSchema.superRefine((addition, context) => {
+    for (const [index, axis] of addition.axes.entries()) {
+      if (findStatAxis(statAxisCatalogInForce, axis.name) !== undefined) {
+        context.addIssue({
+          code: 'custom',
+          path: ['axes', index, 'name'],
+          message: `이미 있는 축은 다시 정의할 수 없습니다: ${axis.name}`,
+        });
+      }
+    }
+  });
 
 export function findStatAxis(catalog: StatAxisCatalog, name: string): StatAxis | undefined {
   return catalog.axes.find((axis) => axis.name === name);

@@ -2,12 +2,15 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import { resetStatAxisCatalog } from '@storyboard/story-model';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { resolveVerb, type ParsedArguments } from '@/cliArguments';
 import type { CommandOutcome } from '@/commands/outcome';
 import { commandCatalog, findCommand } from '@/commands/index';
 import type { ICommandHandler } from '@/commands/commandHandler';
+import { CommandDispatcher, type DispatchDependencies } from '@/commands/commandDispatcher';
+import type { DispatchResult } from '@/commands/dispatchContract';
 import { createCliContainer, type CliContainer } from '@/container';
 import { writeCardBundleFromYaml } from './fixtures/cardBundles';
 
@@ -51,6 +54,17 @@ async function run(
   return await command.execute({ container: container(), args: parsed });
 }
 
+function dispatch(words: readonly string[]): Promise<DispatchResult> {
+  const dependencies: DispatchDependencies = {
+    version: '0.0.0',
+    cwd: workspace,
+    isInteractive: false,
+    createLogger: () => silentLogger,
+  };
+
+  return new CommandDispatcher(dependencies).dispatch(words);
+}
+
 function statsFile(): string {
   return readFileSync(join(workspace, 'character', 'elia.card', 'stats.yaml'), 'utf8');
 }
@@ -66,6 +80,7 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
+  resetStatAxisCatalog();
   if (previousHome === undefined) {
     delete process.env.STORYBOARD_HOME;
   } else {
@@ -128,6 +143,32 @@ describe('card stat set', () => {
 
   it('asks for the missing words', async () => {
     expect(await run(['card', 'stat', 'set', 'elia', '대담함'])).toMatchObject({ ok: false });
+  });
+});
+
+describe('an axis the work adds', () => {
+  it('can be listed and written once .storyboard/statAxes.json names it', async () => {
+    writeFileSync(
+      join(workspace, '.storyboard', 'statAxes.json'),
+      JSON.stringify({
+        axes: [
+          {
+            name: '의협심',
+            group: 'personality',
+            kinds: ['character'],
+            definition: '남의 억울한 일에 얼마나 나서는가',
+            levels: ['모른 척한다', '안타까워만 한다', '부탁받으면 돕는다', '먼저 나선다', '목숨을 건다'],
+          },
+        ],
+      }),
+    );
+
+    const axes: DispatchResult = await dispatch(['card', 'stat', 'axes']);
+    const written: DispatchResult = await dispatch(['card', 'stat', 'set', 'elia', '의협심', '4']);
+
+    expect(axes.stdout).toContain('의협심: 남의 억울한 일에 얼마나 나서는가');
+    expect(written.exitCode).toBe(0);
+    expect(statsFile()).toBe('- {stat: 의협심, value: 4, source: {origin: author}}\n');
   });
 });
 

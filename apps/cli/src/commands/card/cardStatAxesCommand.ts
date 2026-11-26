@@ -35,11 +35,13 @@ export class CardStatAxesCommand implements ICommandHandler {
     examples: ['storyboard card stat axes', 'storyboard card stat axes narrator'],
   };
 
-  public async execute({ args }: CommandContext): Promise<CommandOutcome> {
+  public async execute({ container, args }: CommandContext): Promise<CommandOutcome> {
     const requested: string = args.positionals[0] ?? defaultAxisKind;
     if (!isElementKind(requested)) {
       return failure(`알 수 없는 카드 종류입니다: ${requested}`);
     }
+
+    await container.loadResourceOverrides();
 
     const axes: readonly StatAxis[] = listStatAxesOf(resolveStatAxisCatalog(), requested);
     const lines: readonly string[] =

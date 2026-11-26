@@ -73,6 +73,18 @@ export const statAxisCatalogSchema: z.ZodType<StatAxisCatalog> = z
 
 export const engineStatAxisCatalog: StatAxisCatalog = statAxisCatalogSchema.parse(statAxesData);
 
+export function resolveStatAxisCatalog(): StatAxisCatalog {
+  return engineStatAxisCatalog;
+}
+
+export function findStatAxis(catalog: StatAxisCatalog, name: string): StatAxis | undefined {
+  return catalog.axes.find((axis) => axis.name === name);
+}
+
+export function listStatAxesOf(catalog: StatAxisCatalog, kind: ElementKind): readonly StatAxis[] {
+  return catalog.axes.filter((axis) => axis.kinds.includes(kind));
+}
+
 export function describeStatLevel(axis: StatAxis, value: number): string | undefined {
   return axis.levels[value - lowestStatValue];
 }

@@ -5,6 +5,7 @@ import { elementIdSchema, headerTextSchema } from '#model/element/elementId';
 import { elementHeaderSchemas, type ElementHeader } from '#model/element/elementHeader';
 import type { ElementKind } from '#model/element/elementKind';
 import { beatSchema, type Beat } from '#model/element/scene';
+import { statListSchema, type Stat } from '#model/element/stat';
 import {
   statementListSchema,
   storyStateStatementSchema,
@@ -138,6 +139,14 @@ export function parseStatementsFile(text: string, fileName: string): readonly St
 
 export function serializeStatementsFile(statements: readonly Statement[]): string {
   return dumpYaml(statementListSchema.parse(statements), listItemsInFlowLevel);
+}
+
+export function parseStatsFile(text: string, fileName: string): readonly Stat[] {
+  return parseYamlDocument(text, fileName, statListSchema, emptyListDocument);
+}
+
+export function serializeStatsFile(stats: readonly Stat[]): string {
+  return dumpYaml(statListSchema.parse(stats), listItemsInFlowLevel);
 }
 
 export function parseBeatsFile(text: string, fileName: string): readonly Beat[] {

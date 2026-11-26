@@ -26,6 +26,7 @@ import {
   type LocationBackgroundCard,
   type NarratorCard,
   type NarratorHeader,
+  type Stat,
   type StatementSource,
   type StoryboardCard,
   type StoryUri,
@@ -37,6 +38,7 @@ import type { IStoryboardLogger } from '#engine/ports/logger';
 import { ElementIndexStore } from '#engine/persistence/cache/elementIndexStore';
 import { BundleFileAccess } from '#engine/persistence/bundles/bundleFileAccess';
 import { ElementMemoryRepository } from '#engine/persistence/bundles/elementMemoryRepository';
+import { ElementStatsRepository } from '#engine/persistence/bundles/elementStatsRepository';
 import type { WorkspaceCaches } from '#engine/persistence/cache/workspaceCaches';
 import {
   ElementBundleRepository,
@@ -70,6 +72,7 @@ const authorSource: StatementSource = { origin: 'author' };
 const fingerprintedBundleFiles: readonly string[] = [
   bundleFileNames.card,
   bundleFileNames.statements,
+  bundleFileNames.stats,
 ];
 
 interface CardWritePlan {
@@ -462,6 +465,19 @@ export class WorkspaceCards {
     await this.memoryRepository(workspaceRoot).write(this.bundlePath(kind, slug), threadId, memory);
   }
 
+  public async readStats(workspaceRoot: StoryUri, bundle: ElementBundle): Promise<readonly Stat[]> {
+    return await this.statsRepository(workspaceRoot).read(bundle.path);
+  }
+
+  public async writeStats(
+    workspaceRoot: StoryUri,
+    bundle: ElementBundle,
+    stats: readonly Stat[],
+  ): Promise<void> {
+    this.rosters.clear();
+    await this.statsRepository(workspaceRoot).write(bundle.path, stats);
+  }
+
   public bundleUri(workspaceRoot: StoryUri, kind: CardBundleKind, slug: string): StoryUri {
     return joinStoryPath(workspaceRoot, ...this.bundlePath(kind, slug).split('/'));
   }
@@ -530,6 +546,12 @@ export class WorkspaceCards {
 
   private memoryRepository(workspaceRoot: StoryUri): ElementMemoryRepository {
     return new ElementMemoryRepository(
+      new BundleFileAccess({ fileSystem: this.dependencies.fileSystem, workspaceRoot }),
+    );
+  }
+
+  private statsRepository(workspaceRoot: StoryUri): ElementStatsRepository {
+    return new ElementStatsRepository(
       new BundleFileAccess({ fileSystem: this.dependencies.fileSystem, workspaceRoot }),
     );
   }

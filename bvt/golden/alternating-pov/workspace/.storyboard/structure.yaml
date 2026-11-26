@@ -2,7 +2,7 @@ threads:
   - id: main
     title: 본편
 scenes:
-  - scene: 0db0eb76-a9ef-4c67-a308-50d39a4f0e75
+  - scene: 404d74e3-9725-4a71-b5bb-d4355c8343a1
     thread: main
-  - scene: bfe48b2d-683e-43c7-ace1-55ffaaa64342
+  - scene: ff2798f3-325c-43e9-8e15-d94ad97edc11
     thread: main

@@ -1,3 +1,4 @@
+import { selectSectionCastFacts } from '#engine/pipeline/sectionCastFacts';
 import { splitDraftParagraphs } from '#engine/pipeline/beatLocations';
 import { curlDialogueQuotes } from '#engine/pipeline/dialogueQuotes';
 import { characterSpeechToOthers } from '#engine/pipeline/scene/characterVoices';
@@ -191,6 +192,11 @@ export class SkeletonDrafter {
       catchphrases: characterCatchphrases(run.context.characters),
       characterKnowledge: run.input.characterKnowledge,
       speechToOthers: characterSpeechToOthers(run.context.characters),
+      castFacts: selectSectionCastFacts({
+        characters: run.context.characters,
+        beats: this.beats,
+        beatNumbers: this.beats.map((_, beatIndex) => beatIndex + 1),
+      }),
       background: run.background,
       backgroundConflicts: run.backgroundFactConflicts.map(formatBackgroundFactConflict),
       previousContext: buildSkeletonContext(run.condensedPreviousContext, run.input.canonFactLines),

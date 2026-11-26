@@ -38,6 +38,20 @@ describe("SceneSkeletonPrompt golden", () => {
     expect(SceneSkeletonPrompt.build(full, variant)).toMatchSnapshot()
   })
 
+  it.each(["generic", "xs"] as const)("guards personal facts and lists the card facts for the %s variant (#258)", (variant) => {
+    const rendered: string = JSON.stringify(
+      SceneSkeletonPrompt.build({ ...bare, castFacts: ["하나 — 설명: 지난봄 이 집에 들어왔다"] }, variant)
+    )
+
+    expect(rendered).toContain("[인물 사실")
+    expect(rendered).toContain("하나 — 설명: 지난봄 이 집에 들어왔다")
+    expect(rendered).toMatch(/신상\(나이/)
+  })
+
+  it("leaves the card facts block out when there are none (#258)", () => {
+    expect(JSON.stringify(SceneSkeletonPrompt.build(bare, "generic"))).not.toContain("[인물 사실 —")
+  })
+
   it.each(["generic", "xs"] as const)("asks for breaks only at the planned segments for the %s variant", (variant) => {
     const planned = SceneSkeletonPrompt.build(
       { ...bare, narrativeSource: "⟪대목 1⟫\n사건 하나\n\n⟪대목 2⟫\n사건 둘", plannedBreaks: true },

@@ -12,6 +12,10 @@ after the first public release.
 
 ### Fixed
 
+- **`draft generate --all --force` generates every scene again (#255).** Until now `--force` given with `--all` was ignored without a word: scenes whose input had not changed were left as they were and the run ended in success. Now each scene is made again, as `--force` does for one scene, and the cost confirmation counts every scene. A forced run that is paused says that running it again with `--force` starts again from the first scene. `help draft` and the `--force` description follow this behaviour. The extension's «generate all» is unchanged.
+
+### Fixed
+
 - **The review rewrite no longer brings forward a nickname that is not given yet (#253).** When a nickname is first given in a later beat of the scene, the review's continuity check reported an earlier line that used the name as contradicting the setting («calls her only by the nickname»), and the rewrite replaced the name with the nickname and was accepted. The continuity check and the rewrite now know where the draft first uses that term, and a rewrite of an earlier section that brings it in is rejected and the original text is kept. The revision record gives the reason `early-address`.
 
 ## [0.17.4] - 2026-11-24

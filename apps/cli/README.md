@@ -170,6 +170,7 @@ storyboard scene seed
 storyboard scene plot 001-scene-1-1 --dry-run
 storyboard draft generate 001-scene-1-1 --force
 storyboard draft generate --all
+storyboard draft generate --all --force   # every scene again, even the ones whose input did not change
 storyboard draft revise 001-scene-1-1
 storyboard novel generate
 storyboard manuscript assemble && storyboard manuscript review

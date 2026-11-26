@@ -154,7 +154,7 @@ export const flagCatalog: readonly FlagSpec[] = [
   {
     name: 'force',
     summary:
-      '이미 있는 결과를 덮어씁니다 (draft generate, scene plot, scene seed, outline generate) · card remove: 가리키는 곳을 함께 정리하고 지웁니다',
+      '이미 있는 결과를 덮어씁니다 (draft generate, scene plot, scene seed, outline generate) · draft generate --all: 입력이 같은 씬까지 모든 씬을 다시 · card remove: 가리키는 곳을 함께 정리하고 지웁니다',
   },
   { name: 'out', valueLabel: '<path>', summary: 'manuscript export 의 출력 파일' },
   { name: 'lines', valueLabel: '<a-b>', summary: '대상 줄 범위 (없으면 본문 전체)' },

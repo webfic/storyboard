@@ -2,9 +2,9 @@ import { z } from 'zod';
 
 import { headerTextSchema } from '#model/element/elementId';
 import { isElementKind, type ElementKind } from '#model/element/elementKind';
-import { highestStatValue, lowestStatValue } from '#model/element/stat';
+import { highestStatValue, lowestStatValue, type Stat } from '#model/element/stat';
 
-import statAxesData from './statAxes.params.json';
+import statAxisData from './statAxis.params.json';
 
 export type StatAxisGroup = 'personality' | 'speech';
 
@@ -71,7 +71,7 @@ export const statAxisCatalogSchema: z.ZodType<StatAxisCatalog> = z
     }
   });
 
-export const engineStatAxisCatalog: StatAxisCatalog = statAxisCatalogSchema.parse(statAxesData);
+export const engineStatAxisCatalog: StatAxisCatalog = statAxisCatalogSchema.parse(statAxisData);
 
 export function resolveStatAxisCatalog(): StatAxisCatalog {
   return engineStatAxisCatalog;
@@ -87,4 +87,32 @@ export function listStatAxesOf(catalog: StatAxisCatalog, kind: ElementKind): rea
 
 export function describeStatLevel(axis: StatAxis, value: number): string | undefined {
   return axis.levels[value - lowestStatValue];
+}
+
+export function findStatAxisOf(
+  catalog: StatAxisCatalog,
+  kind: ElementKind,
+  statName: string,
+): StatAxis | undefined {
+  const axis: StatAxis | undefined = findStatAxis(catalog, statName);
+
+  return axis?.kinds.includes(kind) === true ? axis : undefined;
+}
+
+function describeStatPromptLine(axis: StatAxis, value: number): string[] {
+  const meaning: string | undefined = describeStatLevel(axis, value);
+
+  return meaning === undefined ? [] : [`${axis.name} ${value}/${highestStatValue}: ${meaning}`];
+}
+
+export function describeStatPromptLines(
+  catalog: StatAxisCatalog,
+  kind: ElementKind,
+  stats: readonly Stat[],
+): readonly string[] {
+  return stats.flatMap((stat): string[] => {
+    const axis: StatAxis | undefined = findStatAxisOf(catalog, kind, stat.stat);
+
+    return axis === undefined ? [] : describeStatPromptLine(axis, stat.value);
+  });
 }

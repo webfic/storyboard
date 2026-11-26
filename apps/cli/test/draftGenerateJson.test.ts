@@ -226,6 +226,15 @@ describe('draft generate --all --json', () => {
     ]);
     expect(again.usage).toEqual([]);
   });
+  it('generates a scene whose input did not change again with --force (#255)', async () => {
+    await generateAllScenes();
+
+    const forced: BatchData = await generateAllScenes('--force');
+
+    expect(forced.generated).toBe(1);
+    expect(forced.scenes).toEqual([expect.objectContaining({ stem: '001-opening', ok: true, cached: false })]);
+    expect(forced.usage.length).toBeGreaterThan(0);
+  });
 });
 
 describe('draft generate --json with beat location on', () => {

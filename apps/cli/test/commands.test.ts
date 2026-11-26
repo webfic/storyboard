@@ -1100,6 +1100,39 @@ describe('draft generate --all pause', () => {
     expect(outcome.ok).toBe(false);
     expect(outcome.message).toContain('남은 씬 2개');
   });
+  it('passes --force to the batch and says a forced run starts again from the first scene (#255)', async () => {
+    const real = container();
+    let requestedForce: boolean | undefined;
+    const stubbed = {
+      ...real,
+      drafts: stubManager(real.drafts, {
+        generateAll: async (request: { force?: boolean }) => {
+          requestedForce = request.force;
+          return {
+            kind: 'completed',
+            ok: true,
+            summary: {
+              cacheHits: 0,
+              failureLabels: [],
+              failures: 0,
+              generated: 1,
+              sceneCount: 3,
+              pausedWithRemaining: 2,
+            },
+          };
+        },
+      } as never),
+    } as unknown as Parameters<(typeof commands)['draft generate']>[0]['container'];
+
+    const outcome = await findCommand('draft generate')!.execute({
+      container: stubbed,
+      args: args(['draft', 'generate'], { all: true, force: true }),
+    });
+
+    expect(requestedForce).toBe(true);
+    expect(outcome.message).toContain('처음 씬부터 다시');
+    expect(outcome.message).not.toContain('남은 씬부터 이어 갑니다');
+  });
 });
 
 describe('paid run confirmation', () => {
@@ -1124,6 +1157,28 @@ describe('paid run confirmation', () => {
 
     expect(hasRun).toBe(false);
     expect(outcome.message).toContain('취소했습니다');
+  });
+
+  it('asks about every scene when --all comes with --force (#255)', async () => {
+    const real = container();
+    const titles: string[] = [];
+    const stubbed = {
+      ...real,
+      prompter: {
+        shouldConfirmPaidRuns: true,
+        choose: async (prompt: { title: string }) => {
+          titles.push(prompt.title);
+          return false;
+        },
+      },
+    } as unknown as Parameters<(typeof commands)['draft generate']>[0]['container'];
+
+    await findCommand('draft generate')!.execute({
+      container: stubbed,
+      args: args(['draft', 'generate'], { all: true, force: true }),
+    });
+
+    expect(titles).toEqual([expect.stringMatching(/^초안 \d+개 다시 생성$/)]);
   });
 });
 

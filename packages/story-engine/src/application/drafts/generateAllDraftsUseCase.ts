@@ -61,6 +61,7 @@ export type GenerateAllDraftsResult =
   | { readonly kind: 'completed'; readonly ok: true; readonly summary: GenerateAllDraftsSummary };
 
 export type GenerateAllDraftsOptions = {
+  readonly force?: boolean;
   readonly onProgress?: (progress: GenerateAllDraftsProgress) => void;
   readonly shouldCancel?: () => boolean;
   readonly shouldPause?: () => boolean;
@@ -312,7 +313,7 @@ export class GenerateAllDraftsUseCase implements IUseCase<
 
     return await this.collaborators.generateDraftUseCase.execute({
       sceneUri,
-      force: false,
+      force: options.force === true,
       suppressLoggerPanel: true,
       reviseFollows: 'when-enabled',
       onPipelineProgress: (stage, stageCurrent, stageTotal) => {

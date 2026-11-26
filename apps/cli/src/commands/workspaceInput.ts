@@ -34,7 +34,7 @@ export type ContractInput =
     }
   | { readonly message: string };
 
-interface PaidRunSummary {
+export interface PaidRunSummary {
   readonly title: string;
   readonly details: readonly string[];
 }

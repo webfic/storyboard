@@ -8,7 +8,12 @@ import {
 } from '@/commands/draft/draftProgress';
 import { flagBoolean } from '@/cliArguments';
 import { failure, success } from '@/commands/outcomes';
-import { describeMissingChapterSummaries, WorkspaceInput, cancelledBeforeRun } from '@/commands/workspaceInput';
+import {
+  describeMissingChapterSummaries,
+  WorkspaceInput,
+  cancelledBeforeRun,
+  type PaidRunSummary,
+} from '@/commands/workspaceInput';
 import { resolveSceneStemFrom, sceneUriFor } from '@/commands/sceneArguments';
 import {
   describeReviseOutcome,
@@ -24,7 +29,7 @@ import {
   type GenerateDraftResult,
   addBeatSpansToWarnings,
 } from '@storyboard/story-engine';
-import type { GenerateAndReviseDraftResult, ReadyDraft } from '@storyboard/story-app';
+import type { GenerateAndReviseDraftResult, ReadyDraft, WorkspaceStatus } from '@storyboard/story-app';
 import type { BeatLocation, DraftGenerationStepId, StoryUri } from '@storyboard/story-model';
 
 export class DraftGenerateCommand implements ICommandHandler {
@@ -33,7 +38,7 @@ export class DraftGenerateCommand implements ICommandHandler {
     writesWorkspace: true,
     group: '초안',
     usage: 'draft generate <stem> | --all',
-    summary: '씬 초안을 생성합니다 (--force 로 재생성, --all 은 필요한 씬만)',
+    summary: '씬 초안을 생성합니다 (--force 로 재생성, --all 은 필요한 씬만, --all --force 는 모든 씬을 다시)',
     flags: ['all', 'force', 'no-revise', 'revise-iterations', 'params'],
     examples: ['storyboard draft generate 001-scene-1-1', 'storyboard draft generate --all'],
   };
@@ -44,23 +49,18 @@ export class DraftGenerateCommand implements ICommandHandler {
       : this.generateScene(context);
   }
 
-  private async generateAll({ container }: CommandContext): Promise<CommandOutcome> {
-    const isConfirmed: boolean = await new WorkspaceInput(container).confirmPaidRun((status) => {
-      const pending: number = status.drafts.missing + status.drafts.stale;
-      return {
-        title: `초안 ${pending}개 생성`,
-        details: [
-          `대상  초안이 없거나 카드보다 오래된 씬 ${pending}개 (전체 ${status.scenes.total}개)`,
-          ...describeMissingChapterSummaries(status),
-        ],
-      };
-    });
+  private async generateAll({ container, args }: CommandContext): Promise<CommandOutcome> {
+    const isForced: boolean = flagBoolean(args.flags, 'force');
+    const isConfirmed: boolean = await new WorkspaceInput(container).confirmPaidRun((status) =>
+      isForced ? describeForcedBatchTarget(status) : describePendingBatchTarget(status),
+    );
 
     if (!isConfirmed) {
       return cancelledBeforeRun;
     }
 
     const batchGeneration: GenerateAllDraftsResult = await container.drafts.generateAll({
+      force: isForced,
       shouldPause: container.pauseRequests.watch(),
       onProgress: (progress) => {
         const step: string = describeBatchStep(progress);
@@ -76,7 +76,7 @@ export class DraftGenerateCommand implements ICommandHandler {
       return failure(describeBatchFailure(batchGeneration.kind), batchGeneration);
     }
 
-    return describeBatchSummary(batchGeneration.summary);
+    return describeBatchSummary(batchGeneration.summary, { isForced });
   }
 
   private async generateScene({ container, args }: CommandContext): Promise<CommandOutcome> {
@@ -165,7 +165,35 @@ function draftWarningsOf(draft: ReadyDraft): readonly DraftWarning[] {
   return draft.kind === 'generated' ? draft.warnings : [];
 }
 
-function describeBatchSummary(summary: GenerateAllDraftsSummary): CommandOutcome {
+function describePendingBatchTarget(status: WorkspaceStatus): PaidRunSummary {
+  const pending: number = status.drafts.missing + status.drafts.stale;
+  return {
+    title: `초안 ${pending}개 생성`,
+    details: [
+      `대상  초안이 없거나 카드보다 오래된 씬 ${pending}개 (전체 ${status.scenes.total}개)`,
+      ...describeMissingChapterSummaries(status),
+    ],
+  };
+}
+
+function describeForcedBatchTarget(status: WorkspaceStatus): PaidRunSummary {
+  return {
+    title: `초안 ${status.scenes.total}개 다시 생성`,
+    details: [
+      `대상  모든 씬 ${status.scenes.total}개 (--force: 입력이 같은 씬도 다시 만듭니다)`,
+      ...describeMissingChapterSummaries(status),
+    ],
+  };
+}
+
+const pausedBatchResumeHint: string = '다시 실행하면 남은 씬부터 이어 갑니다.';
+const pausedForcedBatchResumeHint: string =
+  '--force 와 함께 다시 실행하면 처음 씬부터 다시 만들고, --force 없이 실행하면 바뀐 씬만 만듭니다.';
+
+function describeBatchSummary(
+  summary: GenerateAllDraftsSummary,
+  { isForced }: { readonly isForced: boolean },
+): CommandOutcome {
   const { cacheHits, failureLabels, failures, generated, pausedWithRemaining } = summary;
 
   if (pausedWithRemaining !== undefined) {
@@ -173,7 +201,7 @@ function describeBatchSummary(summary: GenerateAllDraftsSummary): CommandOutcome
       ok: false,
       message:
         `멈췄습니다: 생성 ${generated}건, 남은 씬 ${pausedWithRemaining}개. ` +
-        '다시 실행하면 남은 씬부터 이어 갑니다.',
+        (isForced ? pausedForcedBatchResumeHint : pausedBatchResumeHint),
       data: summary,
       stop: 'paused',
     };

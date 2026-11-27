@@ -20,6 +20,7 @@ export * from '#ai/ai/prompts/chapterPlan';
 export * from '#ai/ai/prompts/chapterSummary';
 export * from '#ai/ai/prompts/continuityCheck';
 export * from '#ai/ai/prompts/draftConsistency';
+export * from '#ai/ai/prompts/skeletonFacts';
 export * from '#ai/ai/prompts/draftAugment';
 export * from '#ai/ai/prompts/draftCondense';
 export * from '#ai/ai/prompts/draftCritique';

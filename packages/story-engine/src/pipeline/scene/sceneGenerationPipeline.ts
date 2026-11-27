@@ -69,6 +69,7 @@ export class SceneGenerationPipeline {
       draftBody: run.draftBody,
       skeleton: run.polishedText,
       sceneCoordinates: listSceneCoordinates(run.sceneCoordinates),
+      skeletonFacts: run.skeletonFacts,
       warnings,
       ...(beatSegments === undefined ? {} : { beatSegments }),
       detectedCharacters: run.detectedCharacters,

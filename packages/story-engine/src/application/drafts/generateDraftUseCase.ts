@@ -195,6 +195,9 @@ export class GenerateDraftUseCase implements IUseCase<GenerateDraftRequest, Gene
       ...(pipelineResult.sceneCoordinates.length > 0
         ? { sceneCoordinates: pipelineResult.sceneCoordinates }
         : {}),
+      ...(pipelineResult.skeletonFacts.length > 0
+        ? { skeletonFacts: pipelineResult.skeletonFacts }
+        : {}),
       bodyHash,
       personasUsed: Object.fromEntries(pipelineResult.personasUsed),
       backgroundSnapshot: this.toBackgroundSnapshot(context.background),
@@ -442,6 +445,7 @@ export class GenerateDraftUseCase implements IUseCase<GenerateDraftRequest, Gene
     return {
       personaGeneration: this.ai.gateway.getTaskProvider('personaGeneration'),
       sceneSkeleton: this.ai.gateway.getTaskProvider('sceneSkeleton'),
+      skeletonFacts: this.ai.gateway.getTaskProvider('skeletonFacts'),
       sceneBeatActor: this.ai.gateway.getTaskProvider('sceneBeatActor'),
       sceneBeatArbiter: this.ai.gateway.getTaskProvider('sceneBeatArbiter'),
       sceneBeatJudge: this.ai.gateway.getTaskProvider('sceneBeatJudge'),

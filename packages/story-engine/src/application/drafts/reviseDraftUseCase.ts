@@ -233,18 +233,9 @@ async function loadSceneCoordinateLines(
   },
   characters: readonly { readonly id: string; readonly name: string }[],
 ): Promise<string[]> {
-  let recorded: readonly string[] | undefined;
-
-  if (repository) {
-    const cacheUri: StoryUri = sceneCacheFilePath(paths, scene);
-    try {
-      recorded = (await fs.exists(cacheUri))
-        ? (await repository.read(cacheUri)).sceneCoordinates
-        : undefined;
-    } catch {
-      recorded = undefined;
-    }
-  }
+  const recorded: readonly string[] | undefined = (
+    await readRecordedSceneCache(fs, repository, paths, scene)
+  )?.sceneCoordinates;
 
   const nameById: Map<string, string> = new Map(
     characters.map((character) => [character.id, character.name]),
@@ -256,6 +247,36 @@ async function loadSceneCoordinateLines(
     );
 
   return coordinates.map((line) => `장면 좌표 ${line}`);
+}
+
+async function readRecordedSceneCache(
+  fs: IFileSystem,
+  repository: ISceneCacheRepository | undefined,
+  paths: StoryboardProjectPaths,
+  scene: { readonly sceneId?: string; readonly stem: string },
+): Promise<SceneCacheRecord | undefined> {
+  if (!repository) {
+    return undefined;
+  }
+
+  const cacheUri: StoryUri = sceneCacheFilePath(paths, scene);
+  try {
+    return (await fs.exists(cacheUri)) ? await repository.read(cacheUri) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+const skeletonFactLabel: string = '이 장면에서 정한 사실';
+
+async function loadSkeletonFactLines(
+  fs: IFileSystem,
+  repository: ISceneCacheRepository | undefined,
+  paths: StoryboardProjectPaths,
+  scene: { readonly sceneId?: string; readonly stem: string },
+): Promise<string[]> {
+  const recorded: SceneCacheRecord | undefined = await readRecordedSceneCache(fs, repository, paths, scene);
+  return (recorded?.skeletonFacts ?? []).map((fact) => `${skeletonFactLabel} — ${fact}`);
 }
 
 interface ReviseSceneSources {
@@ -360,6 +381,7 @@ async function loadReviseFactLines(
     ...canonFactLines,
     ...storyStateFactLines(priorState, scene.order, scene.body),
     ...(await loadSceneCoordinateLines(fs, sceneCacheRepository, paths, scene, context.characters)),
+    ...(await loadSkeletonFactLines(fs, sceneCacheRepository, paths, scene)),
   ];
 }
 

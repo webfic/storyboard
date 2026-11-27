@@ -59,6 +59,7 @@ export class SceneGenerationRun implements SceneRunState {
   public sceneCoordinates: SceneCoordinateLedger;
   public polishedText: string;
   public skeletonCallParagraphs: readonly SkeletonCallParagraphs[];
+  public skeletonFacts: readonly string[];
   public skeletonBeatStarts: ReadonlyMap<number, number> | undefined;
   public dialoguePolish: DialoguePolishSummary | undefined;
   public readonly warnings: SceneWarning[];
@@ -92,6 +93,7 @@ export class SceneGenerationRun implements SceneRunState {
     this.sceneCoordinates = { segments: [], isAlignedWithBreaks: true };
     this.polishedText = '';
     this.skeletonCallParagraphs = [];
+    this.skeletonFacts = [];
     this.skeletonBeatStarts = undefined;
     this.dialoguePolish = undefined;
     this.warnings = [];

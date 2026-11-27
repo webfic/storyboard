@@ -38,6 +38,7 @@ export type AiTaskName =
   | 'backgroundFactConflicts'
   | 'sceneDraft'
   | 'sceneSkeleton'
+  | 'skeletonFacts'
   | 'sceneDialoguePolish'
   | 'sceneDialogueAttribution'
   | 'sceneSectionExpansion'
@@ -92,6 +93,7 @@ export const aiTaskCatalog: readonly AiTaskCatalogEntry[] = [
   { name: 'backgroundFactConflicts', label: '배경 사실 상충 검사' },
   { name: 'sceneDraft', label: '씬 드래프트' },
   { name: 'sceneSkeleton', label: '씬 뼈대' },
+  { name: 'skeletonFacts', label: '뼈대가 정한 사실' },
   { name: 'sceneDialoguePolish', label: '대사 다듬기' },
   { name: 'sceneDialogueAttribution', label: '대사 화자 귀속' },
   { name: 'sceneSectionExpansion', label: '구간 살붙임' },

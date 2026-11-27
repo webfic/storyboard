@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest"
+import { describe, expect, it, vi } from 'vitest';
 
 import type {
   BackgroundCard,
@@ -6,7 +6,7 @@ import type {
   CharacterCard,
   SceneContext,
   SceneDialogueRecord,
-  SceneFile
+  SceneFile,
 } from '@storyboard/story-model';
 import { AiProviderError, computeDraftBodyHash } from '@storyboard/story-model';
 import {
@@ -35,725 +35,887 @@ import {
 } from '@storyboard/story-engine';
 
 function longProse(prefix: string, length = 3000): string {
-  const syllables = "가나다라마바사아자차카타파하거너더러머버서어저처커터퍼허"
-  let state = [...prefix].reduce((sum, char) => sum + char.charCodeAt(0), 1)
-  let filler = ""
+  const syllables = '가나다라마바사아자차카타파하거너더러머버서어저처커터퍼허';
+  let state = [...prefix].reduce((sum, char) => sum + char.charCodeAt(0), 1);
+  let filler = '';
 
   while (filler.length < length * 2) {
-    state = (state * 48271) % 2147483647
-    filler += syllables[state % syllables.length]
+    state = (state * 48271) % 2147483647;
+    filler += syllables[state % syllables.length];
     if (state % 7 === 0) {
-      filler += " "
+      filler += ' ';
     }
   }
 
-  return `${prefix} ${filler}`
+  return `${prefix} ${filler}`;
 }
 
-const eliaCard: CharacterCard = { type: "character", id: "elia", name: "엘리아", role: "main" }
-const jihoonCard: CharacterCard = { type: "character", id: "jihoon", name: "지훈", role: "main" }
+const eliaCard: CharacterCard = { type: 'character', id: 'elia', name: '엘리아', role: 'main' };
+const jihoonCard: CharacterCard = { type: 'character', id: 'jihoon', name: '지훈', role: 'main' };
 
 function sceneFile(body: string, endState?: string): SceneFile {
   return {
-    stem: "01-opening",
+    stem: '01-opening',
     order: 1,
-    orderText: "01",
-    slug: "opening",
+    orderText: '01',
+    slug: 'opening',
     frontmatter: {},
-    ...(endState === undefined ? {} : { card: { type: "scene", id: "01-opening", endState } }),
-    body
-  } as SceneFile
+    ...(endState === undefined ? {} : { card: { type: 'scene', id: '01-opening', endState } }),
+    body,
+  } as SceneFile;
 }
 
 function contextFor(
   characters: readonly CharacterCard[],
   body: string,
   background?: BackgroundCard,
-  endState?: string
+  endState?: string,
 ): SceneContext {
-  return { scene: sceneFile(body, endState), characters, background }
+  return { scene: sceneFile(body, endState), characters, background };
 }
 
 function createRecordingAiService(): SceneGenerationPipelineAiService & {
-  readonly createCharacterPersona: ReturnType<typeof vi.fn>
-  readonly describeBackground: ReturnType<typeof vi.fn>
-  readonly findBackgroundFactConflicts: ReturnType<typeof vi.fn>
-  readonly draftSceneSkeleton: ReturnType<typeof vi.fn>
-  readonly checkSceneCoverage: ReturnType<typeof vi.fn>
-  readonly proposeBeatAction: ReturnType<typeof vi.fn>
-  readonly arbitrateBeat: ReturnType<typeof vi.fn>
-  readonly judgeBeat: ReturnType<typeof vi.fn>
-  readonly polishSceneDialogue: ReturnType<typeof vi.fn>
-  readonly attributeSceneDialogue: ReturnType<typeof vi.fn>
-  readonly proofreadSceneText: ReturnType<typeof vi.fn>
-  readonly expandSceneSection: ReturnType<typeof vi.fn>
-  readonly locateBeatParagraphs: ReturnType<typeof vi.fn>
+  readonly createCharacterPersona: ReturnType<typeof vi.fn>;
+  readonly describeBackground: ReturnType<typeof vi.fn>;
+  readonly findBackgroundFactConflicts: ReturnType<typeof vi.fn>;
+  readonly draftSceneSkeleton: ReturnType<typeof vi.fn>;
+  readonly extractSkeletonFacts: ReturnType<typeof vi.fn>;
+  readonly checkSceneCoverage: ReturnType<typeof vi.fn>;
+  readonly proposeBeatAction: ReturnType<typeof vi.fn>;
+  readonly arbitrateBeat: ReturnType<typeof vi.fn>;
+  readonly judgeBeat: ReturnType<typeof vi.fn>;
+  readonly polishSceneDialogue: ReturnType<typeof vi.fn>;
+  readonly attributeSceneDialogue: ReturnType<typeof vi.fn>;
+  readonly proofreadSceneText: ReturnType<typeof vi.fn>;
+  readonly expandSceneSection: ReturnType<typeof vi.fn>;
+  readonly locateBeatParagraphs: ReturnType<typeof vi.fn>;
 } {
   return {
-    createCharacterPersona: vi.fn(async () => "p"),
-    describeBackground: vi.fn(async () => ""),
+    createCharacterPersona: vi.fn(async () => 'p'),
+    describeBackground: vi.fn(async () => ''),
     findBackgroundFactConflicts: vi.fn(async () => []),
-    draftSceneSkeleton: vi.fn(async () => "뼈대 본문"),
+    draftSceneSkeleton: vi.fn(async () => '뼈대 본문'),
+    extractSkeletonFacts: vi.fn(async () => []),
     checkSceneCoverage: vi.fn(async () => []),
-    proposeBeatAction: vi.fn(async (input) => proposalFor((input as { character: { name: string } }).character.name)),
+    proposeBeatAction: vi.fn(async (input) =>
+      proposalFor((input as { character: { name: string } }).character.name),
+    ),
     arbitrateBeat: vi.fn(async (input) => ({
-      choice: "[선택]",
-      passage: `대목 ${(input as { beat: { number: number } }).beat.number} 본문 “대사 ${(input as { beat: { number: number } }).beat.number}입니다.”`
+      choice: '[선택]',
+      passage: `대목 ${(input as { beat: { number: number } }).beat.number} 본문 “대사 ${(input as { beat: { number: number } }).beat.number}입니다.”`,
     })),
-    judgeBeat: vi.fn(async (input) => verdictFor((input as { characters: readonly { name: string }[] }).characters.map((c) => c.name))),
+    judgeBeat: vi.fn(async (input) =>
+      verdictFor(
+        (input as { characters: readonly { name: string }[] }).characters.map((c) => c.name),
+      ),
+    ),
     polishSceneDialogue: vi.fn(async () => polishResponse([])),
     attributeSceneDialogue: vi.fn(async (input) =>
       (input as { lines: readonly string[] }).lines.map((_, offset) => ({
         index: offset + 1,
-        speaker: "elia"
-      }))
+        speaker: 'elia',
+      })),
     ),
     proofreadSceneText: vi.fn(async () => []),
-    expandSceneSection: vi.fn(async () => longProse("살붙인 본문")),
-    locateBeatParagraphs: vi.fn(async () => new Map<number, number>())
-  }
+    expandSceneSection: vi.fn(async () => longProse('살붙인 본문')),
+    locateBeatParagraphs: vi.fn(async () => new Map<number, number>()),
+  };
 }
 
-function proposalFor(name: string): { inner: string; options: readonly { strategy: string; action: string; lines: readonly string[] }[] } {
+function proposalFor(name: string): {
+  inner: string;
+  options: readonly { strategy: string; action: string; lines: readonly string[] }[];
+} {
   return {
     inner: `${name}의 속마음`,
     options: [
-      { strategy: "밀기", action: `${name}이 다가선다`, lines: [`${name}의 대사.`] },
-      { strategy: "물러서기", action: `${name}이 물러선다`, lines: [] }
-    ]
-  }
+      { strategy: '밀기', action: `${name}이 다가선다`, lines: [`${name}의 대사.`] },
+      { strategy: '물러서기', action: `${name}이 물러선다`, lines: [] },
+    ],
+  };
 }
 
 function verdictFor(
   names: readonly string[],
-  score = 5
+  score = 5,
 ): {
-  scores: readonly { name: string; score: number; reason: string; avoid: string }[]
-  isBeatCovered: boolean
-  beatMissing: string
-  earlyMaterial: string
-  repeats: string
+  scores: readonly { name: string; score: number; reason: string; avoid: string }[];
+  isBeatCovered: boolean;
+  beatMissing: string;
+  earlyMaterial: string;
+  repeats: string;
 } {
   return {
-    scores: names.map((name) => ({ name, score, reason: "", avoid: "" })),
+    scores: names.map((name) => ({ name, score, reason: '', avoid: '' })),
     isBeatCovered: true,
-    beatMissing: "",
-    earlyMaterial: "",
-    repeats: ""
-  }
+    beatMissing: '',
+    earlyMaterial: '',
+    repeats: '',
+  };
 }
 
 function polishResponse(
   rewrites: readonly { index: number; text: string }[],
-  isTruncated = false
+  isTruncated = false,
 ): { rewrites: readonly { index: number; text: string }[]; isTruncated: boolean } {
-  return { rewrites, isTruncated }
+  return { rewrites, isTruncated };
 }
 
 function createRecordingCorpus(corpus: SceneDialogueRecord[] = []): SceneDialogueCorpus {
-  return { loadCorpus: async (): Promise<readonly SceneDialogueRecord[]> => corpus }
+  return { loadCorpus: async (): Promise<readonly SceneDialogueRecord[]> => corpus };
 }
 
-describe("runSceneGenerationPipeline — 입력 검증", () => {
-  it("rejects an empty scene body", async () => {
-    const ai = createRecordingAiService()
+describe('runSceneGenerationPipeline — 입력 검증', () => {
+  it('rejects an empty scene body', async () => {
+    const ai = createRecordingAiService();
 
     await expect(
       runSceneGenerationPipeline({
-        sceneStem: "01-opening",
-        context: contextFor([eliaCard], "   \n  "),
+        sceneStem: '01-opening',
+        context: contextFor([eliaCard], '   \n  '),
         aiService: ai,
-        format: "novel"
-      })
-    ).rejects.toThrow(/씬 본문이 비어 있습니다/)
+        format: 'novel',
+      }),
+    ).rejects.toThrow(/씬 본문이 비어 있습니다/);
 
-    expect(ai.draftSceneSkeleton).not.toHaveBeenCalled()
-  })
+    expect(ai.draftSceneSkeleton).not.toHaveBeenCalled();
+  });
 
-  it("rejects when no characters are in context", async () => {
-    const ai = createRecordingAiService()
+  it('rejects when no characters are in context', async () => {
+    const ai = createRecordingAiService();
 
     await expect(
       runSceneGenerationPipeline({
-        sceneStem: "01-opening",
-        context: contextFor([], "엘리아가 걷는다."),
+        sceneStem: '01-opening',
+        context: contextFor([], '엘리아가 걷는다.'),
         aiService: ai,
-        format: "novel"
-      })
-    ).rejects.toThrow(/등장인물을 찾을 수 없습니다/)
-  })
-})
+        format: 'novel',
+      }),
+    ).rejects.toThrow(/등장인물을 찾을 수 없습니다/);
+  });
+});
 
-describe("runSceneGenerationPipeline — 뼈대 단계", () => {
-  it("runs personas, then the skeleton, then one expansion per section", async () => {
-    const progress: SceneGenerationPipelineStage[] = []
-    const ai = createRecordingAiService()
+describe('runSceneGenerationPipeline — 뼈대 단계', () => {
+  it('runs personas, then the skeleton, then one expansion per section', async () => {
+    const progress: SceneGenerationPipelineStage[] = [];
+    const ai = createRecordingAiService();
 
     const result = await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: contextFor([eliaCard, jihoonCard], "엘리아와 지훈이 학교에 있다."),
+      sceneStem: '01-opening',
+      context: contextFor([eliaCard, jihoonCard], '엘리아와 지훈이 학교에 있다.'),
       aiService: ai,
-      format: "novel",
-      onProgress: (stage) => progress.push(stage)
-    })
+      format: 'novel',
+      onProgress: (stage) => progress.push(stage),
+    });
 
     expect(progress).toEqual([
-      "buildPersonas",
-      "buildPersonas",
-      "draftSkeleton",
-      "polishDialogue",
-      "expandSection",
-      "proofreadDraft"
-    ])
-    expect(ai.draftSceneSkeleton).toHaveBeenCalledTimes(1)
-    expect(result.skeleton).toBe("뼈대 본문")
-    expect(result.draftBody).toContain("살붙인 본문")
-    expect(result.detectedCharacters).toEqual(["엘리아", "지훈"])
-  })
+      'buildPersonas',
+      'buildPersonas',
+      'draftSkeleton',
+      'polishDialogue',
+      'expandSection',
+      'proofreadDraft',
+    ]);
+    expect(ai.draftSceneSkeleton).toHaveBeenCalledTimes(1);
+    expect(result.skeleton).toBe('뼈대 본문');
+    expect(result.draftBody).toContain('살붙인 본문');
+    expect(result.detectedCharacters).toEqual(['엘리아', '지훈']);
+  });
 
   it("gives the skeleton the card facts of the scene's characters (#258)", async () => {
-    const ai = createRecordingAiService()
+    const ai = createRecordingAiService();
 
     await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
+      sceneStem: '01-opening',
       context: contextFor(
-        [{ ...eliaCard, description: ["지난봄 이 집에 들어왔다"] }, jihoonCard],
-        "엘리아와 지훈이 학교에 있다."
+        [{ ...eliaCard, description: ['지난봄 이 집에 들어왔다'] }, jihoonCard],
+        '엘리아와 지훈이 학교에 있다.',
       ),
       aiService: ai,
-      format: "novel"
-    })
+      format: 'novel',
+    });
 
-    const skeletonInput = ai.draftSceneSkeleton.mock.calls[0]?.[0] as Record<string, unknown>
-    expect(skeletonInput.castFacts).toEqual(["엘리아 — 설명: 지난봄 이 집에 들어왔다"])
-  })
+    const skeletonInput = ai.draftSceneSkeleton.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(skeletonInput.castFacts).toEqual(['엘리아 — 설명: 지난봄 이 집에 들어왔다']);
+  });
 
-  it("feeds only the narrative, not the craft blocks, to the skeleton", async () => {
-    const ai = createRecordingAiService()
+  it('fixes the facts the skeleton stated and hands them to every expansion (#260)', async () => {
+    const ai = createRecordingAiService();
+    ai.extractSkeletonFacts.mockResolvedValueOnce(['엘리아는 이 학교에 2년째 다닌다']);
+
+    const result = await runSceneGenerationPipeline({
+      sceneStem: '01-opening',
+      context: contextFor(
+        [{ ...eliaCard, description: ['전학생'] }, jihoonCard],
+        '엘리아와 지훈이 학교에 있다.',
+      ),
+      aiService: ai,
+      format: 'novel',
+    });
+
+    const extraction = ai.extractSkeletonFacts.mock.calls[0]?.[0] as {
+      skeleton: string;
+      castFacts: string[];
+    };
+    expect(extraction.skeleton).toBe('뼈대 본문');
+    expect(extraction.castFacts).toEqual(['엘리아 — 설명: 전학생']);
+    const expansion = ai.expandSceneSection.mock.calls[0]?.[0] as { skeletonFacts?: string[] };
+    expect(expansion.skeletonFacts).toEqual(['엘리아는 이 학교에 2년째 다닌다']);
+    expect(result.skeletonFacts).toEqual(['엘리아는 이 학교에 2년째 다닌다']);
+  });
+
+  it('feeds only the narrative, not the craft blocks, to the skeleton', async () => {
+    const ai = createRecordingAiService();
     const body =
-      "[갈등]\n발키리가 시비를 건다\n\n[이 장면의 종료 지점]\n광장을 벗어나는 데까지\n\n이준이 좌판을 정리한다."
+      '[갈등]\n발키리가 시비를 건다\n\n[이 장면의 종료 지점]\n광장을 벗어나는 데까지\n\n이준이 좌판을 정리한다.';
 
     await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
+      sceneStem: '01-opening',
       context: contextFor([eliaCard], body),
       aiService: ai,
-      format: "novel"
-    })
+      format: 'novel',
+    });
 
-    const input = ai.draftSceneSkeleton.mock.calls[0]?.[0] as { narrativeSource: string }
-    expect(input.narrativeSource).toBe("이준이 좌판을 정리한다.")
-    expect(input.narrativeSource).not.toContain("[갈등]")
-  })
+    const input = ai.draftSceneSkeleton.mock.calls[0]?.[0] as { narrativeSource: string };
+    expect(input.narrativeSource).toBe('이준이 좌판을 정리한다.');
+    expect(input.narrativeSource).not.toContain('[갈등]');
+  });
 
   it("hands each character's speech to others to the skeleton", async () => {
-    const ai = createRecordingAiService()
+    const ai = createRecordingAiService();
     const manjae: CharacterCard = {
       ...eliaCard,
-      id: "manjae",
-      name: "조만재",
-      relations: [{ target: "elia", type: "소꿉친구", speech: "반말, '엘리트'라고만 부름" }]
-    }
+      id: 'manjae',
+      name: '조만재',
+      relations: [{ target: 'elia', type: '소꿉친구', speech: "반말, '엘리트'라고만 부름" }],
+    };
 
     await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: contextFor([manjae, eliaCard], "조만재가 엘리아를 부른다."),
+      sceneStem: '01-opening',
+      context: contextFor([manjae, eliaCard], '조만재가 엘리아를 부른다.'),
       aiService: ai,
-      format: "novel"
-    })
+      format: 'novel',
+    });
 
     const input = ai.draftSceneSkeleton.mock.calls[0]?.[0] as {
-      speechToOthers?: ReadonlyMap<string, readonly string[]>
-    }
-    expect(input.speechToOthers?.get("조만재")).toEqual(["엘리아에게: 반말, '엘리트'라고만 부름"])
-    expect(input.speechToOthers?.has("엘리아")).toBe(false)
-  })
+      speechToOthers?: ReadonlyMap<string, readonly string[]>;
+    };
+    expect(input.speechToOthers?.get('조만재')).toEqual(["엘리아에게: 반말, '엘리트'라고만 부름"]);
+    expect(input.speechToOthers?.has('엘리아')).toBe(false);
+  });
 
-  it("gives the skeleton a third of the scene target so expansion is not a 15x job", async () => {
-    const ai = createRecordingAiService()
+  it('gives the skeleton a third of the scene target so expansion is not a 15x job', async () => {
+    const ai = createRecordingAiService();
 
     await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: contextFor([eliaCard], "본문"),
+      sceneStem: '01-opening',
+      context: contextFor([eliaCard], '본문'),
       aiService: ai,
-      format: "novel",
-      styleDirective: { targetWordCount: 15000 }
-    })
+      format: 'novel',
+      styleDirective: { targetWordCount: 15000 },
+    });
 
-    const input = ai.draftSceneSkeleton.mock.calls[0]?.[0] as { targetLength?: number }
-    expect(input.targetLength).toBe(5000)
-  })
+    const input = ai.draftSceneSkeleton.mock.calls[0]?.[0] as { targetLength?: number };
+    expect(input.targetLength).toBe(5000);
+  });
 
-  it("redrafts a skeleton that came in under 80% of its target, carrying the reason", async () => {
-    const ai = createRecordingAiService()
-    const thin = `엘리아가 문을 열었다. “가자.” ${"짧다. ".repeat(20)}`
-    const fuller = `엘리아가 문을 열었다. “가자.” ${"밀고 당기는 말이 이어졌다. ".repeat(80)}`
-    ai.draftSceneSkeleton.mockResolvedValueOnce(thin).mockResolvedValueOnce(fuller)
+  it('redrafts a skeleton that came in under 80% of its target, carrying the reason', async () => {
+    const ai = createRecordingAiService();
+    const thin = `엘리아가 문을 열었다. “가자.” ${'짧다. '.repeat(20)}`;
+    const fuller = `엘리아가 문을 열었다. “가자.” ${'밀고 당기는 말이 이어졌다. '.repeat(80)}`;
+    ai.draftSceneSkeleton.mockResolvedValueOnce(thin).mockResolvedValueOnce(fuller);
 
     const result = await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: contextFor([eliaCard], "본문"),
+      sceneStem: '01-opening',
+      context: contextFor([eliaCard], '본문'),
       aiService: ai,
-      format: "novel",
-      styleDirective: { targetWordCount: 3000 }
-    })
+      format: 'novel',
+      styleDirective: { targetWordCount: 3000 },
+    });
 
-    expect(ai.draftSceneSkeleton).toHaveBeenCalledTimes(2)
+    expect(ai.draftSceneSkeleton).toHaveBeenCalledTimes(2);
     const retryInput = ai.draftSceneSkeleton.mock.calls[1]?.[0] as {
-      retryReasons?: readonly string[]
-    }
-    expect(retryInput.retryReasons?.join(" ")).toContain("80%")
-    expect(result.skeleton).toBe(fuller)
-    expect(draftWarningMessages(result.warnings).filter((warning) => warning.startsWith("뼈대:"))).toEqual([])
-  })
+      retryReasons?: readonly string[];
+    };
+    expect(retryInput.retryReasons?.join(' ')).toContain('80%');
+    expect(result.skeleton).toBe(fuller);
+    expect(
+      draftWarningMessages(result.warnings).filter((warning) => warning.startsWith('뼈대:')),
+    ).toEqual([]);
+  });
 
-  it("keeps the fuller of two short skeletons rather than the last one", async () => {
-    const ai = createRecordingAiService()
-    const thin = `“가자.” ${"짧다. ".repeat(10)}`
-    const thinner = `“가자.” ${"짧다. ".repeat(5)}`
-    ai.draftSceneSkeleton.mockResolvedValueOnce(thin).mockResolvedValueOnce(thinner)
-
-    const result = await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: contextFor([eliaCard], "본문"),
-      aiService: ai,
-      format: "novel",
-      styleDirective: { targetWordCount: 3000 }
-    })
-
-    expect(ai.draftSceneSkeleton).toHaveBeenCalledTimes(2)
-    expect(result.skeleton).toBe(thin)
-  })
-
-  it("warns when the kept skeleton is still under its floor after the retry", async () => {
-    const ai = createRecordingAiService()
-    ai.draftSceneSkeleton.mockResolvedValue(`“가자.” ${"짧다. ".repeat(10)}`)
+  it('keeps the fuller of two short skeletons rather than the last one', async () => {
+    const ai = createRecordingAiService();
+    const thin = `“가자.” ${'짧다. '.repeat(10)}`;
+    const thinner = `“가자.” ${'짧다. '.repeat(5)}`;
+    ai.draftSceneSkeleton.mockResolvedValueOnce(thin).mockResolvedValueOnce(thinner);
 
     const result = await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: contextFor([eliaCard], "본문"),
+      sceneStem: '01-opening',
+      context: contextFor([eliaCard], '본문'),
       aiService: ai,
-      format: "novel",
-      styleDirective: { targetWordCount: 3000 }
-    })
+      format: 'novel',
+      styleDirective: { targetWordCount: 3000 },
+    });
 
-    const skeletonWarnings = draftWarningMessages(result.warnings).filter((warning) => warning.startsWith("뼈대 (재시도 1회 뒤 채택한 판):"))
-    expect(skeletonWarnings).toHaveLength(1)
-    expect(skeletonWarnings[0]).toContain("목표 1,000자의 80%")
-  })
+    expect(ai.draftSceneSkeleton).toHaveBeenCalledTimes(2);
+    expect(result.skeleton).toBe(thin);
+  });
 
-  it("passes the card end state so the skeleton knows where to stop", async () => {
-    const ai = createRecordingAiService()
+  it('warns when the kept skeleton is still under its floor after the retry', async () => {
+    const ai = createRecordingAiService();
+    ai.draftSceneSkeleton.mockResolvedValue(`“가자.” ${'짧다. '.repeat(10)}`);
+
+    const result = await runSceneGenerationPipeline({
+      sceneStem: '01-opening',
+      context: contextFor([eliaCard], '본문'),
+      aiService: ai,
+      format: 'novel',
+      styleDirective: { targetWordCount: 3000 },
+    });
+
+    const skeletonWarnings = draftWarningMessages(result.warnings).filter((warning) =>
+      warning.startsWith('뼈대 (재시도 1회 뒤 채택한 판):'),
+    );
+    expect(skeletonWarnings).toHaveLength(1);
+    expect(skeletonWarnings[0]).toContain('목표 1,000자의 80%');
+  });
+
+  it('passes the card end state so the skeleton knows where to stop', async () => {
+    const ai = createRecordingAiService();
 
     await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: contextFor([eliaCard], "본문", undefined, "광장을 벗어나는 데까지"),
+      sceneStem: '01-opening',
+      context: contextFor([eliaCard], '본문', undefined, '광장을 벗어나는 데까지'),
       aiService: ai,
-      format: "novel"
-    })
+      format: 'novel',
+    });
 
-    const input = ai.draftSceneSkeleton.mock.calls[0]?.[0] as { endState?: string }
-    expect(input.endState).toBe("광장을 벗어나는 데까지")
-  })
+    const input = ai.draftSceneSkeleton.mock.calls[0]?.[0] as { endState?: string };
+    expect(input.endState).toBe('광장을 벗어나는 데까지');
+  });
 
-  it("gives canon facts to the skeleton only, framed as author-side background", async () => {
-    const ai = createRecordingAiService()
+  it('gives canon facts to the skeleton only, framed as author-side background', async () => {
+    const ai = createRecordingAiService();
 
     await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: contextFor([eliaCard], "본문"),
+      sceneStem: '01-opening',
+      context: contextFor([eliaCard], '본문'),
       aiService: ai,
-      format: "novel",
-      canonFactLines: ["엘리아 — 비밀: 왕족"],
-      previousContext: "[이전 장면]\n앞 씬 말미"
-    })
+      format: 'novel',
+      canonFactLines: ['엘리아 — 비밀: 왕족'],
+      previousContext: '[이전 장면]\n앞 씬 말미',
+    });
 
     const skeletonContext = (
       ai.draftSceneSkeleton.mock.calls[0]?.[0] as { previousContext?: string }
-    ).previousContext as string
-    expect(skeletonContext).toContain("[설정 메모]")
-    expect(skeletonContext).toContain("왕족")
-    expect(skeletonContext).toContain("앞 씬 말미")
+    ).previousContext as string;
+    expect(skeletonContext).toContain('[설정 메모]');
+    expect(skeletonContext).toContain('왕족');
+    expect(skeletonContext).toContain('앞 씬 말미');
 
-    const expansionInput = ai.expandSceneSection.mock.calls[0]?.[0] as Record<string, unknown>
-    expect(JSON.stringify(expansionInput)).not.toContain("왕족")
-  })
+    const expansionInput = ai.expandSceneSection.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(JSON.stringify(expansionInput)).not.toContain('왕족');
+  });
 
   it("hands the scene's own background facts to every expansion call", async () => {
-    const ai = createRecordingAiService()
+    const ai = createRecordingAiService();
     const background: BackgroundCard = {
-      type: "location",
-      id: "condo",
-      name: "해외 콘도",
-      description: ["12층", "거실 통창 너머 바다"],
+      type: 'location',
+      id: 'condo',
+      name: '해외 콘도',
+      description: ['12층', '거실 통창 너머 바다'],
       characterIds: [],
       tags: [],
-      senses: ["에어컨 바람 냄새"],
-      time: "오후"
-    }
+      senses: ['에어컨 바람 냄새'],
+      time: '오후',
+    };
 
     await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: contextFor([eliaCard], "본문", background),
+      sceneStem: '01-opening',
+      context: contextFor([eliaCard], '본문', background),
       aiService: ai,
-      format: "novel"
-    })
+      format: 'novel',
+    });
 
-    const expansionInput = ai.expandSceneSection.mock.calls[0]?.[0] as { backgroundFacts: readonly string[] }
-    expect(expansionInput.backgroundFacts).toEqual(["오후", "12층", "거실 통창 너머 바다", "에어컨 바람 냄새"])
-  })
+    const expansionInput = ai.expandSceneSection.mock.calls[0]?.[0] as {
+      backgroundFacts: readonly string[];
+    };
+    expect(expansionInput.backgroundFacts).toEqual([
+      '오후',
+      '12층',
+      '거실 통창 너머 바다',
+      '에어컨 바람 냄새',
+    ]);
+  });
 
   it("hands the scene characters' card description and attributes, but no canon facts, to the expansion (#237)", async () => {
-    const ai = createRecordingAiService()
+    const ai = createRecordingAiService();
     const profiledElia: CharacterCard = {
       ...eliaCard,
-      description: ["항구 마을 서점 주인"],
-      attributes: { 나이: 17, 학교: "없음" }
-    }
+      description: ['항구 마을 서점 주인'],
+      attributes: { 나이: 17, 학교: '없음' },
+    };
 
     await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: contextFor([profiledElia, jihoonCard], "본문"),
+      sceneStem: '01-opening',
+      context: contextFor([profiledElia, jihoonCard], '본문'),
       aiService: ai,
-      format: "novel",
-      canonFactLines: ["엘리아 — 비밀: 왕족"]
-    })
+      format: 'novel',
+      canonFactLines: ['엘리아 — 비밀: 왕족'],
+    });
 
-    const expansionInput = ai.expandSceneSection.mock.calls[0]?.[0] as { castFacts: readonly string[] }
-    expect(expansionInput.castFacts).toEqual(["엘리아 — 설명: 항구 마을 서점 주인", "엘리아 — 속성: 나이=17, 학교=없음"])
-    expect(JSON.stringify(expansionInput)).not.toContain("왕족")
-  })
-})
+    const expansionInput = ai.expandSceneSection.mock.calls[0]?.[0] as {
+      castFacts: readonly string[];
+    };
+    expect(expansionInput.castFacts).toEqual([
+      '엘리아 — 설명: 항구 마을 서점 주인',
+      '엘리아 — 속성: 나이=17, 학교=없음',
+    ]);
+    expect(JSON.stringify(expansionInput)).not.toContain('왕족');
+  });
+});
 
-describe("runSceneGenerationPipeline — 되짚기 경고 (#120)", () => {
-  it("warns when a section recaps the earlier scene more often than the limit allows", async () => {
-    const ai = createRecordingAiService()
+describe('runSceneGenerationPipeline — 되짚기 경고 (#120)', () => {
+  it('warns when a section recaps the earlier scene more often than the limit allows', async () => {
+    const ai = createRecordingAiService();
     ai.expandSceneSection.mockResolvedValue(
-      longProse("아까 거실에서의 정적과는 달랐다. 아까 식탁에서의 표정도, 아까 그 말도, 아까 그 눈빛도 멀었다. ")
-    )
+      longProse(
+        '아까 거실에서의 정적과는 달랐다. 아까 식탁에서의 표정도, 아까 그 말도, 아까 그 눈빛도 멀었다. ',
+      ),
+    );
 
     const result = await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: contextFor([eliaCard], "본문"),
+      sceneStem: '01-opening',
+      context: contextFor([eliaCard], '본문'),
       aiService: ai,
-      format: "novel"
-    })
+      format: 'novel',
+    });
 
-    expect(draftWarningMessages(result.warnings).filter((warning) => warning.includes("되짚는 표현"))).toHaveLength(1)
-    expect(draftWarningMessages(result.warnings).find((warning) => warning.includes("되짚는 표현"))).toMatch(/^살붙임 1구간: 앞 장면을 «아까 …»로 되짚는 표현이 \d+회입니다 \(허용 3회\)/)
-  })
+    expect(
+      draftWarningMessages(result.warnings).filter((warning) => warning.includes('되짚는 표현')),
+    ).toHaveLength(1);
+    expect(
+      draftWarningMessages(result.warnings).find((warning) => warning.includes('되짚는 표현')),
+    ).toMatch(/^살붙임 1구간: 앞 장면을 «아까 …»로 되짚는 표현이 \d+회입니다 \(허용 3회\)/);
+  });
 
-  it("tags each expansion call with its section, attempt and the reason it was asked again", async () => {
-    const ai = createRecordingAiService()
-    ai.expandSceneSection.mockResolvedValueOnce("짧다.").mockResolvedValue(longProse("살붙인 본문"))
+  it('tags each expansion call with its section, attempt and the reason it was asked again', async () => {
+    const ai = createRecordingAiService();
+    ai.expandSceneSection
+      .mockResolvedValueOnce('짧다.')
+      .mockResolvedValue(longProse('살붙인 본문'));
 
     await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: contextFor([eliaCard], "본문"),
+      sceneStem: '01-opening',
+      context: contextFor([eliaCard], '본문'),
       aiService: ai,
-      format: "novel"
-    })
+      format: 'novel',
+    });
 
     const tags = ai.expandSceneSection.mock.calls.map(
-      (call) => (call[1] as { traceTag?: { expansionSectionIndex?: number; attempt?: number; retryReason?: string } }).traceTag
-    )
-    expect(tags[0]).toEqual({ expansionSectionIndex: 1, attempt: 1 })
-    expect(tags[1]).toMatchObject({ expansionSectionIndex: 1, attempt: 2 })
-    expect(tags[1]?.retryReason?.length).toBeGreaterThan(0)
-  })
+      (call) =>
+        (
+          call[1] as {
+            traceTag?: { expansionSectionIndex?: number; attempt?: number; retryReason?: string };
+          }
+        ).traceTag,
+    );
+    expect(tags[0]).toEqual({ expansionSectionIndex: 1, attempt: 1 });
+    expect(tags[1]).toMatchObject({ expansionSectionIndex: 1, attempt: 2 });
+    expect(tags[1]?.retryReason?.length).toBeGreaterThan(0);
+  });
 
-  it("reports the rejected attempt, the section lengths and each warning to the observer", async () => {
-    const ai = createRecordingAiService()
-    ai.expandSceneSection.mockResolvedValueOnce("짧다.").mockResolvedValue(longProse("살붙인 본문"))
-    const events: { kind: string; expansionSectionIndex?: number; attempt?: number; lengths?: Record<string, number>; message?: string }[] = []
-
-    const result = await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: contextFor([eliaCard], "본문"),
-      aiService: ai,
-      format: "novel",
-      observer: { onPlan: () => {}, onStageStart: () => {}, onStageEnd: () => {}, onEvent: (event) => void events.push(event) }
-    })
-
-    const rejected = events.find((event) => event.kind === "output-rejected")
-    const measured = events.find((event) => event.kind === "section-measured")
-    expect(rejected).toMatchObject({ expansionSectionIndex: 1, attempt: 1 })
-    expect(measured?.expansionSectionIndex).toBe(1)
-    expect(Object.keys(measured?.lengths ?? {}).sort()).toEqual(["expanded", "final", "skeleton", "target"])
-    const stageLengths = events.filter((event) => event.kind === "text-measured").map((event) => event.lengths)
-    expect(stageLengths.length).toBeGreaterThan(0)
-    expect(stageLengths.at(-1)?.after).toBe(result.draftBody.length)
-    expect(events.filter((event) => event.kind === "warning").map((event) => event.message)).toEqual(draftWarningMessages(result.warnings))
-  })
-
-  it("curls straight dialogue quotes a section expansion wrote", async () => {
-    const ai = createRecordingAiService()
-    ai.expandSceneSection.mockResolvedValue(longProse('엘리아가 "가자." 하고 말했다. '))
+  it('reports the rejected attempt, the section lengths and each warning to the observer', async () => {
+    const ai = createRecordingAiService();
+    ai.expandSceneSection
+      .mockResolvedValueOnce('짧다.')
+      .mockResolvedValue(longProse('살붙인 본문'));
+    const events: {
+      kind: string;
+      expansionSectionIndex?: number;
+      attempt?: number;
+      lengths?: Record<string, number>;
+      message?: string;
+    }[] = [];
 
     const result = await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: contextFor([eliaCard], "본문"),
+      sceneStem: '01-opening',
+      context: contextFor([eliaCard], '본문'),
       aiService: ai,
-      format: "novel"
-    })
+      format: 'novel',
+      observer: {
+        onPlan: () => {},
+        onStageStart: () => {},
+        onStageEnd: () => {},
+        onEvent: (event) => void events.push(event),
+      },
+    });
 
-    expect(result.draftBody).toContain("엘리아가 “가자.” 하고 말했다.")
-    expect(result.draftBody).not.toContain('"가자."')
-  })
-})
+    const rejected = events.find((event) => event.kind === 'output-rejected');
+    const measured = events.find((event) => event.kind === 'section-measured');
+    expect(rejected).toMatchObject({ expansionSectionIndex: 1, attempt: 1 });
+    expect(measured?.expansionSectionIndex).toBe(1);
+    expect(Object.keys(measured?.lengths ?? {}).sort()).toEqual([
+      'expanded',
+      'final',
+      'skeleton',
+      'target',
+    ]);
+    const stageLengths = events
+      .filter((event) => event.kind === 'text-measured')
+      .map((event) => event.lengths);
+    expect(stageLengths.length).toBeGreaterThan(0);
+    expect(stageLengths.at(-1)?.after).toBe(result.draftBody.length);
+    expect(
+      events.filter((event) => event.kind === 'warning').map((event) => event.message),
+    ).toEqual(draftWarningMessages(result.warnings));
+  });
 
-describe("runSceneGenerationPipeline — 배경 사실 점검", () => {
+  it('curls straight dialogue quotes a section expansion wrote', async () => {
+    const ai = createRecordingAiService();
+    ai.expandSceneSection.mockResolvedValue(longProse('엘리아가 "가자." 하고 말했다. '));
+
+    const result = await runSceneGenerationPipeline({
+      sceneStem: '01-opening',
+      context: contextFor([eliaCard], '본문'),
+      aiService: ai,
+      format: 'novel',
+    });
+
+    expect(result.draftBody).toContain('엘리아가 “가자.” 하고 말했다.');
+    expect(result.draftBody).not.toContain('"가자."');
+  });
+});
+
+describe('runSceneGenerationPipeline — 배경 사실 점검', () => {
   const guestRoom: BackgroundCard = {
-    type: "location",
-    id: "condo",
-    name: "해외 콘도",
-    description: ["손님은 거실 소파에서 잔다", "손님에게 자기 방이 있다", "거실 통창 너머 바다"],
+    type: 'location',
+    id: 'condo',
+    name: '해외 콘도',
+    description: ['손님은 거실 소파에서 잔다', '손님에게 자기 방이 있다', '거실 통창 너머 바다'],
     characterIds: [],
-    tags: []
-  }
+    tags: [],
+  };
   const sofaOrRoom: BackgroundFactConflict = {
-    items: ["손님은 거실 소파에서 잔다", "손님에게 자기 방이 있다"]
-  }
+    items: ['손님은 거실 소파에서 잔다', '손님에게 자기 방이 있다'],
+  };
 
   function createMemoryConflictStore(): {
-    load: ReturnType<typeof vi.fn>
-    save: ReturnType<typeof vi.fn>
+    load: ReturnType<typeof vi.fn>;
+    save: ReturnType<typeof vi.fn>;
   } {
-    const saved = new Map<string, readonly BackgroundFactConflict[]>()
+    const saved = new Map<string, readonly BackgroundFactConflict[]>();
     return {
       load: vi.fn(async (card: BackgroundCard) => saved.get(card.id)),
       save: vi.fn(async (card: BackgroundCard, conflicts: readonly BackgroundFactConflict[]) => {
-        saved.set(card.id, conflicts)
-      })
-    }
+        saved.set(card.id, conflicts);
+      }),
+    };
   }
 
-  it("warns about a contradicting pair and hands it to the skeleton and every expansion", async () => {
-    const ai = createRecordingAiService()
-    ai.findBackgroundFactConflicts.mockResolvedValueOnce([sofaOrRoom])
+  it('warns about a contradicting pair and hands it to the skeleton and every expansion', async () => {
+    const ai = createRecordingAiService();
+    ai.findBackgroundFactConflicts.mockResolvedValueOnce([sofaOrRoom]);
 
     const result = await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: contextFor([eliaCard], "본문", guestRoom),
+      sceneStem: '01-opening',
+      context: contextFor([eliaCard], '본문', guestRoom),
       aiService: ai,
-      format: "novel"
-    })
+      format: 'novel',
+    });
 
-    const pair = "「손님은 거실 소파에서 잔다」 ↔ 「손님에게 자기 방이 있다」"
+    const pair = '「손님은 거실 소파에서 잔다」 ↔ 「손님에게 자기 방이 있다」';
     expect(draftWarningMessages(result.warnings)).toContain(
-      `배경 «해외 콘도»: ${pair}는 함께 참일 수 없어 사건에 맞는 쪽만 씁니다.`
-    )
+      `배경 «해외 콘도»: ${pair}는 함께 참일 수 없어 사건에 맞는 쪽만 씁니다.`,
+    );
     const skeletonInput = ai.draftSceneSkeleton.mock.calls[0]?.[0] as {
-      backgroundConflicts: readonly string[]
-    }
-    expect(skeletonInput.backgroundConflicts).toEqual([pair])
+      backgroundConflicts: readonly string[];
+    };
+    expect(skeletonInput.backgroundConflicts).toEqual([pair]);
     for (const call of ai.expandSceneSection.mock.calls) {
-      expect((call[0] as { backgroundConflicts: readonly string[] }).backgroundConflicts).toEqual([pair])
+      expect((call[0] as { backgroundConflicts: readonly string[] }).backgroundConflicts).toEqual([
+        pair,
+      ]);
     }
-  })
+  });
 
-  it("asks once per card and reuses the stored answer", async () => {
-    const ai = createRecordingAiService()
-    const store = createMemoryConflictStore()
+  it('asks once per card and reuses the stored answer', async () => {
+    const ai = createRecordingAiService();
+    const store = createMemoryConflictStore();
     const run = (): ReturnType<typeof runSceneGenerationPipeline> =>
       runSceneGenerationPipeline({
-        sceneStem: "01-opening",
-        context: contextFor([eliaCard], "본문", guestRoom),
+        sceneStem: '01-opening',
+        context: contextFor([eliaCard], '본문', guestRoom),
         aiService: ai,
-        format: "novel",
-        backgroundFactConflictStore: store
-      })
+        format: 'novel',
+        backgroundFactConflictStore: store,
+      });
 
-    await run()
-    await run()
+    await run();
+    await run();
 
-    expect(ai.findBackgroundFactConflicts).toHaveBeenCalledTimes(1)
-    expect(store.save).toHaveBeenCalledWith(guestRoom, [])
-  })
+    expect(ai.findBackgroundFactConflicts).toHaveBeenCalledTimes(1);
+    expect(store.save).toHaveBeenCalledWith(guestRoom, []);
+  });
 
-  it("does not ask about a card with a single line", async () => {
-    const ai = createRecordingAiService()
+  it('does not ask about a card with a single line', async () => {
+    const ai = createRecordingAiService();
 
     await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: contextFor([eliaCard], "본문", { ...guestRoom, description: ["거실 통창 너머 바다"] }),
+      sceneStem: '01-opening',
+      context: contextFor([eliaCard], '본문', {
+        ...guestRoom,
+        description: ['거실 통창 너머 바다'],
+      }),
       aiService: ai,
-      format: "novel"
-    })
+      format: 'novel',
+    });
 
-    expect(ai.findBackgroundFactConflicts).not.toHaveBeenCalled()
-  })
-})
+    expect(ai.findBackgroundFactConflicts).not.toHaveBeenCalled();
+  });
+});
 
-describe("runSceneGenerationPipeline — 장면 좌표", () => {
+describe('runSceneGenerationPipeline — 장면 좌표', () => {
   it("moves the skeleton's coordinate markers into a ledger every expansion receives", async () => {
-    const ai = createRecordingAiService()
+    const ai = createRecordingAiService();
     ai.draftSceneSkeleton.mockResolvedValueOnce(
-      ["⟪시각: 아침 / 장소: 거실 / 있는 사람: 엘리아⟫", "엘리아가 밥을 먹었다.", "", "---", "", "⟪시각: 방과 후 / 장소: 교문 앞 / 있는 사람: 엘리아⟫", "그날 오후, 엘리아가 교문을 나섰다."].join("\n")
-    )
+      [
+        '⟪시각: 아침 / 장소: 거실 / 있는 사람: 엘리아⟫',
+        '엘리아가 밥을 먹었다.',
+        '',
+        '---',
+        '',
+        '⟪시각: 방과 후 / 장소: 교문 앞 / 있는 사람: 엘리아⟫',
+        '그날 오후, 엘리아가 교문을 나섰다.',
+      ].join('\n'),
+    );
 
     const result = await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: contextFor([eliaCard], "본문"),
+      sceneStem: '01-opening',
+      context: contextFor([eliaCard], '본문'),
       aiService: ai,
-      format: "novel"
-    })
+      format: 'novel',
+    });
 
     const expansion = ai.expandSceneSection.mock.calls[0]?.[0] as {
-      skeleton: string
-      sceneCoordinates: readonly string[]
-    }
-    expect(expansion.skeleton).not.toContain("⟪")
+      skeleton: string;
+      sceneCoordinates: readonly string[];
+    };
+    expect(expansion.skeleton).not.toContain('⟪');
     expect(expansion.sceneCoordinates).toEqual([
-      "1. 시각: 아침 / 장소: 거실 / 있는 사람: 엘리아 ← 이번 구간",
-      "2. 시각: 방과 후 / 장소: 교문 앞 / 있는 사람: 엘리아 ← 이번 구간"
-    ])
-    expect(result.skeleton).not.toContain("⟪")
+      '1. 시각: 아침 / 장소: 거실 / 있는 사람: 엘리아 ← 이번 구간',
+      '2. 시각: 방과 후 / 장소: 교문 앞 / 있는 사람: 엘리아 ← 이번 구간',
+    ]);
+    expect(result.skeleton).not.toContain('⟪');
     expect(result.sceneCoordinates).toEqual([
-      "1. 시각: 아침 / 장소: 거실 / 있는 사람: 엘리아",
-      "2. 시각: 방과 후 / 장소: 교문 앞 / 있는 사람: 엘리아"
-    ])
-  })
+      '1. 시각: 아침 / 장소: 거실 / 있는 사람: 엘리아',
+      '2. 시각: 방과 후 / 장소: 교문 앞 / 있는 사람: 엘리아',
+    ]);
+  });
 
-  it("drops a ledger with a marker missing after a break and uses the beats instead, with a warning", async () => {
-    const ai = createRecordingAiService()
+  it('drops a ledger with a marker missing after a break and uses the beats instead, with a warning', async () => {
+    const ai = createRecordingAiService();
     ai.draftSceneSkeleton.mockResolvedValueOnce(
-      ["⟪시각: 아침 / 장소: 거실 / 있는 사람: 엘리아⟫", "엘리아가 밥을 먹었다.", "", "---", "", "그날 오후, 엘리아가 교문을 나섰다."].join("\n")
-    )
-    const context = contextFor([eliaCard], "본문")
+      [
+        '⟪시각: 아침 / 장소: 거실 / 있는 사람: 엘리아⟫',
+        '엘리아가 밥을 먹었다.',
+        '',
+        '---',
+        '',
+        '그날 오후, 엘리아가 교문을 나섰다.',
+      ].join('\n'),
+    );
+    const context = contextFor([eliaCard], '본문');
     const scene = {
       ...context.scene,
       card: {
-        type: "scene",
-        id: "01-opening",
+        type: 'scene',
+        id: '01-opening',
         beats: [
-          { text: "밥을 먹는다", place: "거실", time: "아침" },
-          { text: "교문을 나선다", place: "교문 앞", time: "방과 후" }
-        ]
-      }
-    }
+          { text: '밥을 먹는다', place: '거실', time: '아침' },
+          { text: '교문을 나선다', place: '교문 앞', time: '방과 후' },
+        ],
+      },
+    };
 
     const result = await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
+      sceneStem: '01-opening',
       context: { ...context, scene } as SceneContext,
       aiService: ai,
-      format: "novel"
-    })
+      format: 'novel',
+    });
 
-    expect(result.skeleton).not.toContain("⟪")
-    expect(result.sceneCoordinates).toEqual(["1. 장소: 거실 / 시각: 아침", "2. 장소: 교문 앞 / 시각: 방과 후"])
-    expect(draftWarningMessages(result.warnings)).toContain("뼈대: 장면 표식이 1곳 빠져 비트의 좌표를 대신 씁니다.")
-  })
+    expect(result.skeleton).not.toContain('⟪');
+    expect(result.sceneCoordinates).toEqual([
+      '1. 장소: 거실 / 시각: 아침',
+      '2. 장소: 교문 앞 / 시각: 방과 후',
+    ]);
+    expect(draftWarningMessages(result.warnings)).toContain(
+      '뼈대: 장면 표식이 1곳 빠져 비트의 좌표를 대신 씁니다.',
+    );
+  });
 
-  it("leaves the ledger empty when neither the skeleton nor the beats give coordinates", async () => {
-    const ai = createRecordingAiService()
+  it('leaves the ledger empty when neither the skeleton nor the beats give coordinates', async () => {
+    const ai = createRecordingAiService();
 
     const result = await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: contextFor([eliaCard], "본문"),
+      sceneStem: '01-opening',
+      context: contextFor([eliaCard], '본문'),
       aiService: ai,
-      format: "novel"
-    })
+      format: 'novel',
+    });
 
-    expect(result.sceneCoordinates).toEqual([])
-    expect((ai.expandSceneSection.mock.calls[0]?.[0] as { sceneCoordinates: readonly string[] }).sceneCoordinates).toEqual([])
-  })
-})
+    expect(result.sceneCoordinates).toEqual([]);
+    expect(
+      (ai.expandSceneSection.mock.calls[0]?.[0] as { sceneCoordinates: readonly string[] })
+        .sceneCoordinates,
+    ).toEqual([]);
+  });
+});
 
-describe("runSceneGenerationPipeline — 장면 전환 계획 (#115, #112)", () => {
+describe('runSceneGenerationPipeline — 장면 전환 계획 (#115, #112)', () => {
   const plannedScene = (context: SceneContext): SceneContext =>
     ({
       ...context,
       scene: {
         ...context.scene,
         card: {
-          type: "scene",
-          id: "01-opening",
+          type: 'scene',
+          id: '01-opening',
           beats: [
-            { text: "밥을 먹는다", place: "집 식탁", time: "아침 7시" },
-            { text: "설거지를 한다", place: "집 부엌", time: "아침 7시 20분" },
-            { text: "교문을 나선다", place: "학교 교문 앞", time: "오후 4시" }
-          ]
-        }
-      }
-    }) as SceneContext
+            { text: '밥을 먹는다', place: '집 식탁', time: '아침 7시' },
+            { text: '설거지를 한다', place: '집 부엌', time: '아침 7시 20분' },
+            { text: '교문을 나선다', place: '학교 교문 앞', time: '오후 4시' },
+          ],
+        },
+      },
+    }) as SceneContext;
 
-  it("marks the planned segments for the skeleton and keeps breaks only there", async () => {
-    const ai = createRecordingAiService()
+  it('marks the planned segments for the skeleton and keeps breaks only there', async () => {
+    const ai = createRecordingAiService();
     ai.draftSceneSkeleton.mockResolvedValueOnce(
-      ["⟪대목 1⟫", "엘리아가 밥을 먹었다.", "", "---", "", "엘리아가 설거지를 했다.", "", "⟪대목 2⟫", "엘리아가 교문을 나섰다."].join("\n")
-    )
+      [
+        '⟪대목 1⟫',
+        '엘리아가 밥을 먹었다.',
+        '',
+        '---',
+        '',
+        '엘리아가 설거지를 했다.',
+        '',
+        '⟪대목 2⟫',
+        '엘리아가 교문을 나섰다.',
+      ].join('\n'),
+    );
 
     const result = await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: plannedScene(contextFor([eliaCard], "본문")),
+      sceneStem: '01-opening',
+      context: plannedScene(contextFor([eliaCard], '본문')),
       aiService: ai,
-      format: "novel"
-    })
+      format: 'novel',
+    });
 
-    const skeletonInput = ai.draftSceneSkeleton.mock.calls[0]?.[0] as { narrativeSource: string; plannedBreaks?: boolean }
-    expect(skeletonInput.plannedBreaks).toBe(true)
-    expect(skeletonInput.narrativeSource).toContain("⟪대목 2⟫\n교문을 나선다")
-    expect(result.skeleton.split("\n").filter((line) => line === "---")).toHaveLength(1)
+    const skeletonInput = ai.draftSceneSkeleton.mock.calls[0]?.[0] as {
+      narrativeSource: string;
+      plannedBreaks?: boolean;
+    };
+    expect(skeletonInput.plannedBreaks).toBe(true);
+    expect(skeletonInput.narrativeSource).toContain('⟪대목 2⟫\n교문을 나선다');
+    expect(result.skeleton.split('\n').filter((line) => line === '---')).toHaveLength(1);
     expect(result.sceneCoordinates).toEqual([
-      "1. 장소: 집 식탁 → 집 부엌 / 시각: 아침 7시 ~ 아침 7시 20분",
-      "2. 장소: 학교 교문 앞 / 시각: 오후 4시"
-    ])
-    const expansion = ai.expandSceneSection.mock.calls[0]?.[0] as { sceneCoordinates: readonly string[] }
+      '1. 장소: 집 식탁 → 집 부엌 / 시각: 아침 7시 ~ 아침 7시 20분',
+      '2. 장소: 학교 교문 앞 / 시각: 오후 4시',
+    ]);
+    const expansion = ai.expandSceneSection.mock.calls[0]?.[0] as {
+      sceneCoordinates: readonly string[];
+    };
     expect(expansion.sceneCoordinates).toEqual([
-      "1. 장소: 집 식탁 → 집 부엌 / 시각: 아침 7시 ~ 아침 7시 20분 ← 이번 구간",
-      "  1-1. 장소: 집 식탁 / 시각: 아침 7시 — 밥을 먹는다",
-      "  1-2. 장소: 집 부엌 / 시각: 아침 7시 20분 — 설거지를 한다",
-      "2. 장소: 학교 교문 앞 / 시각: 오후 4시 ← 이번 구간",
-      "  2-3. 장소: 학교 교문 앞 / 시각: 오후 4시 — 교문을 나선다"
-    ])
-  })
+      '1. 장소: 집 식탁 → 집 부엌 / 시각: 아침 7시 ~ 아침 7시 20분 ← 이번 구간',
+      '  1-1. 장소: 집 식탁 / 시각: 아침 7시 — 밥을 먹는다',
+      '  1-2. 장소: 집 부엌 / 시각: 아침 7시 20분 — 설거지를 한다',
+      '2. 장소: 학교 교문 앞 / 시각: 오후 4시 ← 이번 구간',
+      '  2-3. 장소: 학교 교문 앞 / 시각: 오후 4시 — 교문을 나선다',
+    ]);
+  });
 
-  it("drafts a long planned scene in bundled calls that continue each other", async () => {
-    const ai = createRecordingAiService()
+  it('drafts a long planned scene in bundled calls that continue each other', async () => {
+    const ai = createRecordingAiService();
     ai.draftSceneSkeleton
-      .mockResolvedValueOnce(["⟪대목 1⟫", "엘리아가 밥을 먹었다.", "⟪대목 2⟫", "", "엘리아가 설거지를 했다."].join("\n"))
-      .mockResolvedValueOnce("엘리아가 교문을 나섰다.")
+      .mockResolvedValueOnce(
+        ['⟪대목 1⟫', '엘리아가 밥을 먹었다.', '⟪대목 2⟫', '', '엘리아가 설거지를 했다.'].join('\n'),
+      )
+      .mockResolvedValueOnce('엘리아가 교문을 나섰다.');
 
-    const planned = plannedScene(contextFor([eliaCard], "본문"))
+    const planned = plannedScene(contextFor([eliaCard], '본문'));
     const result = await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
+      sceneStem: '01-opening',
       context: {
         ...planned,
-        scene: { ...planned.scene, card: { ...planned.scene.card, endState: "엘리아가 집에 닿는다." } }
+        scene: {
+          ...planned.scene,
+          card: { ...planned.scene.card, endState: '엘리아가 집에 닿는다.' },
+        },
       } as SceneContext,
       aiService: ai,
-      format: "novel",
+      format: 'novel',
       styleDirective: { targetWordCount: 9000 },
-      tuning: { "generation.skeleton.charsPerCall": 2000, "generation.skeleton.retryLimit": 0 }
-    })
+      tuning: { 'generation.skeleton.charsPerCall': 2000, 'generation.skeleton.retryLimit': 0 },
+    });
 
-    expect(ai.draftSceneSkeleton).toHaveBeenCalledTimes(2)
-    const first = ai.draftSceneSkeleton.mock.calls[0]?.[0] as Record<string, unknown>
-    const second = ai.draftSceneSkeleton.mock.calls[1]?.[0] as Record<string, unknown>
-    expect(first.narrativeSource).toContain("⟪대목 1⟫")
-    expect(first.narrativeSource).not.toContain("⟪대목 2⟫")
-    expect(first.targetLength).toBe(2000)
-    expect(first.nextBeat).toBe("교문을 나선다")
-    expect(first.endState).toBeUndefined()
-    expect(second.narrativeSource).toBe("⟪대목 2⟫\n교문을 나선다\n(장소: 학교 교문 앞 / 시각: 오후 4시)")
-    expect(second.priorSkeleton).toBe(["⟪대목 1⟫", "엘리아가 밥을 먹었다.", "", "엘리아가 설거지를 했다."].join("\n"))
-    expect(second.targetLength).toBe(1000)
-    expect(second.endState).toBe("엘리아가 집에 닿는다.")
-    expect(result.skeleton).toBe(["엘리아가 밥을 먹었다.", "", "엘리아가 설거지를 했다.", "", "---", "", "엘리아가 교문을 나섰다."].join("\n"))
-    expect(draftWarningMessages(result.warnings).filter((warning) => warning.startsWith("뼈대 1/2:"))).toHaveLength(1)
-    expect(draftWarningMessages(result.warnings).filter((warning) => warning.startsWith("뼈대 2/2:"))).toHaveLength(1)
-  })
+    expect(ai.draftSceneSkeleton).toHaveBeenCalledTimes(2);
+    const first = ai.draftSceneSkeleton.mock.calls[0]?.[0] as Record<string, unknown>;
+    const second = ai.draftSceneSkeleton.mock.calls[1]?.[0] as Record<string, unknown>;
+    expect(first.narrativeSource).toContain('⟪대목 1⟫');
+    expect(first.narrativeSource).not.toContain('⟪대목 2⟫');
+    expect(first.targetLength).toBe(2000);
+    expect(first.nextBeat).toBe('교문을 나선다');
+    expect(first.endState).toBeUndefined();
+    expect(second.narrativeSource).toBe(
+      '⟪대목 2⟫\n교문을 나선다\n(장소: 학교 교문 앞 / 시각: 오후 4시)',
+    );
+    expect(second.priorSkeleton).toBe(
+      ['⟪대목 1⟫', '엘리아가 밥을 먹었다.', '', '엘리아가 설거지를 했다.'].join('\n'),
+    );
+    expect(second.targetLength).toBe(1000);
+    expect(second.endState).toBe('엘리아가 집에 닿는다.');
+    expect(result.skeleton).toBe(
+      [
+        '엘리아가 밥을 먹었다.',
+        '',
+        '엘리아가 설거지를 했다.',
+        '',
+        '---',
+        '',
+        '엘리아가 교문을 나섰다.',
+      ].join('\n'),
+    );
+    expect(
+      draftWarningMessages(result.warnings).filter((warning) => warning.startsWith('뼈대 1/2:')),
+    ).toHaveLength(1);
+    expect(
+      draftWarningMessages(result.warnings).filter((warning) => warning.startsWith('뼈대 2/2:')),
+    ).toHaveLength(1);
+  });
 
   it("keeps a nickname a later call's beat coins out of the earlier call and redrafts when it slips in (#214)", async () => {
-    const ai = createRecordingAiService()
+    const ai = createRecordingAiService();
     ai.draftSceneSkeleton
-      .mockResolvedValueOnce(["⟪대목 1⟫", "엘리아가 밥을 먹었다. “꼬맹이, 더 먹어.”", "", "엘리아가 설거지를 했다."].join("\n"))
-      .mockResolvedValueOnce(["⟪대목 1⟫", "엘리아가 밥을 먹었다.", "", "엘리아가 설거지를 했다."].join("\n"))
-      .mockResolvedValue("엘리아가 교문을 나섰다. “꼬맹이.”")
+      .mockResolvedValueOnce(
+        [
+          '⟪대목 1⟫',
+          '엘리아가 밥을 먹었다. “꼬맹이, 더 먹어.”',
+          '',
+          '엘리아가 설거지를 했다.',
+        ].join('\n'),
+      )
+      .mockResolvedValueOnce(
+        ['⟪대목 1⟫', '엘리아가 밥을 먹었다.', '', '엘리아가 설거지를 했다.'].join('\n'),
+      )
+      .mockResolvedValue('엘리아가 교문을 나섰다. “꼬맹이.”');
 
-    const planned = plannedScene(contextFor([{ ...eliaCard, catchphrases: ["꼬맹이"] }], "본문"))
+    const planned = plannedScene(contextFor([{ ...eliaCard, catchphrases: ['꼬맹이'] }], '본문'));
     const result = await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
+      sceneStem: '01-opening',
       context: {
         ...planned,
         scene: {
@@ -761,184 +923,247 @@ describe("runSceneGenerationPipeline — 장면 전환 계획 (#115, #112)", () 
           card: {
             ...planned.scene.card,
             beats: [
-              { text: "밥을 먹는다", place: "집 식탁", time: "아침 7시" },
-              { text: "설거지를 한다", place: "집 부엌", time: "아침 7시 20분" },
-              { text: "교문을 나서며 성재를 \"꼬맹이\"라 부르기 시작한다", place: "학교 교문 앞", time: "오후 4시" }
-            ]
-          }
-        }
+              { text: '밥을 먹는다', place: '집 식탁', time: '아침 7시' },
+              { text: '설거지를 한다', place: '집 부엌', time: '아침 7시 20분' },
+              {
+                text: '교문을 나서며 성재를 "꼬맹이"라 부르기 시작한다',
+                place: '학교 교문 앞',
+                time: '오후 4시',
+              },
+            ],
+          },
+        },
       } as SceneContext,
       aiService: ai,
-      format: "novel",
+      format: 'novel',
       styleDirective: { targetWordCount: 9000 },
-      tuning: { "generation.skeleton.charsPerCall": 2000, "generation.skeleton.retryLimit": 1 }
-    })
+      tuning: { 'generation.skeleton.charsPerCall': 2000, 'generation.skeleton.retryLimit': 1 },
+    });
 
-    const first = ai.draftSceneSkeleton.mock.calls[0]?.[0] as Record<string, unknown>
-    const retried = ai.draftSceneSkeleton.mock.calls[1]?.[0] as Record<string, unknown>
-    const last = ai.draftSceneSkeleton.mock.calls[2]?.[0] as Record<string, unknown>
-    expect(first.withheldAddressTerms).toEqual(["꼬맹이"])
-    expect([...(first.catchphrases as Map<string, string[]>).values()]).toEqual([[]])
-    expect(String((retried.retryReasons as string[]).join(" "))).toContain("«꼬맹이»")
-    expect(last.withheldAddressTerms).toBeUndefined()
-    expect(last.coinedAddressNotes).toEqual(["«꼬맹이»: «교문을 나서며 성재를 \"꼬맹이\"라 부르기 시작한다»에서 처음 붙는다"])
-    expect(result.skeleton).not.toContain("꼬맹이, 더 먹어")
-  })
+    const first = ai.draftSceneSkeleton.mock.calls[0]?.[0] as Record<string, unknown>;
+    const retried = ai.draftSceneSkeleton.mock.calls[1]?.[0] as Record<string, unknown>;
+    const last = ai.draftSceneSkeleton.mock.calls[2]?.[0] as Record<string, unknown>;
+    expect(first.withheldAddressTerms).toEqual(['꼬맹이']);
+    expect([...(first.catchphrases as Map<string, string[]>).values()]).toEqual([[]]);
+    expect(String((retried.retryReasons as string[]).join(' '))).toContain('«꼬맹이»');
+    expect(last.withheldAddressTerms).toBeUndefined();
+    expect(last.coinedAddressNotes).toEqual([
+      '«꼬맹이»: «교문을 나서며 성재를 "꼬맹이"라 부르기 시작한다»에서 처음 붙는다',
+    ]);
+    expect(result.skeleton).not.toContain('꼬맹이, 더 먹어');
+  });
 
-  it("curls straight dialogue quotes a skeleton call wrote", async () => {
-    const ai = createRecordingAiService()
-    ai.draftSceneSkeleton.mockResolvedValueOnce('엘리아가 말했다.\n\n"밥 먹자." 성재가 "응." 하고 답했다.')
+  it('curls straight dialogue quotes a skeleton call wrote', async () => {
+    const ai = createRecordingAiService();
+    ai.draftSceneSkeleton.mockResolvedValueOnce(
+      '엘리아가 말했다.\n\n"밥 먹자." 성재가 "응." 하고 답했다.',
+    );
 
     const result = await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: plannedScene(contextFor([eliaCard], "본문")),
+      sceneStem: '01-opening',
+      context: plannedScene(contextFor([eliaCard], '본문')),
       aiService: ai,
-      format: "novel"
-    })
+      format: 'novel',
+    });
 
-    expect(result.skeleton).toContain("“밥 먹자.” 성재가 “응.” 하고 답했다.")
-    expect(result.skeleton).not.toContain('"')
-  })
+    expect(result.skeleton).toContain('“밥 먹자.” 성재가 “응.” 하고 답했다.');
+    expect(result.skeleton).not.toContain('"');
+  });
 
-  it("redrafts a skeleton that dropped a beat, naming the beat, and warns when it stays missing", async () => {
-    const ai = createRecordingAiService()
+  it('redrafts a skeleton that dropped a beat, naming the beat, and warns when it stays missing', async () => {
+    const ai = createRecordingAiService();
     ai.checkSceneCoverage
-      .mockResolvedValueOnce([{ index: 2, status: "missing", note: "" }])
-      .mockResolvedValueOnce([{ index: 2, status: "missing", note: "" }])
+      .mockResolvedValueOnce([{ index: 2, status: 'missing', note: '' }])
+      .mockResolvedValueOnce([{ index: 2, status: 'missing', note: '' }]);
 
     const result = await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: plannedScene(contextFor([eliaCard], "본문")),
+      sceneStem: '01-opening',
+      context: plannedScene(contextFor([eliaCard], '본문')),
       aiService: ai,
-      format: "novel"
-    })
+      format: 'novel',
+    });
 
-    expect(ai.draftSceneSkeleton).toHaveBeenCalledTimes(2)
-    expect(ai.checkSceneCoverage.mock.calls[0]?.[0]).toEqual(["밥을 먹는다", "설거지를 한다", "교문을 나선다"])
-    const retry = ai.draftSceneSkeleton.mock.calls[1]?.[0] as { retryReasons: readonly string[] }
-    expect(retry.retryReasons.join(" ")).toContain("사건 «설거지를 한다»이 뼈대에 없습니다")
-    expect(draftWarningMessages(result.warnings).filter((warning) => warning.startsWith("뼈대 (재시도 1회 뒤 채택한 판): 사건 «설거지를 한다»"))).toHaveLength(1)
-  })
+    expect(ai.draftSceneSkeleton).toHaveBeenCalledTimes(2);
+    expect(ai.checkSceneCoverage.mock.calls[0]?.[0]).toEqual([
+      '밥을 먹는다',
+      '설거지를 한다',
+      '교문을 나선다',
+    ]);
+    const retry = ai.draftSceneSkeleton.mock.calls[1]?.[0] as { retryReasons: readonly string[] };
+    expect(retry.retryReasons.join(' ')).toContain('사건 «설거지를 한다»이 뼈대에 없습니다');
+    expect(
+      draftWarningMessages(result.warnings).filter((warning) =>
+        warning.startsWith('뼈대 (재시도 1회 뒤 채택한 판): 사건 «설거지를 한다»'),
+      ),
+    ).toHaveLength(1);
+  });
 
-  it("redrafts a skeleton that reversed a beat, naming the beat, and warns when it stays reversed", async () => {
-    const ai = createRecordingAiService()
+  it('redrafts a skeleton that reversed a beat, naming the beat, and warns when it stays reversed', async () => {
+    const ai = createRecordingAiService();
     ai.checkSceneCoverage
-      .mockResolvedValueOnce([{ index: 2, status: "reversed", note: "" }])
-      .mockResolvedValueOnce([{ index: 2, status: "reversed", note: "" }])
+      .mockResolvedValueOnce([{ index: 2, status: 'reversed', note: '' }])
+      .mockResolvedValueOnce([{ index: 2, status: 'reversed', note: '' }]);
 
     const result = await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: plannedScene(contextFor([eliaCard], "본문")),
+      sceneStem: '01-opening',
+      context: plannedScene(contextFor([eliaCard], '본문')),
       aiService: ai,
-      format: "novel"
-    })
+      format: 'novel',
+    });
 
-    expect(ai.draftSceneSkeleton).toHaveBeenCalledTimes(2)
-    const retry = ai.draftSceneSkeleton.mock.calls[1]?.[0] as { retryReasons: readonly string[] }
-    expect(retry.retryReasons.join(" ")).toContain("사건 «설거지를 한다»이 뼈대에서 거꾸로 벌어집니다")
-    expect(retry.retryReasons.join(" ")).not.toContain("뼈대에 없습니다")
-    expect(draftWarningMessages(result.warnings).filter((warning) => warning.startsWith("뼈대 (재시도 1회 뒤 채택한 판): 사건 «설거지를 한다»이 뼈대에서 거꾸로"))).toHaveLength(1)
-  })
+    expect(ai.draftSceneSkeleton).toHaveBeenCalledTimes(2);
+    const retry = ai.draftSceneSkeleton.mock.calls[1]?.[0] as { retryReasons: readonly string[] };
+    expect(retry.retryReasons.join(' ')).toContain(
+      '사건 «설거지를 한다»이 뼈대에서 거꾸로 벌어집니다',
+    );
+    expect(retry.retryReasons.join(' ')).not.toContain('뼈대에 없습니다');
+    expect(
+      draftWarningMessages(result.warnings).filter((warning) =>
+        warning.startsWith(
+          '뼈대 (재시도 1회 뒤 채택한 판): 사건 «설거지를 한다»이 뼈대에서 거꾸로',
+        ),
+      ),
+    ).toHaveLength(1);
+  });
 
-  it("drops a missing-beat warning when the beat turns up elsewhere in the whole skeleton (#118)", async () => {
-    const ai = createRecordingAiService()
+  it('drops a missing-beat warning when the beat turns up elsewhere in the whole skeleton (#118)', async () => {
+    const ai = createRecordingAiService();
     ai.draftSceneSkeleton
-      .mockResolvedValueOnce(["⟪대목 1⟫", "엘리아가 밥을 먹었다."].join("\n"))
-      .mockResolvedValueOnce(["⟪대목 2⟫", "엘리아가 설거지를 하고 교문을 나섰다."].join("\n"))
+      .mockResolvedValueOnce(['⟪대목 1⟫', '엘리아가 밥을 먹었다.'].join('\n'))
+      .mockResolvedValueOnce(['⟪대목 2⟫', '엘리아가 설거지를 하고 교문을 나섰다.'].join('\n'));
     ai.checkSceneCoverage
-      .mockResolvedValueOnce([{ index: 2, status: "missing", note: "" }])
+      .mockResolvedValueOnce([{ index: 2, status: 'missing', note: '' }])
       .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
 
     const result = await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: plannedScene(contextFor([eliaCard], "본문")),
+      sceneStem: '01-opening',
+      context: plannedScene(contextFor([eliaCard], '본문')),
       aiService: ai,
-      format: "novel",
+      format: 'novel',
       styleDirective: { targetWordCount: 9000 },
-      tuning: { "generation.skeleton.charsPerCall": 2000, "generation.skeleton.retryLimit": 0 }
-    })
+      tuning: { 'generation.skeleton.charsPerCall': 2000, 'generation.skeleton.retryLimit': 0 },
+    });
 
-    expect(ai.checkSceneCoverage).toHaveBeenCalledTimes(3)
-    const recheck = ai.checkSceneCoverage.mock.calls[2] as [readonly string[], string]
-    expect(recheck[0]).toEqual(["설거지를 한다"])
-    expect(recheck[1]).toContain("설거지를 하고 교문을 나섰다")
-    expect(draftWarningMessages(result.warnings).filter((warning) => warning.includes("뼈대에 없습니다"))).toEqual([])
-  })
+    expect(ai.checkSceneCoverage).toHaveBeenCalledTimes(3);
+    const recheck = ai.checkSceneCoverage.mock.calls[2] as [readonly string[], string];
+    expect(recheck[0]).toEqual(['설거지를 한다']);
+    expect(recheck[1]).toContain('설거지를 하고 교문을 나섰다');
+    expect(
+      draftWarningMessages(result.warnings).filter((warning) =>
+        warning.includes('뼈대에 없습니다'),
+      ),
+    ).toEqual([]);
+  });
 
-  it("reports each beat verdict of a skeleton check to the observer", async () => {
-    const ai = createRecordingAiService()
+  it('reports each beat verdict of a skeleton check to the observer', async () => {
+    const ai = createRecordingAiService();
     ai.checkSceneCoverage
-      .mockResolvedValueOnce([{ index: 2, status: "missing", note: "" }])
-      .mockResolvedValue([])
-    const checks: { attempt?: number; beats?: readonly { number: number; text: string; status: string }[] }[] = []
+      .mockResolvedValueOnce([{ index: 2, status: 'missing', note: '' }])
+      .mockResolvedValue([]);
+    const checks: {
+      attempt?: number;
+      beats?: readonly { number: number; text: string; status: string }[];
+    }[] = [];
 
     await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: plannedScene(contextFor([eliaCard], "본문")),
+      sceneStem: '01-opening',
+      context: plannedScene(contextFor([eliaCard], '본문')),
       aiService: ai,
-      format: "novel",
+      format: 'novel',
       observer: {
         onPlan: () => {},
         onStageStart: () => {},
         onStageEnd: () => {},
-        onEvent: (event) => void (event.kind === "beats-checked" && checks.push(event))
-      }
-    })
+        onEvent: (event) => void (event.kind === 'beats-checked' && checks.push(event)),
+      },
+    });
 
-    expect(checks[0]).toMatchObject({ attempt: 1 })
+    expect(checks[0]).toMatchObject({ attempt: 1 });
     expect(checks[0]?.beats).toEqual([
-      { number: 1, text: "밥을 먹는다", status: "present" },
-      { number: 2, text: "설거지를 한다", status: "missing" },
-      { number: 3, text: "교문을 나선다", status: "present" }
-    ])
-    expect(checks[1]?.attempt).toBe(2)
-    expect(checks[1]?.beats?.map((beat) => beat.status)).toEqual(["present", "present", "present"])
-  })
+      { number: 1, text: '밥을 먹는다', status: 'present' },
+      { number: 2, text: '설거지를 한다', status: 'missing' },
+      { number: 3, text: '교문을 나선다', status: 'present' },
+    ]);
+    expect(checks[1]?.attempt).toBe(2);
+    expect(checks[1]?.beats?.map((beat) => beat.status)).toEqual(['present', 'present', 'present']);
+  });
 
-  it("reports which beats each expanded section covers", async () => {
-    const ai = createRecordingAiService()
+  it('reports which beats each expanded section covers', async () => {
+    const ai = createRecordingAiService();
     ai.draftSceneSkeleton.mockResolvedValueOnce(
-      ["⟪대목 1⟫", "엘리아가 밥을 먹었다.", "", "---", "", "엘리아가 설거지를 했다.", "", "⟪대목 2⟫", "엘리아가 교문을 나섰다."].join("\n")
-    )
-    const measured: { expansionSectionIndex?: number; beatNumbers?: readonly number[]; startOffset?: number }[] = []
+      [
+        '⟪대목 1⟫',
+        '엘리아가 밥을 먹었다.',
+        '',
+        '---',
+        '',
+        '엘리아가 설거지를 했다.',
+        '',
+        '⟪대목 2⟫',
+        '엘리아가 교문을 나섰다.',
+      ].join('\n'),
+    );
+    const measured: {
+      expansionSectionIndex?: number;
+      beatNumbers?: readonly number[];
+      startOffset?: number;
+    }[] = [];
 
     const result = await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: plannedScene(contextFor([eliaCard], "본문")),
+      sceneStem: '01-opening',
+      context: plannedScene(contextFor([eliaCard], '본문')),
       aiService: ai,
-      format: "novel",
+      format: 'novel',
       observer: {
         onPlan: () => {},
         onStageStart: () => {},
         onStageEnd: () => {},
-        onEvent: (event) => void (event.kind === "section-measured" && measured.push(event))
-      }
-    })
+        onEvent: (event) => void (event.kind === 'section-measured' && measured.push(event)),
+      },
+    });
 
-    const expansionOptions = ai.expandSceneSection.mock.calls[0]?.[1] as { traceTag?: { beatIds?: readonly string[] } }
-    expect(measured.flatMap((event) => event.beatNumbers ?? [])).toEqual([1, 2, 3])
-    expect(measured.map((event) => event.startOffset)[0]).toBe(0)
-    expect(expansionOptions.traceTag?.beatIds).toEqual(measured[0]?.beatNumbers?.map(String))
-    expect(result.beatSegments?.flat()).toEqual([1, 2, 3])
-    expect(result.beatSegments).toHaveLength(2)
-  })
+    const expansionOptions = ai.expandSceneSection.mock.calls[0]?.[1] as {
+      traceTag?: { beatIds?: readonly string[] };
+    };
+    expect(measured.flatMap((event) => event.beatNumbers ?? [])).toEqual([1, 2, 3]);
+    expect(measured.map((event) => event.startOffset)[0]).toBe(0);
+    expect(expansionOptions.traceTag?.beatIds).toEqual(measured[0]?.beatNumbers?.map(String));
+    expect(result.beatSegments?.flat()).toEqual([1, 2, 3]);
+    expect(result.beatSegments).toHaveLength(2);
+  });
 
-  it("tells each expansion section the beats it writes from where the skeleton beats start (#239)", async () => {
-    const ai = createRecordingAiService()
+  it('tells each expansion section the beats it writes from where the skeleton beats start (#239)', async () => {
+    const ai = createRecordingAiService();
     ai.draftSceneSkeleton.mockResolvedValueOnce(
-      ["⟪대목 1⟫", "엘리아가 밥을 먹었다.", "", "---", "", "엘리아가 설거지를 했다.", "", "⟪대목 2⟫", "엘리아가 교문을 나섰다."].join("\n")
-    )
-    ai.locateBeatParagraphs.mockResolvedValueOnce(new Map([[1, 1], [2, 2], [3, 3]]))
-    ai.expandSceneSection.mockImplementation(async () => "짧은 본문")
-    const measured: { expansionSectionIndex?: number; beatNumbers?: readonly number[] }[] = []
-    const kept: { expansionSectionIndex?: number; attempt?: number }[] = []
+      [
+        '⟪대목 1⟫',
+        '엘리아가 밥을 먹었다.',
+        '',
+        '---',
+        '',
+        '엘리아가 설거지를 했다.',
+        '',
+        '⟪대목 2⟫',
+        '엘리아가 교문을 나섰다.',
+      ].join('\n'),
+    );
+    ai.locateBeatParagraphs.mockResolvedValueOnce(
+      new Map([
+        [1, 1],
+        [2, 2],
+        [3, 3],
+      ]),
+    );
+    ai.expandSceneSection.mockImplementation(async () => '짧은 본문');
+    const measured: { expansionSectionIndex?: number; beatNumbers?: readonly number[] }[] = [];
+    const kept: { expansionSectionIndex?: number; attempt?: number }[] = [];
 
     const result = await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: plannedScene(contextFor([eliaCard], "본문")),
+      sceneStem: '01-opening',
+      context: plannedScene(contextFor([eliaCard], '본문')),
       aiService: ai,
-      format: "novel",
+      format: 'novel',
       styleDirective: { targetWordCount: 6000 },
       sectionOutputLimit: 2000,
       observer: {
@@ -946,199 +1171,241 @@ describe("runSceneGenerationPipeline — 장면 전환 계획 (#115, #112)", () 
         onStageStart: () => {},
         onStageEnd: () => {},
         onEvent: (event) => {
-          if (event.kind === "section-measured") measured.push(event)
-          if (event.kind === "output-kept-despite-violations") kept.push(event)
-        }
-      }
-    })
+          if (event.kind === 'section-measured') measured.push(event);
+          if (event.kind === 'output-kept-despite-violations') kept.push(event);
+        },
+      },
+    });
 
-    const sectionBeats = measured.map((event) => event.beatNumbers ?? [])
-    expect(sectionBeats.length).toBeGreaterThan(1)
-    expect(sectionBeats.flat()).toEqual([1, 2, 3])
-    const tags = ai.expandSceneSection.mock.calls.map((call) => (call[1] as { traceTag?: { expansionSectionIndex?: number; beatIds?: readonly string[] } }).traceTag)
-    expect(tags[0]?.beatIds).toEqual(sectionBeats[0]?.map(String))
-    expect(kept[0]?.attempt).toBeGreaterThanOrEqual(1)
+    const sectionBeats = measured.map((event) => event.beatNumbers ?? []);
+    expect(sectionBeats.length).toBeGreaterThan(1);
+    expect(sectionBeats.flat()).toEqual([1, 2, 3]);
+    const tags = ai.expandSceneSection.mock.calls.map(
+      (call) =>
+        (call[1] as { traceTag?: { expansionSectionIndex?: number; beatIds?: readonly string[] } })
+          .traceTag,
+    );
+    expect(tags[0]?.beatIds).toEqual(sectionBeats[0]?.map(String));
+    expect(kept[0]?.attempt).toBeGreaterThanOrEqual(1);
 
-    const firstWarning = result.warnings.find((warning) => warning.sectionUnit === "expansion")
-    expect(firstWarning).toMatchObject({ sectionNumber: 1, sectionUnit: "expansion", passageNumbers: [1] })
-    expect(firstWarning?.message).toMatch(/^살붙임 1구간 \(비트 1(–\d)?\): /)
-  })
+    const firstWarning = result.warnings.find((warning) => warning.sectionUnit === 'expansion');
+    expect(firstWarning).toMatchObject({
+      sectionNumber: 1,
+      sectionUnit: 'expansion',
+      passageNumbers: [1],
+    });
+    expect(firstWarning?.message).toMatch(/^살붙임 1구간 \(비트 1(–\d)?\): /);
+  });
 
-  it("falls back to the beats of each skeleton call when the skeleton beats cannot be located", async () => {
-    const ai = createRecordingAiService()
+  it('falls back to the beats of each skeleton call when the skeleton beats cannot be located', async () => {
+    const ai = createRecordingAiService();
     ai.draftSceneSkeleton.mockResolvedValueOnce(
-      ["⟪대목 1⟫", "엘리아가 밥을 먹었다.", "", "---", "", "엘리아가 설거지를 했다.", "", "⟪대목 2⟫", "엘리아가 교문을 나섰다."].join("\n")
-    )
-    ai.locateBeatParagraphs.mockRejectedValueOnce(new AiProviderError("generation-failed", "mock", "위치 실패"))
-    const warnings: string[] = []
+      [
+        '⟪대목 1⟫',
+        '엘리아가 밥을 먹었다.',
+        '',
+        '---',
+        '',
+        '엘리아가 설거지를 했다.',
+        '',
+        '⟪대목 2⟫',
+        '엘리아가 교문을 나섰다.',
+      ].join('\n'),
+    );
+    ai.locateBeatParagraphs.mockRejectedValueOnce(
+      new AiProviderError('generation-failed', 'mock', '위치 실패'),
+    );
+    const warnings: string[] = [];
 
     const result = await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: plannedScene(contextFor([eliaCard], "본문")),
+      sceneStem: '01-opening',
+      context: plannedScene(contextFor([eliaCard], '본문')),
       aiService: ai,
-      format: "novel",
+      format: 'novel',
       observer: {
         onPlan: () => {},
         onStageStart: () => {},
         onStageEnd: () => {},
-        onEvent: (event) => void (event.kind === "warning" && warnings.push(event.message ?? ""))
-      }
-    })
+        onEvent: (event) => void (event.kind === 'warning' && warnings.push(event.message ?? '')),
+      },
+    });
 
-    expect(result.draftBody.length).toBeGreaterThan(0)
-    expect(warnings.some((message) => message.startsWith("뼈대 비트 위치를 찾지 못해"))).toBe(true)
-    const tag = (ai.expandSceneSection.mock.calls[0]?.[1] as { traceTag?: { beatIds?: readonly string[] } }).traceTag
-    expect(tag?.beatIds).toEqual(["1", "2", "3"])
-  })
+    expect(result.draftBody.length).toBeGreaterThan(0);
+    expect(warnings.some((message) => message.startsWith('뼈대 비트 위치를 찾지 못해'))).toBe(true);
+    const tag = (
+      ai.expandSceneSection.mock.calls[0]?.[1] as { traceTag?: { beatIds?: readonly string[] } }
+    ).traceTag;
+    expect(tag?.beatIds).toEqual(['1', '2', '3']);
+  });
 
-  it("keeps a missing-beat warning the whole-skeleton recheck confirms", async () => {
-    const ai = createRecordingAiService()
+  it('keeps a missing-beat warning the whole-skeleton recheck confirms', async () => {
+    const ai = createRecordingAiService();
     ai.draftSceneSkeleton
-      .mockResolvedValueOnce(["⟪대목 1⟫", "엘리아가 밥을 먹었다."].join("\n"))
-      .mockResolvedValueOnce(["⟪대목 2⟫", "엘리아가 교문을 나섰다."].join("\n"))
+      .mockResolvedValueOnce(['⟪대목 1⟫', '엘리아가 밥을 먹었다.'].join('\n'))
+      .mockResolvedValueOnce(['⟪대목 2⟫', '엘리아가 교문을 나섰다.'].join('\n'));
     ai.checkSceneCoverage
-      .mockResolvedValueOnce([{ index: 2, status: "missing", note: "" }])
+      .mockResolvedValueOnce([{ index: 2, status: 'missing', note: '' }])
       .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([{ index: 1, status: "missing", note: "" }])
+      .mockResolvedValueOnce([{ index: 1, status: 'missing', note: '' }]);
 
     const result = await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: plannedScene(contextFor([eliaCard], "본문")),
+      sceneStem: '01-opening',
+      context: plannedScene(contextFor([eliaCard], '본문')),
       aiService: ai,
-      format: "novel",
+      format: 'novel',
       styleDirective: { targetWordCount: 9000 },
-      tuning: { "generation.skeleton.charsPerCall": 2000, "generation.skeleton.retryLimit": 0 }
-    })
+      tuning: { 'generation.skeleton.charsPerCall': 2000, 'generation.skeleton.retryLimit': 0 },
+    });
 
-    expect(draftWarningMessages(result.warnings).filter((warning) => warning.startsWith("뼈대 1/2: 사건 «설거지를 한다»이 뼈대에 없습니다"))).toHaveLength(1)
-  })
+    expect(
+      draftWarningMessages(result.warnings).filter((warning) =>
+        warning.startsWith('뼈대 1/2: 사건 «설거지를 한다»이 뼈대에 없습니다'),
+      ),
+    ).toHaveLength(1);
+  });
 
-  it("keeps a skeleton that covers every beat without a retry", async () => {
-    const ai = createRecordingAiService()
-    ai.draftSceneSkeleton.mockResolvedValue(["⟪대목 1⟫", "밥을 먹었다.", "⟪대목 2⟫", "교문을 나섰다."].join("\n"))
-    ai.checkSceneCoverage.mockResolvedValueOnce([{ index: 1, status: "out-of-order", note: "" }])
+  it('keeps a skeleton that covers every beat without a retry', async () => {
+    const ai = createRecordingAiService();
+    ai.draftSceneSkeleton.mockResolvedValue(
+      ['⟪대목 1⟫', '밥을 먹었다.', '⟪대목 2⟫', '교문을 나섰다.'].join('\n'),
+    );
+    ai.checkSceneCoverage.mockResolvedValueOnce([{ index: 1, status: 'out-of-order', note: '' }]);
 
     const result = await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: plannedScene(contextFor([eliaCard], "본문")),
+      sceneStem: '01-opening',
+      context: plannedScene(contextFor([eliaCard], '본문')),
       aiService: ai,
-      format: "novel"
-    })
+      format: 'novel',
+    });
 
-    expect(ai.draftSceneSkeleton).toHaveBeenCalledTimes(1)
-    expect(draftWarningMessages(result.warnings).filter((warning) => warning.startsWith("뼈대:"))).toEqual([])
-  })
+    expect(ai.draftSceneSkeleton).toHaveBeenCalledTimes(1);
+    expect(
+      draftWarningMessages(result.warnings).filter((warning) => warning.startsWith('뼈대:')),
+    ).toEqual([]);
+  });
 
-  it("skips the coverage check for a scene without beats", async () => {
-    const ai = createRecordingAiService()
+  it('skips the coverage check for a scene without beats', async () => {
+    const ai = createRecordingAiService();
 
     await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: contextFor([eliaCard], "엘리아가 문을 연다."),
+      sceneStem: '01-opening',
+      context: contextFor([eliaCard], '엘리아가 문을 연다.'),
       aiService: ai,
-      format: "novel"
-    })
+      format: 'novel',
+    });
 
-    expect(ai.checkSceneCoverage).not.toHaveBeenCalled()
-  })
+    expect(ai.checkSceneCoverage).not.toHaveBeenCalled();
+  });
 
-  it("names the thin conversations when a planned skeleton comes back short", async () => {
-    const ai = createRecordingAiService()
-    ai.draftSceneSkeleton.mockResolvedValue(["⟪대목 1⟫", "\u201c밥 먹자.\u201d", "⟪대목 2⟫", "교문을 나섰다."].join("\n"))
-    const context = plannedScene(contextFor([eliaCard], "본문"))
+  it('names the thin conversations when a planned skeleton comes back short', async () => {
+    const ai = createRecordingAiService();
+    ai.draftSceneSkeleton.mockResolvedValue(
+      ['⟪대목 1⟫', '\u201c밥 먹자.\u201d', '⟪대목 2⟫', '교문을 나섰다.'].join('\n'),
+    );
+    const context = plannedScene(contextFor([eliaCard], '본문'));
     const beats = (context.scene.card?.beats ?? []).map((beat) =>
-      typeof beat === "string" ? beat : { ...beat, cast: ["elia", "hana"] }
-    )
+      typeof beat === 'string' ? beat : { ...beat, cast: ['elia', 'hana'] },
+    );
 
     await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: { ...context, scene: { ...context.scene, card: { ...context.scene.card, beats } } } as SceneContext,
+      sceneStem: '01-opening',
+      context: {
+        ...context,
+        scene: { ...context.scene, card: { ...context.scene.card, beats } },
+      } as SceneContext,
       aiService: ai,
-      format: "novel",
-      styleDirective: { targetWordCount: 9000 }
-    })
+      format: 'novel',
+      styleDirective: { targetWordCount: 9000 },
+    });
 
-    const retry = ai.draftSceneSkeleton.mock.calls[1]?.[0] as { retryReasons: readonly string[] }
-    expect(retry.retryReasons.join(" ")).toContain("«밥을 먹는다»·«설거지를 한다»·«교문을 나선다»의 대화가 짧습니다")
-    expect(retry.retryReasons.join(" ")).toContain("6턴 이상")
-  })
+    const retry = ai.draftSceneSkeleton.mock.calls[1]?.[0] as { retryReasons: readonly string[] };
+    expect(retry.retryReasons.join(' ')).toContain(
+      '«밥을 먹는다»·«설거지를 한다»·«교문을 나선다»의 대화가 짧습니다',
+    );
+    expect(retry.retryReasons.join(' ')).toContain('6턴 이상');
+  });
 
-  it("retries an expansion that dropped a break and restores it from the skeleton", async () => {
-    const ai = createRecordingAiService()
+  it('retries an expansion that dropped a break and restores it from the skeleton', async () => {
+    const ai = createRecordingAiService();
     ai.draftSceneSkeleton.mockResolvedValueOnce(
-      ["⟪대목 1⟫", "엘리아가 밥을 먹었다.", "", "⟪대목 2⟫", "엘리아가 교문을 나섰다."].join("\n")
-    )
+      ['⟪대목 1⟫', '엘리아가 밥을 먹었다.', '', '⟪대목 2⟫', '엘리아가 교문을 나섰다.'].join('\n'),
+    );
     ai.expandSceneSection.mockImplementation(async () =>
-      [longProse("엘리아가 밥을 먹었다. 김이 올랐다."), "엘리아가 교문을 나섰다. 바람이 찼다."].join("\n\n")
-    )
+      [
+        longProse('엘리아가 밥을 먹었다. 김이 올랐다.'),
+        '엘리아가 교문을 나섰다. 바람이 찼다.',
+      ].join('\n\n'),
+    );
 
     const result = await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: plannedScene(contextFor([eliaCard], "본문")),
+      sceneStem: '01-opening',
+      context: plannedScene(contextFor([eliaCard], '본문')),
       aiService: ai,
-      format: "novel"
-    })
+      format: 'novel',
+    });
 
-    const firstRetry = ai.expandSceneSection.mock.calls[1]?.[0] as { retryReasons: readonly string[] }
-    expect(firstRetry.retryReasons.join(" ")).toContain("장면 전환(---) 1개가 0개")
-    expect(result.draftBody.split("\n").filter((line) => line === "---")).toHaveLength(1)
-    expect(result.draftBody.indexOf("---")).toBeLessThan(result.draftBody.indexOf("교문을 나섰다"))
-    expect(draftWarningMessages(result.warnings).join("\n")).toContain("되살렸습니다")
-  })
-})
+    const firstRetry = ai.expandSceneSection.mock.calls[1]?.[0] as {
+      retryReasons: readonly string[];
+    };
+    expect(firstRetry.retryReasons.join(' ')).toContain('장면 전환(---) 1개가 0개');
+    expect(result.draftBody.split('\n').filter((line) => line === '---')).toHaveLength(1);
+    expect(result.draftBody.indexOf('---')).toBeLessThan(result.draftBody.indexOf('교문을 나섰다'));
+    expect(draftWarningMessages(result.warnings).join('\n')).toContain('되살렸습니다');
+  });
+});
 
-describe("runSceneGenerationPipeline — 살붙임 단계", () => {
-  const longSkeleton = Array.from({ length: 6 }, (_, i) => `문단${i} ${"가".repeat(300)}`).join(
-    "\n\n"
-  )
+describe('runSceneGenerationPipeline — 살붙임 단계', () => {
+  const longSkeleton = Array.from({ length: 6 }, (_, i) => `문단${i} ${'가'.repeat(300)}`).join(
+    '\n\n',
+  );
 
-  it("splits by target length and shows each section the whole skeleton", async () => {
-    const ai = createRecordingAiService()
-    ai.draftSceneSkeleton.mockResolvedValueOnce(longSkeleton)
-    ai.expandSceneSection.mockImplementation(
-      async (input) => longProse(`확장:${(input as { section: string }).section.slice(0, 5)}`)
-    )
+  it('splits by target length and shows each section the whole skeleton', async () => {
+    const ai = createRecordingAiService();
+    ai.draftSceneSkeleton.mockResolvedValueOnce(longSkeleton);
+    ai.expandSceneSection.mockImplementation(async (input) =>
+      longProse(`확장:${(input as { section: string }).section.slice(0, 5)}`),
+    );
 
     await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: contextFor([eliaCard], "본문"),
+      sceneStem: '01-opening',
+      context: contextFor([eliaCard], '본문'),
       aiService: ai,
-      format: "novel",
-      styleDirective: { targetWordCount: 15000 }
-    })
+      format: 'novel',
+      styleDirective: { targetWordCount: 15000 },
+    });
 
-    expect(ai.expandSceneSection).toHaveBeenCalledTimes(3)
+    expect(ai.expandSceneSection).toHaveBeenCalledTimes(3);
     const inputs = ai.expandSceneSection.mock.calls.map(
-      (call) => call[0] as { skeleton: string; section: string; targetLength: number }
-    )
+      (call) => call[0] as { skeleton: string; section: string; targetLength: number },
+    );
     const budgets = planSectionTargetLengths(
       inputs.map((input) => input.section),
-      15000
-    )
+      15000,
+    );
     for (const [index, input] of inputs.entries()) {
-      expect(input.skeleton).toBe(longSkeleton)
-      expect(input.targetLength).toBe(budgets[index])
+      expect(input.skeleton).toBe(longSkeleton);
+      expect(input.targetLength).toBe(budgets[index]);
     }
-    expect(inputs.reduce((sum, input) => sum + input.targetLength, 0)).toBe(15000)
-  })
+    expect(inputs.reduce((sum, input) => sum + input.targetLength, 0)).toBe(15000);
+  });
 
-  it("saves the accepted sections before a cancel stops the run, and continues from there", async () => {
+  it('saves the accepted sections before a cancel stops the run, and continues from there', async () => {
     const createExpandingAi = (): ReturnType<typeof createRecordingAiService> => {
-      const ai = createRecordingAiService()
-      ai.draftSceneSkeleton.mockResolvedValue(longSkeleton)
-      ai.expandSceneSection.mockImplementation(
-        async (input) => longProse(`확장:${(input as { section: string }).section.slice(0, 5)}`)
-      )
-      return ai
-    }
-    const ai = createExpandingAi()
-    const checkpoints: SceneRunCheckpoint[] = []
+      const ai = createRecordingAiService();
+      ai.draftSceneSkeleton.mockResolvedValue(longSkeleton);
+      ai.expandSceneSection.mockImplementation(async (input) =>
+        longProse(`확장:${(input as { section: string }).section.slice(0, 5)}`),
+      );
+      return ai;
+    };
+    const ai = createExpandingAi();
+    const checkpoints: SceneRunCheckpoint[] = [];
     const baseInput = {
-      sceneStem: "01-opening",
-      context: contextFor([eliaCard], "본문"),
-      format: "novel" as const,
-      styleDirective: { targetWordCount: 15000 }
-    }
+      sceneStem: '01-opening',
+      context: contextFor([eliaCard], '본문'),
+      format: 'novel' as const,
+      styleDirective: { targetWordCount: 15000 },
+    };
 
     await expect(
       runSceneGenerationPipeline({
@@ -1146,1717 +1413,1921 @@ describe("runSceneGenerationPipeline — 살붙임 단계", () => {
         aiService: ai,
         shouldCancel: () => ai.expandSceneSection.mock.calls.length >= 1,
         onCheckpoint: async (checkpoint) => {
-          checkpoints.push(checkpoint)
-        }
-      })
-    ).rejects.toBeInstanceOf(SceneGenerationPipelineCancelledError)
-    const saved = checkpoints.at(-1) as SceneRunCheckpoint
-    expect(saved.expansion?.sections).toHaveLength(1)
-    expect(saved.finishedStages).toContain("draftSkeleton")
-    expect(saved.finishedStages).not.toContain("expandSection")
+          checkpoints.push(checkpoint);
+        },
+      }),
+    ).rejects.toBeInstanceOf(SceneGenerationPipelineCancelledError);
+    const saved = checkpoints.at(-1) as SceneRunCheckpoint;
+    expect(saved.expansion?.sections).toHaveLength(1);
+    expect(saved.finishedStages).toContain('draftSkeleton');
+    expect(saved.finishedStages).not.toContain('expandSection');
 
-    const resumedAi = createExpandingAi()
+    const resumedAi = createExpandingAi();
     const resumed = await runSceneGenerationPipeline({
       ...baseInput,
       aiService: resumedAi,
-      resumeFrom: JSON.parse(JSON.stringify(saved)) as SceneRunCheckpoint
-    })
-    const uninterrupted = await runSceneGenerationPipeline({ ...baseInput, aiService: createExpandingAi() })
+      resumeFrom: JSON.parse(JSON.stringify(saved)) as SceneRunCheckpoint,
+    });
+    const uninterrupted = await runSceneGenerationPipeline({
+      ...baseInput,
+      aiService: createExpandingAi(),
+    });
 
-    expect(resumedAi.createCharacterPersona).not.toHaveBeenCalled()
-    expect(resumedAi.draftSceneSkeleton).not.toHaveBeenCalled()
-    expect(resumedAi.expandSceneSection).toHaveBeenCalledTimes(2)
-    expect((resumedAi.expandSceneSection.mock.calls[0]?.[0] as { previousSection?: string }).previousSection).toBe(
-      saved.expansion?.sections[0]
-    )
-    expect(resumed.draftBody).toBe(uninterrupted.draftBody)
-    expect(resumed.warnings).toEqual(uninterrupted.warnings)
-  })
+    expect(resumedAi.createCharacterPersona).not.toHaveBeenCalled();
+    expect(resumedAi.draftSceneSkeleton).not.toHaveBeenCalled();
+    expect(resumedAi.expandSceneSection).toHaveBeenCalledTimes(2);
+    expect(
+      (resumedAi.expandSceneSection.mock.calls[0]?.[0] as { previousSection?: string })
+        .previousSection,
+    ).toBe(saved.expansion?.sections[0]);
+    expect(resumed.draftBody).toBe(uninterrupted.draftBody);
+    expect(resumed.warnings).toEqual(uninterrupted.warnings);
+  });
 
-  it("hands the previous finished section to the next call, and none to the first", async () => {
-    const ai = createRecordingAiService()
-    ai.draftSceneSkeleton.mockResolvedValueOnce(longSkeleton)
-    ai.expandSceneSection.mockImplementation(
-      async (input) => longProse(`확장(${(input as { section: string }).section.length})`)
-    )
+  it('hands the previous finished section to the next call, and none to the first', async () => {
+    const ai = createRecordingAiService();
+    ai.draftSceneSkeleton.mockResolvedValueOnce(longSkeleton);
+    ai.expandSceneSection.mockImplementation(async (input) =>
+      longProse(`확장(${(input as { section: string }).section.length})`),
+    );
 
     await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: contextFor([eliaCard], "본문"),
+      sceneStem: '01-opening',
+      context: contextFor([eliaCard], '본문'),
       aiService: ai,
-      format: "novel",
-      styleDirective: { targetWordCount: 15000 }
-    })
+      format: 'novel',
+      styleDirective: { targetWordCount: 15000 },
+    });
 
     const priors = ai.expandSceneSection.mock.calls.map(
-      (call) => (call[0] as { previousSection?: string }).previousSection
-    )
-    expect(priors[0]).toBeUndefined()
-    expect(priors[1]).toMatch(/^확장\(/)
-    expect(priors[2]).toMatch(/^확장\(/)
-  })
+      (call) => (call[0] as { previousSection?: string }).previousSection,
+    );
+    expect(priors[0]).toBeUndefined();
+    expect(priors[1]).toMatch(/^확장\(/);
+    expect(priors[2]).toMatch(/^확장\(/);
+  });
 
-  it("shows each call the opening of the section after it, and the last call none (#188)", async () => {
-    const ai = createRecordingAiService()
-    ai.draftSceneSkeleton.mockResolvedValueOnce(longSkeleton)
-    ai.expandSceneSection.mockImplementation(
-      async (input) => longProse(`확장(${(input as { section: string }).section.length})`)
-    )
+  it('shows each call the opening of the section after it, and the last call none (#188)', async () => {
+    const ai = createRecordingAiService();
+    ai.draftSceneSkeleton.mockResolvedValueOnce(longSkeleton);
+    ai.expandSceneSection.mockImplementation(async (input) =>
+      longProse(`확장(${(input as { section: string }).section.length})`),
+    );
 
     await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: contextFor([eliaCard], "본문"),
+      sceneStem: '01-opening',
+      context: contextFor([eliaCard], '본문'),
       aiService: ai,
-      format: "novel",
-      styleDirective: { targetWordCount: 15000 }
-    })
+      format: 'novel',
+      styleDirective: { targetWordCount: 15000 },
+    });
 
     const sections = [
       ...new Map(
         ai.expandSceneSection.mock.calls.map((call) => {
-          const input = call[0] as { section: string; upcomingOpening?: string }
-          return [input.section, input.upcomingOpening] as const
-        })
-      )
-    ]
-    expect(sections.length).toBeGreaterThan(1)
+          const input = call[0] as { section: string; upcomingOpening?: string };
+          return [input.section, input.upcomingOpening] as const;
+        }),
+      ),
+    ];
+    expect(sections.length).toBeGreaterThan(1);
     sections.slice(0, -1).forEach(([, upcomingOpening], index) => {
-      const nextFirstLine = sections[index + 1]?.[0].split("\n").find((line) => line.trim().length > 0)?.trim()
-      expect(upcomingOpening?.split("\n")[0]).toBe(nextFirstLine)
-    })
-    expect(sections.at(-1)?.[1]).toBeUndefined()
-  })
+      const nextFirstLine = sections[index + 1]?.[0]
+        .split('\n')
+        .find((line) => line.trim().length > 0)
+        ?.trim();
+      expect(upcomingOpening?.split('\n')[0]).toBe(nextFirstLine);
+    });
+    expect(sections.at(-1)?.[1]).toBeUndefined();
+  });
 
-  it("takes the first lines of a section as its opening, skipping blank lines and scene breaks", () => {
-    expect(extractSectionOpening("\n---\n하나\n\n둘\n셋\n넷")).toBe("하나\n둘\n셋")
-    expect(extractSectionOpening(undefined)).toBeUndefined()
-    expect(extractSectionOpening("---\n")).toBeUndefined()
-  })
+  it('takes the first lines of a section as its opening, skipping blank lines and scene breaks', () => {
+    expect(extractSectionOpening('\n---\n하나\n\n둘\n셋\n넷')).toBe('하나\n둘\n셋');
+    expect(extractSectionOpening(undefined)).toBeUndefined();
+    expect(extractSectionOpening('---\n')).toBeUndefined();
+  });
 
-  it("runs a single pass when the scene fits one section", async () => {
-    const ai = createRecordingAiService()
+  it('runs a single pass when the scene fits one section', async () => {
+    const ai = createRecordingAiService();
 
     await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: contextFor([eliaCard], "본문"),
+      sceneStem: '01-opening',
+      context: contextFor([eliaCard], '본문'),
       aiService: ai,
-      format: "novel",
-      styleDirective: { targetWordCount: 5000 }
-    })
+      format: 'novel',
+      styleDirective: { targetWordCount: 5000 },
+    });
 
-    expect(ai.expandSceneSection).toHaveBeenCalledTimes(1)
-  })
-})
+    expect(ai.expandSceneSection).toHaveBeenCalledTimes(1);
+  });
+});
 
-describe("runSceneGenerationPipeline — 기계 검증", () => {
-  it("retries a violating section with the reason attached", async () => {
-    const ai = createRecordingAiService()
-    ai.draftSceneSkeleton.mockResolvedValueOnce("엘리아가 문을 연다.")
+describe('runSceneGenerationPipeline — 기계 검증', () => {
+  it('retries a violating section with the reason attached', async () => {
+    const ai = createRecordingAiService();
+    ai.draftSceneSkeleton.mockResolvedValueOnce('엘리아가 문을 연다.');
     ai.expandSceneSection
-      .mockResolvedValueOnce(longProse("엘리아와 지훈이 문을 연다."))
-      .mockResolvedValueOnce(longProse("엘리아가 천천히 문을 연다."))
+      .mockResolvedValueOnce(longProse('엘리아와 지훈이 문을 연다.'))
+      .mockResolvedValueOnce(longProse('엘리아가 천천히 문을 연다.'));
 
     const result = await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: contextFor([eliaCard, jihoonCard], "본문"),
+      sceneStem: '01-opening',
+      context: contextFor([eliaCard, jihoonCard], '본문'),
       aiService: ai,
-      format: "novel"
-    })
+      format: 'novel',
+    });
 
-    expect(ai.expandSceneSection).toHaveBeenCalledTimes(2)
+    expect(ai.expandSceneSection).toHaveBeenCalledTimes(2);
     const retryInput = ai.expandSceneSection.mock.calls[1]?.[0] as {
-      retryReasons?: readonly string[]
-    }
-    expect(retryInput.retryReasons?.join(" ")).toContain("지훈")
-    expect(draftWarningMessages(result.warnings)).toEqual([])
-    expect(result.draftBody).toContain("엘리아가 천천히 문을 연다.")
-  })
+      retryReasons?: readonly string[];
+    };
+    expect(retryInput.retryReasons?.join(' ')).toContain('지훈');
+    expect(draftWarningMessages(result.warnings)).toEqual([]);
+    expect(result.draftBody).toContain('엘리아가 천천히 문을 연다.');
+  });
 
-  it("accepts a still-failing attempt and records a warning when retries keep failing", async () => {
-    const ai = createRecordingAiService()
-    ai.draftSceneSkeleton.mockResolvedValueOnce("엘리아가 문을 연다.")
-    ai.expandSceneSection.mockResolvedValue(longProse("엘리아와 지훈이 문을 연다."))
-
-    const result = await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: contextFor([eliaCard, jihoonCard], "본문"),
-      aiService: ai,
-      format: "novel"
-    })
-
-    expect(ai.expandSceneSection).toHaveBeenCalledTimes(3)
-    expect(result.draftBody).toContain("엘리아와 지훈이 문을 연다.")
-    expect(draftWarningMessages(result.warnings)).toHaveLength(1)
-    expect(draftWarningMessages(result.warnings)[0]).toContain("살붙임 1구간")
-    expect(draftWarningMessages(result.warnings)[0]).toContain("지훈")
-  })
-
-  it("names the stage, the violation kind and the section of a warning", async () => {
-    const ai = createRecordingAiService()
-    ai.draftSceneSkeleton.mockResolvedValueOnce("엘리아가 문을 연다.")
-    ai.expandSceneSection.mockResolvedValue(longProse("엘리아와 지훈이 문을 연다."))
+  it('accepts a still-failing attempt and records a warning when retries keep failing', async () => {
+    const ai = createRecordingAiService();
+    ai.draftSceneSkeleton.mockResolvedValueOnce('엘리아가 문을 연다.');
+    ai.expandSceneSection.mockResolvedValue(longProse('엘리아와 지훈이 문을 연다.'));
 
     const result = await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: contextFor([eliaCard, jihoonCard], "본문"),
+      sceneStem: '01-opening',
+      context: contextFor([eliaCard, jihoonCard], '본문'),
       aiService: ai,
-      format: "novel"
-    })
+      format: 'novel',
+    });
+
+    expect(ai.expandSceneSection).toHaveBeenCalledTimes(3);
+    expect(result.draftBody).toContain('엘리아와 지훈이 문을 연다.');
+    expect(draftWarningMessages(result.warnings)).toHaveLength(1);
+    expect(draftWarningMessages(result.warnings)[0]).toContain('살붙임 1구간');
+    expect(draftWarningMessages(result.warnings)[0]).toContain('지훈');
+  });
+
+  it('names the stage, the violation kind and the section of a warning', async () => {
+    const ai = createRecordingAiService();
+    ai.draftSceneSkeleton.mockResolvedValueOnce('엘리아가 문을 연다.');
+    ai.expandSceneSection.mockResolvedValue(longProse('엘리아와 지훈이 문을 연다.'));
+
+    const result = await runSceneGenerationPipeline({
+      sceneStem: '01-opening',
+      context: contextFor([eliaCard, jihoonCard], '본문'),
+      aiService: ai,
+      format: 'novel',
+    });
 
     expect(result.warnings).toEqual([
-      expect.objectContaining({ stage: "expandSection", kinds: ["cast"], sectionNumber: 1 })
-    ])
-  })
+      expect.objectContaining({ stage: 'expandSection', kinds: ['cast'], sectionNumber: 1 }),
+    ]);
+  });
 
-  it("marks only a retry after a too-short attempt as an under-length retry", async () => {
-    const ai = createRecordingAiService()
-    ai.draftSceneSkeleton.mockResolvedValueOnce("엘리아가 문을 연다.")
+  it('marks only a retry after a too-short attempt as an under-length retry', async () => {
+    const ai = createRecordingAiService();
+    ai.draftSceneSkeleton.mockResolvedValueOnce('엘리아가 문을 연다.');
     ai.expandSceneSection
-      .mockResolvedValueOnce("엘리아가 문을 천천히 열었다.")
-      .mockResolvedValueOnce(longProse("엘리아가 문을 연다."))
+      .mockResolvedValueOnce('엘리아가 문을 천천히 열었다.')
+      .mockResolvedValueOnce(longProse('엘리아가 문을 연다.'));
 
     await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: contextFor([eliaCard], "본문"),
+      sceneStem: '01-opening',
+      context: contextFor([eliaCard], '본문'),
       aiService: ai,
-      format: "novel",
-      styleDirective: { targetWordCount: 6000 }
-    })
+      format: 'novel',
+      styleDirective: { targetWordCount: 6000 },
+    });
 
     const calls = ai.expandSceneSection.mock.calls.map(
-      (call) => (call[0] as { isUnderLengthRetry?: boolean }).isUnderLengthRetry
-    )
-    expect(calls.slice(0, 2)).toEqual([false, true])
-  })
+      (call) => (call[0] as { isUnderLengthRetry?: boolean }).isUnderLengthRetry,
+    );
+    expect(calls.slice(0, 2)).toEqual([false, true]);
+  });
 
-  it("prefers the attempt closest to target when severity ties", async () => {
-    const ai = createRecordingAiService()
-    ai.draftSceneSkeleton.mockResolvedValueOnce("엘리아가 문을 연다.")
+  it('prefers the attempt closest to target when severity ties', async () => {
+    const ai = createRecordingAiService();
+    ai.draftSceneSkeleton.mockResolvedValueOnce('엘리아가 문을 연다.');
     ai.expandSceneSection
-      .mockResolvedValueOnce("짧".repeat(2100))
-      .mockResolvedValueOnce("중".repeat(2450))
-      .mockResolvedValueOnce("긴".repeat(2500))
+      .mockResolvedValueOnce('짧'.repeat(2100))
+      .mockResolvedValueOnce('중'.repeat(2450))
+      .mockResolvedValueOnce('긴'.repeat(2500));
 
     const result = await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: contextFor([eliaCard], "본문"),
+      sceneStem: '01-opening',
+      context: contextFor([eliaCard], '본문'),
       aiService: ai,
-      format: "novel",
-      styleDirective: { targetWordCount: 6000 }
-    })
-
-    expect(result.draftBody).toContain("긴")
-    expect(result.draftBody).not.toContain("짧")
-  })
-
-  it("keeps a near-target attempt with a light violation over one far too short", async () => {
-    const ai = createRecordingAiService()
-    ai.draftSceneSkeleton.mockResolvedValueOnce("엘리아가 문을 연다.")
-    ai.expandSceneSection
-      .mockResolvedValueOnce(longProse("엘리아와 지훈이 문을 연다."))
-      .mockResolvedValueOnce("짧".repeat(1500))
-      .mockResolvedValueOnce("짧".repeat(1400))
-
-    const result = await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: contextFor([eliaCard, jihoonCard], "본문"),
-      aiService: ai,
-      format: "novel",
+      format: 'novel',
       styleDirective: { targetWordCount: 6000 },
-      tuning: { "generation.violationWeights.cast": 2 }
-    })
+    });
 
-    expect(ai.expandSceneSection).toHaveBeenCalledTimes(3)
-    expect(result.draftBody).toContain("엘리아와 지훈이 문을 연다.")
-    expect(result.draftBody).not.toContain("짧")
-  })
+    expect(result.draftBody).toContain('긴');
+    expect(result.draftBody).not.toContain('짧');
+  });
 
-  it("keeps the least severe attempt rather than whichever came last", async () => {
-    const ai = createRecordingAiService()
-    ai.draftSceneSkeleton.mockResolvedValueOnce("엘리아가 문을 연다.")
+  it('keeps a near-target attempt with a light violation over one far too short', async () => {
+    const ai = createRecordingAiService();
+    ai.draftSceneSkeleton.mockResolvedValueOnce('엘리아가 문을 연다.');
     ai.expandSceneSection
-      .mockResolvedValueOnce("엘리아가 문을 천천히 열었다.")
-      .mockResolvedValueOnce(longProse("엘리아와 지훈이 문을 연다."))
-      .mockResolvedValueOnce(longProse("엘리아와 지훈이 ضرب 문을 연다."))
+      .mockResolvedValueOnce(longProse('엘리아와 지훈이 문을 연다.'))
+      .mockResolvedValueOnce('짧'.repeat(1500))
+      .mockResolvedValueOnce('짧'.repeat(1400));
 
     const result = await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: contextFor([eliaCard, jihoonCard], "본문"),
+      sceneStem: '01-opening',
+      context: contextFor([eliaCard, jihoonCard], '본문'),
       aiService: ai,
-      format: "novel",
-      styleDirective: { targetWordCount: 6000 }
-    })
+      format: 'novel',
+      styleDirective: { targetWordCount: 6000 },
+      tuning: { 'generation.violationWeights.cast': 2 },
+    });
 
-    expect(ai.expandSceneSection).toHaveBeenCalledTimes(3)
-    expect(result.draftBody).toContain("엘리아가 문을 천천히 열었다.")
-    expect(draftWarningMessages(result.warnings).find((warning) => warning.startsWith("살붙임 1구간"))).toContain(
-      "크게 못 미칩니다"
-    )
-  })
-})
+    expect(ai.expandSceneSection).toHaveBeenCalledTimes(3);
+    expect(result.draftBody).toContain('엘리아와 지훈이 문을 연다.');
+    expect(result.draftBody).not.toContain('짧');
+  });
 
-describe("runSceneGenerationPipeline — 구간 상한 설정", () => {
-  const longSkeleton = Array.from({ length: 6 }, (_, i) => `문단${i} ${"가".repeat(300)}`).join(
-    "\n\n"
-  )
+  it('keeps the least severe attempt rather than whichever came last', async () => {
+    const ai = createRecordingAiService();
+    ai.draftSceneSkeleton.mockResolvedValueOnce('엘리아가 문을 연다.');
+    ai.expandSceneSection
+      .mockResolvedValueOnce('엘리아가 문을 천천히 열었다.')
+      .mockResolvedValueOnce(longProse('엘리아와 지훈이 문을 연다.'))
+      .mockResolvedValueOnce(longProse('엘리아와 지훈이 ضرب 문을 연다.'));
+
+    const result = await runSceneGenerationPipeline({
+      sceneStem: '01-opening',
+      context: contextFor([eliaCard, jihoonCard], '본문'),
+      aiService: ai,
+      format: 'novel',
+      styleDirective: { targetWordCount: 6000 },
+    });
+
+    expect(ai.expandSceneSection).toHaveBeenCalledTimes(3);
+    expect(result.draftBody).toContain('엘리아가 문을 천천히 열었다.');
+    expect(
+      draftWarningMessages(result.warnings).find((warning) => warning.startsWith('살붙임 1구간')),
+    ).toContain('크게 못 미칩니다');
+  });
+});
+
+describe('runSceneGenerationPipeline — 구간 상한 설정', () => {
+  const longSkeleton = Array.from({ length: 6 }, (_, i) => `문단${i} ${'가'.repeat(300)}`).join(
+    '\n\n',
+  );
 
   async function countExpandCalls(sectionOutputLimit?: number): Promise<number> {
-    const ai = createRecordingAiService()
-    ai.draftSceneSkeleton.mockResolvedValueOnce(longSkeleton)
-    ai.expandSceneSection.mockImplementation(
-      async (input) => longProse(`확장:${(input as { section: string }).section.slice(0, 5)}`)
-    )
+    const ai = createRecordingAiService();
+    ai.draftSceneSkeleton.mockResolvedValueOnce(longSkeleton);
+    ai.expandSceneSection.mockImplementation(async (input) =>
+      longProse(`확장:${(input as { section: string }).section.slice(0, 5)}`),
+    );
 
     await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: contextFor([eliaCard], "본문"),
+      sceneStem: '01-opening',
+      context: contextFor([eliaCard], '본문'),
       aiService: ai,
-      format: "novel",
+      format: 'novel',
       styleDirective: { targetWordCount: 6000 },
-      ...(sectionOutputLimit === undefined ? {} : { sectionOutputLimit })
-    })
+      ...(sectionOutputLimit === undefined ? {} : { sectionOutputLimit }),
+    });
 
-    return ai.expandSceneSection.mock.calls.length
+    return ai.expandSceneSection.mock.calls.length;
   }
 
-  it("runs a single expansion at the default limit", async () => {
-    expect(await countExpandCalls()).toBe(1)
-  })
+  it('runs a single expansion at the default limit', async () => {
+    expect(await countExpandCalls()).toBe(1);
+  });
 
-  it("splits into more calls when the limit is lowered", async () => {
-    expect(await countExpandCalls(2000)).toBe(3)
-  })
-})
+  it('splits into more calls when the limit is lowered', async () => {
+    expect(await countExpandCalls(2000)).toBe(3);
+  });
+});
 
-describe("planSectionCount", () => {
-  it("keeps each section under the output limit", () => {
-    expect(planSectionCount(5000)).toBe(1)
-    expect(planSectionCount(7000)).toBe(1)
-    expect(planSectionCount(15000)).toBe(3)
-    expect(planSectionCount(20000)).toBe(3)
-  })
+describe('planSectionCount', () => {
+  it('keeps each section under the output limit', () => {
+    expect(planSectionCount(5000)).toBe(1);
+    expect(planSectionCount(7000)).toBe(1);
+    expect(planSectionCount(15000)).toBe(3);
+    expect(planSectionCount(20000)).toBe(3);
+  });
 
-  it("falls back to a single section without a target", () => {
-    expect(planSectionCount(0)).toBe(1)
-  })
+  it('falls back to a single section without a target', () => {
+    expect(planSectionCount(0)).toBe(1);
+  });
 
-  it("honours a configured limit in place of the default", () => {
-    expect(planSectionCount(6000, 2000)).toBe(3)
-    expect(planSectionCount(6000, 20000)).toBe(1)
-  })
-})
+  it('honours a configured limit in place of the default', () => {
+    expect(planSectionCount(6000, 2000)).toBe(3);
+    expect(planSectionCount(6000, 20000)).toBe(1);
+  });
+});
 
-describe("planSectionTargetLengths", () => {
-  it("splits the budget in proportion to each skeleton slice", () => {
-    const sections = ["가".repeat(600), "나".repeat(300), "다".repeat(100)]
+describe('planSectionTargetLengths', () => {
+  it('splits the budget in proportion to each skeleton slice', () => {
+    const sections = ['가'.repeat(600), '나'.repeat(300), '다'.repeat(100)];
 
-    expect(planSectionTargetLengths(sections, 10000)).toEqual([6000, 3000, 1000])
-  })
+    expect(planSectionTargetLengths(sections, 10000)).toEqual([6000, 3000, 1000]);
+  });
 
-  it("caps a fat slice at the output limit and hands the excess to the other slices", () => {
-    const sections = ["가".repeat(900), "나".repeat(100)]
+  it('caps a fat slice at the output limit and hands the excess to the other slices', () => {
+    const sections = ['가'.repeat(900), '나'.repeat(100)];
 
-    expect(planSectionTargetLengths(sections, 15000)).toEqual([7000, 7000])
-  })
+    expect(planSectionTargetLengths(sections, 15000)).toEqual([7000, 7000]);
+  });
 
-  it("ignores whitespace when weighing slices", () => {
-    const sections = ["가".repeat(500) + " \n".repeat(500), "나".repeat(500)]
+  it('ignores whitespace when weighing slices', () => {
+    const sections = ['가'.repeat(500) + ' \n'.repeat(500), '나'.repeat(500)];
 
-    expect(planSectionTargetLengths(sections, 6000)).toEqual([3000, 3000])
-  })
+    expect(planSectionTargetLengths(sections, 6000)).toEqual([3000, 3000]);
+  });
 
-  it("falls back to an even split when the slices are empty", () => {
-    expect(planSectionTargetLengths(["", ""], 6000)).toEqual([3000, 3000])
-  })
-})
+  it('falls back to an even split when the slices are empty', () => {
+    expect(planSectionTargetLengths(['', ''], 6000)).toEqual([3000, 3000]);
+  });
+});
 
-describe("splitSkeletonIntoSections", () => {
-  const skeleton = Array.from({ length: 9 }, (_, i) => `문단${i} ${"가".repeat(200)}`).join("\n\n")
+describe('splitSkeletonIntoSections', () => {
+  const skeleton = Array.from({ length: 9 }, (_, i) => `문단${i} ${'가'.repeat(200)}`).join('\n\n');
 
-  it("returns the requested number of sections at paragraph boundaries", () => {
-    expect(splitSkeletonIntoSections(skeleton, 3)).toHaveLength(3)
-    expect(splitSkeletonIntoSections(skeleton, 3).join("\n\n")).toContain("문단8")
-  })
+  it('returns the requested number of sections at paragraph boundaries', () => {
+    expect(splitSkeletonIntoSections(skeleton, 3)).toHaveLength(3);
+    expect(splitSkeletonIntoSections(skeleton, 3).join('\n\n')).toContain('문단8');
+  });
 
-  it("never returns more sections than there are paragraphs", () => {
-    expect(splitSkeletonIntoSections(skeleton, 20)).toHaveLength(9)
-  })
+  it('never returns more sections than there are paragraphs', () => {
+    expect(splitSkeletonIntoSections(skeleton, 20)).toHaveLength(9);
+  });
 
-  it("keeps a single-paragraph skeleton whole", () => {
-    expect(splitSkeletonIntoSections("한 문단뿐", 3)).toEqual(["한 문단뿐"])
-  })
-})
+  it('keeps a single-paragraph skeleton whole', () => {
+    expect(splitSkeletonIntoSections('한 문단뿐', 3)).toEqual(['한 문단뿐']);
+  });
+});
 
-describe("findRepeatedDialogueRun", () => {
-  it("finds a run of dialogue repeated in the same order", () => {
+describe('findRepeatedDialogueRun', () => {
+  it('finds a run of dialogue repeated in the same order', () => {
     const skeleton = [
       '진아가 말했다. "회수부터 하죠."',
       '도현이 답했다. "계정 접근도 막아야 해."',
       '유정이 끄덕였다. "공지는 제가 올릴게요."',
-      "셋은 편집실을 나섰다.",
+      '셋은 편집실을 나섰다.',
       '진아가 말했다. "회수부터 하죠."',
       '도현이 답했다. "계정 접근도 막아야 해."',
-      '유정이 끄덕였다. "공지는 제가 올릴게요."'
-    ].join("\n\n")
+      '유정이 끄덕였다. "공지는 제가 올릴게요."',
+    ].join('\n\n');
 
-    expect(findRepeatedDialogueRun(skeleton)).toBeGreaterThanOrEqual(3)
-  })
+    expect(findRepeatedDialogueRun(skeleton)).toBeGreaterThanOrEqual(3);
+  });
 
-  it("does not count a character echoing one line", () => {
-    const skeleton = ['진아가 말했다. "가자."', "둘은 걸었다.", '도현이 되뇌었다. "가자."'].join(
-      "\n\n"
-    )
+  it('does not count a character echoing one line', () => {
+    const skeleton = ['진아가 말했다. "가자."', '둘은 걸었다.', '도현이 되뇌었다. "가자."'].join(
+      '\n\n',
+    );
 
-    expect(findRepeatedDialogueRun(skeleton)).toBeLessThan(3)
-  })
+    expect(findRepeatedDialogueRun(skeleton)).toBeLessThan(3);
+  });
 
-  it("rejects a skeleton that repeats itself", () => {
+  it('rejects a skeleton that repeats itself', () => {
     const repeated = [
       '"회수부터 하죠."',
       '"계정 접근도 막아야 해."',
-      '"공지는 제가 올릴게요."'
-    ].join("\n\n")
+      '"공지는 제가 올릴게요."',
+    ].join('\n\n');
 
-    expect(validateSceneSkeleton(`${repeated}\n\n걸었다.\n\n${repeated}`)).not.toEqual([])
-    expect(validateSceneSkeleton(repeated)).toEqual([])
-  })
+    expect(validateSceneSkeleton(`${repeated}\n\n걸었다.\n\n${repeated}`)).not.toEqual([]);
+    expect(validateSceneSkeleton(repeated)).toEqual([]);
+  });
 
-  it("flags a skeleton under 80% of its target and tells it to add beats, not description", () => {
-    const violations = validateSceneSkeleton("가".repeat(300), 1000)
+  it('flags a skeleton under 80% of its target and tells it to add beats, not description', () => {
+    const violations = validateSceneSkeleton('가'.repeat(300), 1000);
 
-    expect(violations.map((violation) => violation.kind)).toEqual(["too-short"])
-    expect(violations[0]?.detail).toContain("단계로 쪼개")
-    expect(validateSceneSkeleton("가".repeat(550), 1000).map((violation) => violation.kind)).toEqual([
-      "too-short"
-    ])
-  })
+    expect(violations.map((violation) => violation.kind)).toEqual(['too-short']);
+    expect(violations[0]?.detail).toContain('단계로 쪼개');
+    expect(
+      validateSceneSkeleton('가'.repeat(550), 1000).map((violation) => violation.kind),
+    ).toEqual(['too-short']);
+  });
 
-  it("accepts a thin skeleton when no target was given, or when it clears 80%", () => {
-    expect(validateSceneSkeleton("가".repeat(300))).toEqual([])
-    expect(validateSceneSkeleton("가".repeat(800), 1000)).toEqual([])
-  })
-})
+  it('accepts a thin skeleton when no target was given, or when it clears 80%', () => {
+    expect(validateSceneSkeleton('가'.repeat(300))).toEqual([]);
+    expect(validateSceneSkeleton('가'.repeat(800), 1000)).toEqual([]);
+  });
+});
 
-describe("validateExpandedSection", () => {
+describe('validateExpandedSection', () => {
   const base = {
     characters: [eliaCard, jihoonCard],
     targetLength: 100,
-    skeleton: "엘리아가 걷는다."
-  }
+    skeleton: '엘리아가 걷는다.',
+  };
 
-  it("rejects an expansion that rewrites the previous section", () => {
-    const previousSection = "엘리아는 골목을 빠져나왔다. ".repeat(30)
+  it('rejects an expansion that rewrites the previous section', () => {
+    const previousSection = '엘리아는 골목을 빠져나왔다. '.repeat(30);
     const violations = validateExpandedSection({
       ...base,
-      section: "지훈이 뒤따랐다.",
+      section: '지훈이 뒤따랐다.',
       previousSection,
-      expanded: `${previousSection} 지훈이 뒤따라 걸었다. ${"묘사".repeat(200)}`
-    })
+      expanded: `${previousSection} 지훈이 뒤따라 걸었다. ${'묘사'.repeat(200)}`,
+    });
 
-    expect(violations.map((violation) => violation.kind)).toContain("repeats-previous")
-  })
+    expect(violations.map((violation) => violation.kind)).toContain('repeats-previous');
+  });
 
-  it("rejects an expansion that retells the previous section with fresh prose", () => {
+  it('rejects an expansion that retells the previous section with fresh prose', () => {
     const previousSection = [
       '진아가 원고를 내려다봤다. "회수부터 하죠."',
       '도현이 고개를 들었다. "계정 접근도 막아야 해."',
-      '유정이 종이를 모았다. "공지는 제가 올릴게요."'
-    ].join("\n\n")
+      '유정이 종이를 모았다. "공지는 제가 올릴게요."',
+    ].join('\n\n');
     const retold = [
       '창밖이 어두워지고 있었다. 진아는 손끝을 말았다. "회수부터 하죠."',
       '도현은 의자를 뒤로 밀었다. "계정 접근도 막아야 해."',
       '유정은 파일을 덮었다. "공지는 제가 올릴게요."',
-      "묘사".repeat(200)
-    ].join("\n\n")
+      '묘사'.repeat(200),
+    ].join('\n\n');
 
     const violations = validateExpandedSection({
       ...base,
-      section: "지훈이 뒤따랐다.",
+      section: '지훈이 뒤따랐다.',
       previousSection,
-      expanded: retold
-    })
+      expanded: retold,
+    });
 
-    expect(violations.map((violation) => violation.kind)).toContain("repeats-previous")
-  })
+    expect(violations.map((violation) => violation.kind)).toContain('repeats-previous');
+  });
 
-  it("lets an expansion that merely continues from the previous section pass", () => {
+  it('lets an expansion that merely continues from the previous section pass', () => {
     const violations = validateExpandedSection({
       ...base,
-      section: "지훈이 뒤따랐다.",
-      previousSection: "엘리아는 골목을 빠져나왔다. ".repeat(30),
-      expanded: `지훈이 뒤따라 걸었다. ${"새로운 묘사".repeat(200)}`
-    })
+      section: '지훈이 뒤따랐다.',
+      previousSection: '엘리아는 골목을 빠져나왔다. '.repeat(30),
+      expanded: `지훈이 뒤따라 걸었다. ${'새로운 묘사'.repeat(200)}`,
+    });
 
-    expect(violations.map((violation) => violation.kind)).not.toContain("repeats-previous")
-  })
+    expect(violations.map((violation) => violation.kind)).not.toContain('repeats-previous');
+  });
 
-  it("passes an expansion that only thickens the prose", () => {
+  it('passes an expansion that only thickens the prose', () => {
     const violations = validateExpandedSection({
       ...base,
       section: '엘리아가 말했다. "가자."',
       expanded:
         '엘리아가 천천히 고개를 들고 말했다. "가자." 문 밖에는 비가 내리고 있었다. ' +
-        "묘사".repeat(20)
-    })
+        '묘사'.repeat(20),
+    });
 
-    expect(violations).toEqual([])
-  })
+    expect(violations).toEqual([]);
+  });
 
-  it("flags a character the skeleton never had", () => {
+  it('flags a character the skeleton never had', () => {
     const violations = validateExpandedSection({
       ...base,
-      section: "엘리아가 걷는다.",
-      expanded: "엘리아가 걷는다. 지훈이 뒤따랐다. " + "묘사".repeat(30)
-    })
+      section: '엘리아가 걷는다.',
+      expanded: '엘리아가 걷는다. 지훈이 뒤따랐다. ' + '묘사'.repeat(30),
+    });
 
-    expect(violations.map((violation) => violation.kind)).toContain("cast")
-    expect(violations[0]?.detail).toContain("지훈")
-  })
+    expect(violations.map((violation) => violation.kind)).toContain('cast');
+    expect(violations[0]?.detail).toContain('지훈');
+  });
 
-  it("flags foreign script contamination", () => {
+  it('flags foreign script contamination', () => {
     const violations = validateExpandedSection({
       ...base,
-      section: "엘리아가 걷는다.",
-      expanded: "엘리아가 다음 ضرب을 향해 걷는다. " + "묘사".repeat(30)
-    })
+      section: '엘리아가 걷는다.',
+      expanded: '엘리아가 다음 ضرب을 향해 걷는다. ' + '묘사'.repeat(30),
+    });
 
-    expect(violations.map((violation) => violation.kind)).toContain("foreign-script")
-  })
+    expect(violations.map((violation) => violation.kind)).toContain('foreign-script');
+  });
 
-  it("flags a lone Hangul jamo as a broken character", () => {
+  it('flags a lone Hangul jamo as a broken character', () => {
     const violations = validateExpandedSection({
       ...base,
-      section: "엘리아가 걷는다.",
-      expanded: "엘리아가 ㅈ 권을 들고 걷는다. " + "묘사".repeat(30)
-    })
+      section: '엘리아가 걷는다.',
+      expanded: '엘리아가 ㅈ 권을 들고 걷는다. ' + '묘사'.repeat(30),
+    });
 
-    expect(violations.map((violation) => violation.kind)).toContain("broken-hangul")
-    expect(violations.find((violation) => violation.kind === "broken-hangul")?.detail).toContain("ㅈ 권")
-  })
+    expect(violations.map((violation) => violation.kind)).toContain('broken-hangul');
+    expect(violations.find((violation) => violation.kind === 'broken-hangul')?.detail).toContain(
+      'ㅈ 권',
+    );
+  });
 
-  it("keeps a run of jamo such as laughter in a text message", () => {
+  it('keeps a run of jamo such as laughter in a text message', () => {
     const violations = validateExpandedSection({
       ...base,
-      section: "엘리아가 걷는다.",
-      expanded: "엘리아가 걷는다. 화면에 ㅋㅋㅋ 하고 답이 왔다. " + "묘사".repeat(30)
-    })
+      section: '엘리아가 걷는다.',
+      expanded: '엘리아가 걷는다. 화면에 ㅋㅋㅋ 하고 답이 왔다. ' + '묘사'.repeat(30),
+    });
 
-    expect(violations.map((violation) => violation.kind)).not.toContain("broken-hangul")
-  })
+    expect(violations.map((violation) => violation.kind)).not.toContain('broken-hangul');
+  });
 
-  it("accepts a skeleton line the expansion only reworded", () => {
-    const violations = validateExpandedSection({
-      ...base,
-      section: '서하가 물었다. "세 번째입니다. 07-19 보관함의 병이 제 것입니까."',
-      expanded: '서하가 물었다. "세 번째입니다. 07-19 병은 제 것입니까." ' + "묘사".repeat(30)
-    })
-
-    expect(violations.map((violation) => violation.kind)).not.toContain("lost-dialogue")
-  })
-
-  it("still flags a skeleton line the expansion truncated", () => {
+  it('accepts a skeleton line the expansion only reworded', () => {
     const violations = validateExpandedSection({
       ...base,
       section: '서하가 물었다. "세 번째입니다. 07-19 보관함의 병이 제 것입니까."',
-      expanded: '서하가 물었다. "세 번째입니다." ' + "묘사".repeat(30)
-    })
+      expanded: '서하가 물었다. "세 번째입니다. 07-19 병은 제 것입니까." ' + '묘사'.repeat(30),
+    });
 
-    expect(violations.map((violation) => violation.kind)).toContain("lost-dialogue")
-  })
+    expect(violations.map((violation) => violation.kind)).not.toContain('lost-dialogue');
+  });
 
-  it("accepts a skeleton turn the expansion split into consecutive fragments", () => {
+  it('still flags a skeleton line the expansion truncated', () => {
+    const violations = validateExpandedSection({
+      ...base,
+      section: '서하가 물었다. "세 번째입니다. 07-19 보관함의 병이 제 것입니까."',
+      expanded: '서하가 물었다. "세 번째입니다." ' + '묘사'.repeat(30),
+    });
+
+    expect(violations.map((violation) => violation.kind)).toContain('lost-dialogue');
+  });
+
+  it('accepts a skeleton turn the expansion split into consecutive fragments', () => {
     const violations = validateExpandedSection({
       ...base,
       section: '명태가 말했다. "구조가 늦은 건, 내가 인정합니다. 현장 정리도 내가 지시했고."',
       expanded:
         '"구조가 늦은 건 인정합니다." 그가 말했다. 목소리가 낮았다. "현장 정리도 내가 시켰고." ' +
-        "묘사".repeat(30)
-    })
+        '묘사'.repeat(30),
+    });
 
-    expect(violations.map((violation) => violation.kind)).not.toContain("lost-dialogue")
-  })
+    expect(violations.map((violation) => violation.kind)).not.toContain('lost-dialogue');
+  });
 
-  it("does not let unrelated neighbouring lines pass off as a split turn", () => {
+  it('does not let unrelated neighbouring lines pass off as a split turn', () => {
     const violations = validateExpandedSection({
       ...base,
       section: '명태가 말했다. "구조가 늦은 건, 내가 인정합니다. 현장 정리도 내가 지시했고."',
-      expanded: '"누가요." 서연이 물었다. "그건." 명태가 입을 다물었다. ' + "묘사".repeat(30)
-    })
+      expanded: '"누가요." 서연이 물었다. "그건." 명태가 입을 다물었다. ' + '묘사'.repeat(30),
+    });
 
-    expect(violations.map((violation) => violation.kind)).toContain("lost-dialogue")
-  })
+    expect(violations.map((violation) => violation.kind)).toContain('lost-dialogue');
+  });
 
-  it("flags a skeleton line that the expansion dropped", () => {
+  it('flags a skeleton line that the expansion dropped', () => {
     const violations = validateExpandedSection({
       ...base,
       section: '엘리아가 말했다. "여기서 기다려."',
-      expanded: "엘리아가 아무 말 없이 서 있었다. " + "묘사".repeat(30)
-    })
+      expanded: '엘리아가 아무 말 없이 서 있었다. ' + '묘사'.repeat(30),
+    });
 
-    expect(violations.map((violation) => violation.kind)).toContain("lost-dialogue")
-  })
+    expect(violations.map((violation) => violation.kind)).toContain('lost-dialogue');
+  });
 
-  it("flags a dialogue line written twice when the skeleton slice has it once", () => {
+  it('flags a dialogue line written twice when the skeleton slice has it once', () => {
     const violations = validateExpandedSection({
       ...base,
       section: '명태가 말했다. "내 손으로 죽인 건 아닙니다."',
       expanded:
         '"내 손으로 죽인 건 아닙니다." 명태가 말했다. ' +
-        "묘사".repeat(20) +
+        '묘사'.repeat(20) +
         ' 그가 다시 말했다. "내 손으로 죽인 건 아닙니다." ' +
-        "다른 묘사".repeat(20)
-    })
+        '다른 묘사'.repeat(20),
+    });
 
-    expect(violations.map((violation) => violation.kind)).toContain("repetition")
-  })
+    expect(violations.map((violation) => violation.kind)).toContain('repetition');
+  });
 
-  it("flags a dialogue line re-rendered from the previous section", () => {
+  it('flags a dialogue line re-rendered from the previous section', () => {
     const violations = validateExpandedSection({
       ...base,
       section: '서연이 물었다. "그게 누구예요."',
       previousSection: '명태가 말했다. "구조가 늦은 건 인정합니다." 형광등이 깜박였다.',
       expanded:
         '"구조가 늦은 건 인정합니다." 명태가 되풀이했다. "그게 누구예요." 서연이 물었다. ' +
-        "묘사".repeat(30)
-    })
+        '묘사'.repeat(30),
+    });
 
-    expect(violations.map((violation) => violation.kind)).toContain("repetition")
-  })
+    expect(violations.map((violation) => violation.kind)).toContain('repetition');
+  });
 
-  it("lets the skeleton have a character repeat a line on purpose", () => {
+  it('lets the skeleton have a character repeat a line on purpose', () => {
     const violations = validateExpandedSection({
       ...base,
-      section: '서연이 물었다. "이름을 말하세요." 명태가 침묵했다. 서연이 다시 물었다. "이름을 말하세요."',
+      section:
+        '서연이 물었다. "이름을 말하세요." 명태가 침묵했다. 서연이 다시 물었다. "이름을 말하세요."',
       expanded:
         '"이름을 말하세요." 서연이 물었다. 명태는 입을 다물었다. "이름을 말하세요." 서연이 또박또박 되물었다. ' +
-        "묘사".repeat(30)
-    })
+        '묘사'.repeat(30),
+    });
 
-    expect(violations.map((violation) => violation.kind)).not.toContain("repetition")
-  })
+    expect(violations.map((violation) => violation.kind)).not.toContain('repetition');
+  });
 
-  it("flags a narration paragraph that near-duplicates an earlier one", () => {
+  it('flags a narration paragraph that near-duplicates an earlier one', () => {
     const beat =
-      "서연이 숨을 멈췄다가 다시 천천히 내쉬었다. 콧속으로 들어온 공기가 눅눅한 종이 냄새를 실어 왔다. 그녀는 명태에게서 눈을 떼지 않았다."
+      '서연이 숨을 멈췄다가 다시 천천히 내쉬었다. 콧속으로 들어온 공기가 눅눅한 종이 냄새를 실어 왔다. 그녀는 명태에게서 눈을 떼지 않았다.';
     const violations = validateExpandedSection({
       ...base,
-      section: "서연이 숨을 골랐다.",
-      expanded: `${beat}\n\n명태의 손끝이 하얗게 질려 있었다. ${"묘사".repeat(20)}\n\n${beat.replace("천천히", "느리게")}`
-    })
+      section: '서연이 숨을 골랐다.',
+      expanded: `${beat}\n\n명태의 손끝이 하얗게 질려 있었다. ${'묘사'.repeat(20)}\n\n${beat.replace('천천히', '느리게')}`,
+    });
 
-    expect(violations.map((violation) => violation.kind)).toContain("repetition")
-  })
+    expect(violations.map((violation) => violation.kind)).toContain('repetition');
+  });
 
-  it("does not mistake distinct paragraphs for padding", () => {
+  it('does not mistake distinct paragraphs for padding', () => {
     const violations = validateExpandedSection({
       ...base,
-      section: "서연이 숨을 골랐다.",
+      section: '서연이 숨을 골랐다.',
       expanded:
-        "서연이 숨을 멈췄다가 다시 천천히 내쉬었다. 콧속으로 들어온 공기가 눅눅한 종이 냄새를 실어 왔다.\n\n" +
-        "명태의 손끝이 하얗게 질려 있었다. 입이 열렸다가 소리 없이 닫혔다. 목울대가 한 번 크게 움직였다.\n\n" +
-        "형광등 소리만 방 안을 채웠다. 서연은 그 정적을 그대로 두었다. 재촉하면 그가 문을 닫아버릴 것을 알았다. " +
-        "묘사".repeat(20)
-    })
+        '서연이 숨을 멈췄다가 다시 천천히 내쉬었다. 콧속으로 들어온 공기가 눅눅한 종이 냄새를 실어 왔다.\n\n' +
+        '명태의 손끝이 하얗게 질려 있었다. 입이 열렸다가 소리 없이 닫혔다. 목울대가 한 번 크게 움직였다.\n\n' +
+        '형광등 소리만 방 안을 채웠다. 서연은 그 정적을 그대로 두었다. 재촉하면 그가 문을 닫아버릴 것을 알았다. ' +
+        '묘사'.repeat(20),
+    });
 
-    expect(violations.map((violation) => violation.kind)).not.toContain("repetition")
-  })
+    expect(violations.map((violation) => violation.kind)).not.toContain('repetition');
+  });
 
-  it("flags an expansion that stopped well short of its section target", () => {
+  it('flags an expansion that stopped well short of its section target', () => {
     const violations = validateExpandedSection({
       ...base,
-      section: "엘리아가 걷는다.",
-      expanded: "묘사".repeat(35)
-    })
+      section: '엘리아가 걷는다.',
+      expanded: '묘사'.repeat(35),
+    });
 
-    expect(violations.map((violation) => violation.kind)).toContain("too-short")
-  })
+    expect(violations.map((violation) => violation.kind)).toContain('too-short');
+  });
 
-  it("flags an expansion that came back far too short", () => {
+  it('flags an expansion that came back far too short', () => {
     const violations = validateExpandedSection({
       ...base,
-      section: "엘리아가 걷는다.",
-      expanded: "짧다."
-    })
+      section: '엘리아가 걷는다.',
+      expanded: '짧다.',
+    });
 
-    expect(violations.map((violation) => violation.kind)).toContain("too-short")
-  })
-})
+    expect(violations.map((violation) => violation.kind)).toContain('too-short');
+  });
+});
 
-describe("대사 다듬기 단계", () => {
-  it("polishes the skeleton before splitting, and expands the polished text", async () => {
-    const ai = createRecordingAiService()
-    const skeleton = `엘리아가 문 앞에서 걸음을 멈췄다. "가자, 지금." ${"복도는 조용했다. ".repeat(20)}`
-    const polished = skeleton.replace('"가자, 지금."', '“가자, 지금 당장.”')
-    ai.draftSceneSkeleton.mockResolvedValueOnce(skeleton)
-    ai.polishSceneDialogue.mockResolvedValueOnce(polishResponse([{ index: 1, text: "“가자, 지금 당장.”" }]))
+describe('대사 다듬기 단계', () => {
+  it('polishes the skeleton before splitting, and expands the polished text', async () => {
+    const ai = createRecordingAiService();
+    const skeleton = `엘리아가 문 앞에서 걸음을 멈췄다. "가자, 지금." ${'복도는 조용했다. '.repeat(20)}`;
+    const polished = skeleton.replace('"가자, 지금."', '“가자, 지금 당장.”');
+    ai.draftSceneSkeleton.mockResolvedValueOnce(skeleton);
+    ai.polishSceneDialogue.mockResolvedValueOnce(
+      polishResponse([{ index: 1, text: '“가자, 지금 당장.”' }]),
+    );
     ai.expandSceneSection.mockImplementation(
-      async (input) => `${(input as { section: string }).section} ${longProse("살붙인 본문")}`
-    )
+      async (input) => `${(input as { section: string }).section} ${longProse('살붙인 본문')}`,
+    );
 
     const result = await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: contextFor([eliaCard], "본문"),
+      sceneStem: '01-opening',
+      context: contextFor([eliaCard], '본문'),
       aiService: ai,
-      format: "novel"
-    })
+      format: 'novel',
+    });
 
-    expect(ai.polishSceneDialogue).toHaveBeenCalledTimes(1)
-    expect(result.skeleton).toBe(polished)
+    expect(ai.polishSceneDialogue).toHaveBeenCalledTimes(1);
+    expect(result.skeleton).toBe(polished);
 
-    const expansionInput = ai.expandSceneSection.mock.calls[0]?.[0] as { skeleton: string }
-    expect(expansionInput.skeleton).toBe(polished)
-    expect(draftWarningMessages(result.warnings)).toEqual([])
-  })
+    const expansionInput = ai.expandSceneSection.mock.calls[0]?.[0] as { skeleton: string };
+    expect(expansionInput.skeleton).toBe(polished);
+    expect(draftWarningMessages(result.warnings)).toEqual([]);
+  });
 
   it("reports the lines a character's polish changed to the observer", async () => {
-    const ai = createRecordingAiService()
-    const skeleton = `엘리아가 문 앞에서 걸음을 멈췄다. "가자, 지금." ${"복도는 조용했다. ".repeat(20)}`
-    ai.draftSceneSkeleton.mockResolvedValueOnce(skeleton)
-    ai.polishSceneDialogue.mockResolvedValueOnce(polishResponse([{ index: 1, text: "“가자, 지금 당장.”" }]))
+    const ai = createRecordingAiService();
+    const skeleton = `엘리아가 문 앞에서 걸음을 멈췄다. "가자, 지금." ${'복도는 조용했다. '.repeat(20)}`;
+    ai.draftSceneSkeleton.mockResolvedValueOnce(skeleton);
+    ai.polishSceneDialogue.mockResolvedValueOnce(
+      polishResponse([{ index: 1, text: '“가자, 지금 당장.”' }]),
+    );
     ai.expandSceneSection.mockImplementation(
-      async (input) => `${(input as { section: string }).section} ${longProse("살붙인 본문")}`
-    )
-    const polished: { subject?: string; attempt?: number; lines?: readonly { number: number; after: string; isKept: boolean }[] }[] = []
+      async (input) => `${(input as { section: string }).section} ${longProse('살붙인 본문')}`,
+    );
+    const polished: {
+      subject?: string;
+      attempt?: number;
+      lines?: readonly { number: number; after: string; isKept: boolean }[];
+    }[] = [];
 
     await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: contextFor([eliaCard], "본문"),
+      sceneStem: '01-opening',
+      context: contextFor([eliaCard], '본문'),
       aiService: ai,
-      format: "novel",
+      format: 'novel',
       observer: {
         onPlan: () => {},
         onStageStart: () => {},
         onStageEnd: () => {},
-        onEvent: (event) => void (event.kind === "dialogue-polished" && polished.push(event))
-      }
-    })
+        onEvent: (event) => void (event.kind === 'dialogue-polished' && polished.push(event)),
+      },
+    });
 
-    expect(polished).toHaveLength(1)
-    expect(polished[0]).toMatchObject({ subject: eliaCard.name, attempt: 1 })
-    expect(polished[0]?.lines).toMatchObject([{ number: 1, after: "가자, 지금 당장.", isKept: true }])
-  })
+    expect(polished).toHaveLength(1);
+    expect(polished[0]).toMatchObject({ subject: eliaCard.name, attempt: 1 });
+    expect(polished[0]?.lines).toMatchObject([
+      { number: 1, after: '가자, 지금 당장.', isKept: true },
+    ]);
+  });
 
-  it("retries only the rejected lines and keeps the lines the first attempt got right (#259)", async () => {
-    const ai = createRecordingAiService()
-    const skeleton = `엘리아가 말했다. "가자, 지금." 엘리아가 다시 말했다. "문을 닫아." ${"복도는 조용했다. ".repeat(20)}`
-    ai.draftSceneSkeleton.mockResolvedValueOnce(skeleton)
+  it('retries only the rejected lines and keeps the lines the first attempt got right (#259)', async () => {
+    const ai = createRecordingAiService();
+    const skeleton = `엘리아가 말했다. "가자, 지금." 엘리아가 다시 말했다. "문을 닫아." ${'복도는 조용했다. '.repeat(20)}`;
+    ai.draftSceneSkeleton.mockResolvedValueOnce(skeleton);
     ai.polishSceneDialogue
       .mockResolvedValueOnce(
         polishResponse([
-          { index: 1, text: "“가자, 지금 당장.”" },
-          { index: 2, text: "“문을 닫아, быстро.”" }
-        ])
+          { index: 1, text: '“가자, 지금 당장.”' },
+          { index: 2, text: '“문을 닫아, быстро.”' },
+        ]),
       )
       .mockResolvedValueOnce(
         polishResponse([
-          { index: 1, text: "“자, 이제 가.”" },
-          { index: 2, text: "“문 좀 닫아 줘.”" }
-        ])
-      )
+          { index: 1, text: '“자, 이제 가.”' },
+          { index: 2, text: '“문 좀 닫아 줘.”' },
+        ]),
+      );
     ai.expandSceneSection.mockImplementation(
-      async (input) => `${(input as { section: string }).section} ${longProse("살붙인 본문")}`
-    )
-    const polished: { attempt?: number; reasons?: readonly string[] }[] = []
+      async (input) => `${(input as { section: string }).section} ${longProse('살붙인 본문')}`,
+    );
+    const polished: { attempt?: number; reasons?: readonly string[] }[] = [];
 
     const result = await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: contextFor([eliaCard], "본문"),
+      sceneStem: '01-opening',
+      context: contextFor([eliaCard], '본문'),
       aiService: ai,
-      format: "novel",
+      format: 'novel',
       observer: {
         onPlan: () => {},
         onStageStart: () => {},
         onStageEnd: () => {},
-        onEvent: (event) => void (event.kind === "dialogue-polished" && polished.push(event))
-      }
-    })
+        onEvent: (event) => void (event.kind === 'dialogue-polished' && polished.push(event)),
+      },
+    });
 
-    const retry = ai.polishSceneDialogue.mock.calls[1]?.[0] as { retryLineNumbers?: number[] }
-    expect(retry.retryLineNumbers).toEqual([2])
-    expect(result.skeleton).toContain("“가자, 지금 당장.”")
-    expect(result.skeleton).toContain("“문 좀 닫아 줘.”")
-    expect(result.skeleton).not.toContain("자, 이제 가.")
-    expect(polished[0]?.reasons).toEqual([expect.stringContaining("⟨2⟩")])
-    expect(polished[1]).toMatchObject({ attempt: 2, reasons: [] })
-  })
+    const retry = ai.polishSceneDialogue.mock.calls[1]?.[0] as { retryLineNumbers?: number[] };
+    expect(retry.retryLineNumbers).toEqual([2]);
+    expect(result.skeleton).toContain('“가자, 지금 당장.”');
+    expect(result.skeleton).toContain('“문 좀 닫아 줘.”');
+    expect(result.skeleton).not.toContain('자, 이제 가.');
+    expect(polished[0]?.reasons).toEqual([expect.stringContaining('⟨2⟩')]);
+    expect(polished[1]).toMatchObject({ attempt: 2, reasons: [] });
+  });
 
   it("calls the polish once per character with only that character's persona", async () => {
-    const ai = createRecordingAiService()
-    ai.draftSceneSkeleton.mockResolvedValueOnce("엘리아가 말했다. “가자, 지금.” 지훈이 답했다. “알았어.”")
+    const ai = createRecordingAiService();
+    ai.draftSceneSkeleton.mockResolvedValueOnce(
+      '엘리아가 말했다. “가자, 지금.” 지훈이 답했다. “알았어.”',
+    );
 
     await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: contextFor([eliaCard, jihoonCard], "본문"),
+      sceneStem: '01-opening',
+      context: contextFor([eliaCard, jihoonCard], '본문'),
       aiService: ai,
-      format: "novel"
-    })
+      format: 'novel',
+    });
 
     const inputs = ai.polishSceneDialogue.mock.calls.map(
-      (call) => call[0] as { character: { name: string; persona: string }; otherCharacters: string[]; numberedSkeleton: string }
-    )
-    expect(inputs.map((input) => input.character.name)).toEqual(["엘리아", "지훈"])
-    expect(inputs[0]?.otherCharacters).toEqual(["지훈"])
-    expect(inputs[0]?.numberedSkeleton).toBe("엘리아가 말했다. ⟨1⟩“가자, 지금.” 지훈이 답했다. ⟨2⟩“알았어.”")
-  })
+      (call) =>
+        call[0] as {
+          character: { name: string; persona: string };
+          otherCharacters: string[];
+          numberedSkeleton: string;
+        },
+    );
+    expect(inputs.map((input) => input.character.name)).toEqual(['엘리아', '지훈']);
+    expect(inputs[0]?.otherCharacters).toEqual(['지훈']);
+    expect(inputs[0]?.numberedSkeleton).toBe(
+      '엘리아가 말했다. ⟨1⟩“가자, 지금.” 지훈이 답했다. ⟨2⟩“알았어.”',
+    );
+  });
 
-  it("hands each character its own relation changes from the ledger", async () => {
-    const ai = createRecordingAiService()
-    ai.draftSceneSkeleton.mockResolvedValueOnce("엘리아가 말했다. “가자, 지금.” 지훈이 답했다. “알았어.”")
+  it('hands each character its own relation changes from the ledger', async () => {
+    const ai = createRecordingAiService();
+    ai.draftSceneSkeleton.mockResolvedValueOnce(
+      '엘리아가 말했다. “가자, 지금.” 지훈이 답했다. “알았어.”',
+    );
 
     await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: contextFor([eliaCard, jihoonCard], "본문"),
+      sceneStem: '01-opening',
+      context: contextFor([eliaCard, jihoonCard], '본문'),
       aiService: ai,
-      format: "novel",
-      characterRelations: new Map([["엘리아", ["엘리아는 지훈에게 이제 반말을 쓴다"]]])
-    })
+      format: 'novel',
+      characterRelations: new Map([['엘리아', ['엘리아는 지훈에게 이제 반말을 쓴다']]]),
+    });
 
     const inputs = ai.polishSceneDialogue.mock.calls.map(
-      (call) => call[0] as { character: { name: string; relationChanges?: string[] } }
-    )
-    expect(inputs[0]?.character.relationChanges).toEqual(["엘리아는 지훈에게 이제 반말을 쓴다"])
-    expect(inputs[1]?.character.relationChanges).toEqual([])
-  })
+      (call) => call[0] as { character: { name: string; relationChanges?: string[] } },
+    );
+    expect(inputs[0]?.character.relationChanges).toEqual(['엘리아는 지훈에게 이제 반말을 쓴다']);
+    expect(inputs[1]?.character.relationChanges).toEqual([]);
+  });
 
-  it("skips the polish when the skeleton has no dialogue", async () => {
-    const ai = createRecordingAiService()
-    ai.draftSceneSkeleton.mockResolvedValueOnce("엘리아가 문을 연다.")
+  it('skips the polish when the skeleton has no dialogue', async () => {
+    const ai = createRecordingAiService();
+    ai.draftSceneSkeleton.mockResolvedValueOnce('엘리아가 문을 연다.');
 
     await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: contextFor([eliaCard], "본문"),
+      sceneStem: '01-opening',
+      context: contextFor([eliaCard], '본문'),
       aiService: ai,
-      format: "novel"
-    })
+      format: 'novel',
+    });
 
-    expect(ai.polishSceneDialogue).not.toHaveBeenCalled()
-  })
+    expect(ai.polishSceneDialogue).not.toHaveBeenCalled();
+  });
 
-  it("keeps the skeleton line when two characters claim the same dialogue", async () => {
-    const ai = createRecordingAiService()
-    ai.draftSceneSkeleton.mockResolvedValueOnce("엘리아가 말했다. “가자, 지금.” 지훈이 답했다. “알았어.”")
+  it('keeps the skeleton line when two characters claim the same dialogue', async () => {
+    const ai = createRecordingAiService();
+    ai.draftSceneSkeleton.mockResolvedValueOnce(
+      '엘리아가 말했다. “가자, 지금.” 지훈이 답했다. “알았어.”',
+    );
     ai.polishSceneDialogue
-      .mockResolvedValueOnce(polishResponse([{ index: 1, text: "가자, 당장." }, { index: 2, text: "엘리아 판" }]))
-      .mockResolvedValueOnce(polishResponse([{ index: 2, text: "지훈 판" }]))
+      .mockResolvedValueOnce(
+        polishResponse([
+          { index: 1, text: '가자, 당장.' },
+          { index: 2, text: '엘리아 판' },
+        ]),
+      )
+      .mockResolvedValueOnce(polishResponse([{ index: 2, text: '지훈 판' }]));
 
     const result = await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: contextFor([eliaCard, jihoonCard], "본문"),
+      sceneStem: '01-opening',
+      context: contextFor([eliaCard, jihoonCard], '본문'),
       aiService: ai,
-      format: "novel"
-    })
+      format: 'novel',
+    });
 
-    expect(result.skeleton).toBe("엘리아가 말했다. “가자, 당장.” 지훈이 답했다. “알았어.”")
-    expect(draftWarningMessages(result.warnings)[0]).toContain("대사 2번은 두 인물이 자기 대사라고 해")
-  })
+    expect(result.skeleton).toBe('엘리아가 말했다. “가자, 당장.” 지훈이 답했다. “알았어.”');
+    expect(draftWarningMessages(result.warnings)[0]).toContain(
+      '대사 2번은 두 인물이 자기 대사라고 해',
+    );
+  });
 
-  it("re-asks only the character whose rewrite failed, and keeps the skeleton line for it in the end", async () => {
-    const ai = createRecordingAiService()
-    ai.draftSceneSkeleton.mockResolvedValueOnce("엘리아가 말했다. “가자, 지금.” 그가 답했다. “알았어.”")
+  it('re-asks only the character whose rewrite failed, and keeps the skeleton line for it in the end', async () => {
+    const ai = createRecordingAiService();
+    ai.draftSceneSkeleton.mockResolvedValueOnce(
+      '엘리아가 말했다. “가자, 지금.” 그가 답했다. “알았어.”',
+    );
     ai.polishSceneDialogue.mockImplementation(async (input) =>
-      (input as { character: { name: string } }).character.name === "엘리아"
-        ? polishResponse([{ index: 1, text: "지훈이 들어왔다" }])
-        : polishResponse([{ index: 2, text: "알았다니까." }])
-    )
+      (input as { character: { name: string } }).character.name === '엘리아'
+        ? polishResponse([{ index: 1, text: '지훈이 들어왔다' }])
+        : polishResponse([{ index: 2, text: '알았다니까.' }]),
+    );
 
     const result = await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: contextFor([eliaCard, jihoonCard], "본문"),
+      sceneStem: '01-opening',
+      context: contextFor([eliaCard, jihoonCard], '본문'),
       aiService: ai,
-      format: "novel"
-    })
+      format: 'novel',
+    });
 
     const names = ai.polishSceneDialogue.mock.calls.map(
-      (call) => (call[0] as { character: { name: string } }).character.name
-    )
-    expect(names).toEqual(["엘리아", "지훈", "엘리아"])
-    expect(result.skeleton).toBe("엘리아가 말했다. “가자, 지금.” 그가 답했다. “알았다니까.”")
-    const polishWarnings = draftWarningMessages(result.warnings).filter((warning) => warning.includes("다듬기"))
-    expect(polishWarnings).toEqual([])
-    const heldBack = draftWarningMessages(result.warnings).filter((warning) => warning.includes("뼈대대로 두었습니다"))
-    expect(heldBack).toHaveLength(1)
-    expect(heldBack[0]).toContain("엘리아의 대사 1개를")
-    expect(heldBack[0]).toContain("⟨1⟩에 뼈대에 없는 인물이 나옵니다 (지훈)")
-    expect(result.dialoguePolish).toEqual({ lineCount: 2, polishedCount: 1, contestedCount: 0 })
-  })
+      (call) => (call[0] as { character: { name: string } }).character.name,
+    );
+    expect(names).toEqual(['엘리아', '지훈', '엘리아']);
+    expect(result.skeleton).toBe('엘리아가 말했다. “가자, 지금.” 그가 답했다. “알았다니까.”');
+    const polishWarnings = draftWarningMessages(result.warnings).filter((warning) =>
+      warning.includes('다듬기'),
+    );
+    expect(polishWarnings).toEqual([]);
+    const heldBack = draftWarningMessages(result.warnings).filter((warning) =>
+      warning.includes('뼈대대로 두었습니다'),
+    );
+    expect(heldBack).toHaveLength(1);
+    expect(heldBack[0]).toContain('엘리아의 대사 1개를');
+    expect(heldBack[0]).toContain('⟨1⟩에 뼈대에 없는 인물이 나옵니다 (지훈)');
+    expect(result.dialoguePolish).toEqual({ lineCount: 2, polishedCount: 1, contestedCount: 0 });
+  });
 
   it("keeps the skeleton line only for the number that broke, and the rest of the character's rewrites", async () => {
-    const ai = createRecordingAiService()
+    const ai = createRecordingAiService();
     ai.draftSceneSkeleton.mockResolvedValueOnce(
-      "엘리아가 말했다. “가자, 지금.” 이어서 “정말이야, 진짜로.” 마지막으로 “늦으면 안 돼.”"
-    )
+      '엘리아가 말했다. “가자, 지금.” 이어서 “정말이야, 진짜로.” 마지막으로 “늦으면 안 돼.”',
+    );
     ai.polishSceneDialogue.mockResolvedValue(
       polishResponse([
-        { index: 1, text: "가자, 당장." },
-        { index: 2, text: "응." },
-        { index: 3, text: "늦으면 끝이야." }
-      ])
-    )
+        { index: 1, text: '가자, 당장.' },
+        { index: 2, text: '응.' },
+        { index: 3, text: '늦으면 끝이야.' },
+      ]),
+    );
 
     const result = await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: contextFor([eliaCard], "본문"),
+      sceneStem: '01-opening',
+      context: contextFor([eliaCard], '본문'),
       aiService: ai,
-      format: "novel"
-    })
+      format: 'novel',
+    });
 
-    expect(ai.polishSceneDialogue).toHaveBeenCalledTimes(2)
-    const retryInput = ai.polishSceneDialogue.mock.calls[1]?.[0] as { retryReasons?: string[] }
-    expect(retryInput.retryReasons).toEqual(["⟨2⟩이 4자보다 짧아져 대사로 세어지지 않습니다"])
+    expect(ai.polishSceneDialogue).toHaveBeenCalledTimes(2);
+    const retryInput = ai.polishSceneDialogue.mock.calls[1]?.[0] as { retryReasons?: string[] };
+    expect(retryInput.retryReasons).toEqual(['⟨2⟩이 4자보다 짧아져 대사로 세어지지 않습니다']);
     expect(result.skeleton).toBe(
-      "엘리아가 말했다. “가자, 당장.” 이어서 “정말이야, 진짜로.” 마지막으로 “늦으면 끝이야.”"
-    )
+      '엘리아가 말했다. “가자, 당장.” 이어서 “정말이야, 진짜로.” 마지막으로 “늦으면 끝이야.”',
+    );
     expect(draftWarningMessages(result.warnings)).toContain(
-      "엘리아의 대사 1개를 뼈대대로 두었습니다 — ⟨2⟩이 4자보다 짧아져 대사로 세어지지 않습니다"
-    )
-    expect(result.dialoguePolish).toEqual({ lineCount: 3, polishedCount: 2, contestedCount: 0 })
-  })
+      '엘리아의 대사 1개를 뼈대대로 두었습니다 — ⟨2⟩이 4자보다 짧아져 대사로 세어지지 않습니다',
+    );
+    expect(result.dialoguePolish).toEqual({ lineCount: 3, polishedCount: 2, contestedCount: 0 });
+  });
 
-  it("still rolls the whole character back when its rewrites push the scene past the length limit", async () => {
-    const ai = createRecordingAiService()
-    ai.draftSceneSkeleton.mockResolvedValueOnce("엘리아가 말했다. “가자, 지금.”")
-    ai.polishSceneDialogue.mockResolvedValue(polishResponse([{ index: 1, text: "가자, ".repeat(30) }]))
+  it('still rolls the whole character back when its rewrites push the scene past the length limit', async () => {
+    const ai = createRecordingAiService();
+    ai.draftSceneSkeleton.mockResolvedValueOnce('엘리아가 말했다. “가자, 지금.”');
+    ai.polishSceneDialogue.mockResolvedValue(
+      polishResponse([{ index: 1, text: '가자, '.repeat(30) }]),
+    );
 
     const result = await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: contextFor([eliaCard], "본문"),
+      sceneStem: '01-opening',
+      context: contextFor([eliaCard], '본문'),
       aiService: ai,
-      format: "novel"
-    })
+      format: 'novel',
+    });
 
-    expect(result.skeleton).toBe("엘리아가 말했다. “가자, 지금.”")
-    expect(draftWarningMessages(result.warnings).some((warning) => warning.startsWith("엘리아의 대사 다듬기를 되돌렸습니다"))).toBe(true)
-  })
+    expect(result.skeleton).toBe('엘리아가 말했다. “가자, 지금.”');
+    expect(
+      draftWarningMessages(result.warnings).some((warning) =>
+        warning.startsWith('엘리아의 대사 다듬기를 되돌렸습니다'),
+      ),
+    ).toBe(true);
+  });
 
-  it("hands the rejection reasons to the retry call", async () => {
-    const ai = createRecordingAiService()
-    ai.draftSceneSkeleton.mockResolvedValueOnce("엘리아가 말했다. “가자, 지금.”")
-    let eliaCalls = 0
+  it('hands the rejection reasons to the retry call', async () => {
+    const ai = createRecordingAiService();
+    ai.draftSceneSkeleton.mockResolvedValueOnce('엘리아가 말했다. “가자, 지금.”');
+    let eliaCalls = 0;
     ai.polishSceneDialogue.mockImplementation(async (input) => {
-      if ((input as { character: { name: string } }).character.name !== "엘리아") {
-        return polishResponse([])
+      if ((input as { character: { name: string } }).character.name !== '엘리아') {
+        return polishResponse([]);
       }
-      eliaCalls += 1
-      return polishResponse([{ index: 1, text: eliaCalls === 1 ? "지훈이 들어왔다" : "가자, 당장." }])
-    })
+      eliaCalls += 1;
+      return polishResponse([
+        { index: 1, text: eliaCalls === 1 ? '지훈이 들어왔다' : '가자, 당장.' },
+      ]);
+    });
 
     const result = await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: contextFor([eliaCard, jihoonCard], "본문"),
+      sceneStem: '01-opening',
+      context: contextFor([eliaCard, jihoonCard], '본문'),
       aiService: ai,
-      format: "novel"
-    })
+      format: 'novel',
+    });
 
     const eliaInputs = ai.polishSceneDialogue.mock.calls
       .map((call) => call[0] as { character: { name: string }; retryReasons?: string[] })
-      .filter((input) => input.character.name === "엘리아")
-    expect(eliaInputs[0]).not.toHaveProperty("retryReasons")
-    expect(eliaInputs[1]?.retryReasons?.[0]).toContain("뼈대에 없는 인물")
-    expect(result.skeleton).toBe("엘리아가 말했다. “가자, 당장.”")
-    expect(draftWarningMessages(result.warnings).filter((warning) => warning.includes("다듬기"))).toEqual([])
-  })
+      .filter((input) => input.character.name === '엘리아');
+    expect(eliaInputs[0]).not.toHaveProperty('retryReasons');
+    expect(eliaInputs[1]?.retryReasons?.[0]).toContain('뼈대에 없는 인물');
+    expect(result.skeleton).toBe('엘리아가 말했다. “가자, 당장.”');
+    expect(
+      draftWarningMessages(result.warnings).filter((warning) => warning.includes('다듬기')),
+    ).toEqual([]);
+  });
 
-  it("warns when a polish response was cut at the output limit", async () => {
-    const ai = createRecordingAiService()
-    ai.draftSceneSkeleton.mockResolvedValueOnce("엘리아가 말했다. “가자, 지금.”")
-    ai.polishSceneDialogue.mockResolvedValueOnce(polishResponse([], true))
+  it('warns when a polish response was cut at the output limit', async () => {
+    const ai = createRecordingAiService();
+    ai.draftSceneSkeleton.mockResolvedValueOnce('엘리아가 말했다. “가자, 지금.”');
+    ai.polishSceneDialogue.mockResolvedValueOnce(polishResponse([], true));
 
     const result = await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: contextFor([eliaCard], "본문"),
+      sceneStem: '01-opening',
+      context: contextFor([eliaCard], '본문'),
       aiService: ai,
-      format: "novel"
-    })
+      format: 'novel',
+    });
 
-    expect(ai.polishSceneDialogue).toHaveBeenCalledTimes(1)
-    expect(draftWarningMessages(result.warnings)).toContain("엘리아의 대사 다듬기 응답이 출력 한도에서 잘려 일부 대사를 손보지 못했습니다")
-  })
-})
+    expect(ai.polishSceneDialogue).toHaveBeenCalledTimes(1);
+    expect(draftWarningMessages(result.warnings)).toContain(
+      '엘리아의 대사 다듬기 응답이 출력 한도에서 잘려 일부 대사를 손보지 못했습니다',
+    );
+  });
+});
 
-describe("구간별 입버릇 한도 (#188)", () => {
-  const joker: CharacterCard = { ...eliaCard, catchphrases: ["세기의 철학자", "평민"] }
-  const base = { characters: [joker, jihoonCard], targetLength: 100, skeleton: "엘리아가 걷는다." }
+describe('구간별 입버릇 한도 (#188)', () => {
+  const joker: CharacterCard = { ...eliaCard, catchphrases: ['세기의 철학자', '평민'] };
+  const base = { characters: [joker, jihoonCard], targetLength: 100, skeleton: '엘리아가 걷는다.' };
 
   it("splits the scene's catchphrase limit over the sections by target length", () => {
     const budgets = planSectionCatchphraseBudgets({
       characters: [joker, jihoonCard],
       sceneLimit: 10,
-      sectionTargetLengths: [6000, 3000, 1000]
-    })
+      sectionTargetLengths: [6000, 3000, 1000],
+    });
 
-    expect(budgets.map((section) => section.map((budget) => budget.limit))).toEqual([[6], [3], [1]])
-    expect(budgets[0]?.[0]).toMatchObject({ characterName: "엘리아", phrases: ["세기의 철학자", "평민"] })
-    expect(describeCatchphraseBudget(budgets[0]![0]!)).toBe("엘리아: «세기의 철학자»·«평민» 모두 합쳐 6번까지")
-  })
+    expect(budgets.map((section) => section.map((budget) => budget.limit))).toEqual([
+      [6],
+      [3],
+      [1],
+    ]);
+    expect(budgets[0]?.[0]).toMatchObject({
+      characterName: '엘리아',
+      phrases: ['세기의 철학자', '평민'],
+    });
+    expect(describeCatchphraseBudget(budgets[0]![0]!)).toBe(
+      '엘리아: «세기의 철학자»·«평민» 모두 합쳐 6번까지',
+    );
+  });
 
-  it("plans no budget for a scene without beats", () => {
+  it('plans no budget for a scene without beats', () => {
     expect(
-      planSectionCatchphraseBudgets({ characters: [joker], sceneLimit: 0, sectionTargetLengths: [3000, 3000] })
-    ).toEqual([[], []])
-  })
+      planSectionCatchphraseBudgets({
+        characters: [joker],
+        sceneLimit: 0,
+        sectionTargetLengths: [3000, 3000],
+      }),
+    ).toEqual([[], []]);
+  });
 
-  it("rejects a section that spends more catchphrases than its budget", () => {
+  it('rejects a section that spends more catchphrases than its budget', () => {
     const violations = validateExpandedSection({
       ...base,
-      section: "엘리아가 걷는다.",
-      expanded: `엘리아가 걷는다. ${"세기의 철학자는 생각했다. ".repeat(3)}${"묘사".repeat(30)}`,
-      catchphraseBudgets: [{ characterName: "엘리아", phrases: ["세기의 철학자", "평민"], limit: 2 }]
-    })
+      section: '엘리아가 걷는다.',
+      expanded: `엘리아가 걷는다. ${'세기의 철학자는 생각했다. '.repeat(3)}${'묘사'.repeat(30)}`,
+      catchphraseBudgets: [
+        { characterName: '엘리아', phrases: ['세기의 철학자', '평민'], limit: 2 },
+      ],
+    });
 
-    const violation = violations.find((entry) => entry.kind === "catchphrase")
-    expect(violation?.detail).toContain("엘리아의 입버릇을 3번 썼습니다 (이번 구간 2번까지: «세기의 철학자» 3번)")
-  })
+    const violation = violations.find((entry) => entry.kind === 'catchphrase');
+    expect(violation?.detail).toContain(
+      '엘리아의 입버릇을 3번 썼습니다 (이번 구간 2번까지: «세기의 철학자» 3번)',
+    );
+  });
 
-  it("lets the expansion keep every catchphrase the skeleton section already has", () => {
-    const section = `"세기의 철학자가 왔다." "세기의 철학자가 간다." "세기의 철학자다."`
+  it('lets the expansion keep every catchphrase the skeleton section already has', () => {
+    const section = `"세기의 철학자가 왔다." "세기의 철학자가 간다." "세기의 철학자다."`;
     const violations = validateExpandedSection({
       ...base,
       section,
-      expanded: `${section} ${"묘사".repeat(30)}`,
-      catchphraseBudgets: [{ characterName: "엘리아", phrases: ["세기의 철학자"], limit: 1 }]
-    })
+      expanded: `${section} ${'묘사'.repeat(30)}`,
+      catchphraseBudgets: [{ characterName: '엘리아', phrases: ['세기의 철학자'], limit: 1 }],
+    });
 
-    expect(violations.map((entry) => entry.kind)).not.toContain("catchphrase")
-  })
+    expect(violations.map((entry) => entry.kind)).not.toContain('catchphrase');
+  });
 
-  it("tells each expansion call its catchphrase budget", async () => {
-    const ai = createRecordingAiService()
+  it('tells each expansion call its catchphrase budget', async () => {
+    const ai = createRecordingAiService();
     const context: SceneContext = {
-      ...contextFor([joker], "본문"),
+      ...contextFor([joker], '본문'),
       scene: {
-        ...sceneFile("본문"),
-        card: { type: "scene", id: "01-opening", beats: ["하나", "둘", "셋", "넷"] }
-      } as SceneFile
-    }
+        ...sceneFile('본문'),
+        card: { type: 'scene', id: '01-opening', beats: ['하나', '둘', '셋', '넷'] },
+      } as SceneFile,
+    };
 
     await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
+      sceneStem: '01-opening',
       context,
       aiService: ai,
-      format: "novel",
-      styleDirective: { targetWordCount: 5000 }
-    })
+      format: 'novel',
+      styleDirective: { targetWordCount: 5000 },
+    });
 
-    const limits = (ai.expandSceneSection.mock.calls[0]?.[0] as { catchphraseLimits?: string[] }).catchphraseLimits
-    expect(limits).toEqual(["엘리아: «세기의 철학자»·«평민» 모두 합쳐 4번까지"])
-  })
-})
+    const limits = (ai.expandSceneSection.mock.calls[0]?.[0] as { catchphraseLimits?: string[] })
+      .catchphraseLimits;
+    expect(limits).toEqual(['엘리아: «세기의 철학자»·«평민» 모두 합쳐 4번까지']);
+  });
+});
 
-describe("findCatchphraseOveruse", () => {
-  const joker: CharacterCard = { ...eliaCard, catchphrases: ["세기의 철학자", "평민"] }
+describe('findCatchphraseOveruse', () => {
+  const joker: CharacterCard = { ...eliaCard, catchphrases: ['세기의 철학자', '평민'] };
 
   it("warns when a character's catchphrases outnumber the beats", () => {
-    const text = `${"세기의 철학자가 말하노니. ".repeat(3)}평민들아.`
+    const text = `${'세기의 철학자가 말하노니. '.repeat(3)}평민들아.`;
 
-    expect(findCatchphraseOveruse({ text, characters: [joker, jihoonCard], beatCount: 3 })).toEqual([
-      '엘리아의 입버릇이 4회 나옵니다 (비트 3개, 상한 3회): "세기의 철학자" 3회, "평민" 1회'
-    ])
-  })
+    expect(findCatchphraseOveruse({ text, characters: [joker, jihoonCard], beatCount: 3 })).toEqual(
+      ['엘리아의 입버릇이 4회 나옵니다 (비트 3개, 상한 3회): "세기의 철학자" 3회, "평민" 1회'],
+    );
+  });
 
-  it("counts a catchphrase only where it starts a word, not inside another word", () => {
-    const narrator: CharacterCard = { ...eliaCard, catchphrases: ["이 몸"] }
-    const text = "윗사람이 몸소 왔다. 윗사람이 몸소 갔다. 이 몸이 간다."
+  it('counts a catchphrase only where it starts a word, not inside another word', () => {
+    const narrator: CharacterCard = { ...eliaCard, catchphrases: ['이 몸'] };
+    const text = '윗사람이 몸소 왔다. 윗사람이 몸소 갔다. 이 몸이 간다.';
 
-    expect(findCatchphraseOveruse({ text, characters: [narrator], beatCount: 1 })).toEqual([])
-    expect(findCatchphraseOveruse({ text: `${text} 그래, 이 몸.`, characters: [narrator], beatCount: 1 })).toEqual([
-      '엘리아의 입버릇이 2회 나옵니다 (비트 1개, 상한 1회): "이 몸" 2회'
-    ])
-  })
+    expect(findCatchphraseOveruse({ text, characters: [narrator], beatCount: 1 })).toEqual([]);
+    expect(
+      findCatchphraseOveruse({
+        text: `${text} 그래, 이 몸.`,
+        characters: [narrator],
+        beatCount: 1,
+      }),
+    ).toEqual(['엘리아의 입버릇이 2회 나옵니다 (비트 1개, 상한 1회): "이 몸" 2회']);
+  });
 
-  it("stays quiet at the limit, and when the scene has no beats to measure by", () => {
-    const text = "세기의 철학자. 세기의 철학자."
+  it('stays quiet at the limit, and when the scene has no beats to measure by', () => {
+    const text = '세기의 철학자. 세기의 철학자.';
 
-    expect(findCatchphraseOveruse({ text, characters: [joker], beatCount: 2 })).toEqual([])
-    expect(findCatchphraseOveruse({ text, characters: [joker], beatCount: 0 })).toEqual([])
-  })
+    expect(findCatchphraseOveruse({ text, characters: [joker], beatCount: 2 })).toEqual([]);
+    expect(findCatchphraseOveruse({ text, characters: [joker], beatCount: 0 })).toEqual([]);
+  });
 
-  it("scales the limit by the per-beat knob", () => {
-    const text = "세기의 철학자. ".repeat(4)
+  it('scales the limit by the per-beat knob', () => {
+    const text = '세기의 철학자. '.repeat(4);
 
     expect(
       findCatchphraseOveruse({
         text,
         characters: [joker],
         beatCount: 2,
-        tuning: { "generation.catchphrase.perBeatLimit": 2 }
-      })
-    ).toEqual([])
-  })
-})
+        tuning: { 'generation.catchphrase.perBeatLimit': 2 },
+      }),
+    ).toEqual([]);
+  });
+});
 
 it("reports catchphrase overuse in the generated draft's warnings", async () => {
-  const ai = createRecordingAiService()
-  const joker: CharacterCard = { ...eliaCard, catchphrases: ["세기의 철학자"] }
-  ai.expandSceneSection.mockResolvedValue(longProse("세기의 철학자 세기의 철학자 세기의 철학자"))
-  const context = contextFor([joker], "본문")
-  const scene = { ...context.scene, card: { type: "scene", id: "01-opening", beats: ["문을 연다", "나간다"] } }
+  const ai = createRecordingAiService();
+  const joker: CharacterCard = { ...eliaCard, catchphrases: ['세기의 철학자'] };
+  ai.expandSceneSection.mockResolvedValue(longProse('세기의 철학자 세기의 철학자 세기의 철학자'));
+  const context = contextFor([joker], '본문');
+  const scene = {
+    ...context.scene,
+    card: { type: 'scene', id: '01-opening', beats: ['문을 연다', '나간다'] },
+  };
 
   const result = await runSceneGenerationPipeline({
-    sceneStem: "01-opening",
+    sceneStem: '01-opening',
     context: { ...context, scene } as SceneContext,
     aiService: ai,
-    format: "novel"
-  })
+    format: 'novel',
+  });
 
-  expect(draftWarningMessages(result.warnings).some((warning) => warning.startsWith("엘리아의 입버릇이 3회 나옵니다 (비트 2개"))).toBe(true)
-})
+  expect(
+    draftWarningMessages(result.warnings).some((warning) =>
+      warning.startsWith('엘리아의 입버릇이 3회 나옵니다 (비트 2개'),
+    ),
+  ).toBe(true);
+});
 
-describe("대사 화자 귀속 단계", () => {
-  const skeletonWithDialogue = `엘리아가 문 앞에서 걸음을 멈췄다. "가자, 지금 당장." 지훈이 고개를 저었다. "아직은 아니야, 조금만 더." ${"복도는 조용했다. ".repeat(20)}`
+describe('대사 화자 귀속 단계', () => {
+  const skeletonWithDialogue = `엘리아가 문 앞에서 걸음을 멈췄다. "가자, 지금 당장." 지훈이 고개를 저었다. "아직은 아니야, 조금만 더." ${'복도는 조용했다. '.repeat(20)}`;
 
   function expandWithExtraDialogue(section: string): string {
-    return `${section} "그럼 내가 먼저 간다." ${longProse("살붙인 본문")}`
+    return `${section} "그럼 내가 먼저 간다." ${longProse('살붙인 본문')}`;
   }
 
-  it("attributes the finished draft body, not the skeleton", async () => {
-    const ai = createRecordingAiService()
-    ai.draftSceneSkeleton.mockResolvedValueOnce(skeletonWithDialogue)
+  it('attributes the finished draft body, not the skeleton', async () => {
+    const ai = createRecordingAiService();
+    ai.draftSceneSkeleton.mockResolvedValueOnce(skeletonWithDialogue);
     ai.expandSceneSection.mockImplementation(async (input) =>
-      expandWithExtraDialogue((input as { section: string }).section)
-    )
+      expandWithExtraDialogue((input as { section: string }).section),
+    );
 
-    const stages: string[] = []
+    const stages: string[] = [];
     const result = await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: contextFor([eliaCard, jihoonCard], "본문"),
+      sceneStem: '01-opening',
+      context: contextFor([eliaCard, jihoonCard], '본문'),
       aiService: ai,
-      format: "novel",
+      format: 'novel',
       onProgress: (stage): void => {
-        stages.push(stage)
-      }
-    })
+        stages.push(stage);
+      },
+    });
 
-    expect(stages.indexOf("attributeDialogue")).toBeGreaterThan(stages.lastIndexOf("expandSection"))
+    expect(stages.indexOf('attributeDialogue')).toBeGreaterThan(
+      stages.lastIndexOf('expandSection'),
+    );
 
     const attributionInput = ai.attributeSceneDialogue.mock.calls[0]?.[0] as {
-      skeleton: string
-      lines: readonly string[]
-      candidates: readonly { id: string }[]
-    }
-    expect(attributionInput.skeleton).toBe(result.draftBody)
-    expect(attributionInput.lines).toContain("그럼 내가 먼저 간다.")
-    expect(attributionInput.candidates.map((candidate) => candidate.id)).toEqual(["elia", "jihoon"])
+      skeleton: string;
+      lines: readonly string[];
+      candidates: readonly { id: string }[];
+    };
+    expect(attributionInput.skeleton).toBe(result.draftBody);
+    expect(attributionInput.lines).toContain('그럼 내가 먼저 간다.');
+    expect(attributionInput.candidates.map((candidate) => candidate.id)).toEqual([
+      'elia',
+      'jihoon',
+    ]);
 
     const bodyLines = [...result.draftBody.matchAll(/[“"]([^”"\n]{4,})[”"]/g)].map((match) =>
-      (match[1] ?? "").trim()
-    )
-    expect(result.dialogueRecord?.turns.map((turn) => turn.text)).toEqual(bodyLines)
-    expect(result.dialogueRecord?.bodyHash).toBe(computeDraftBodyHash(result.draftBody))
-  })
+      (match[1] ?? '').trim(),
+    );
+    expect(result.dialogueRecord?.turns.map((turn) => turn.text)).toEqual(bodyLines);
+    expect(result.dialogueRecord?.bodyHash).toBe(computeDraftBodyHash(result.draftBody));
+  });
 
-  it("returns the record instead of persisting it", async () => {
-    const ai = createRecordingAiService()
-    ai.draftSceneSkeleton.mockResolvedValueOnce(skeletonWithDialogue)
+  it('returns the record instead of persisting it', async () => {
+    const ai = createRecordingAiService();
+    ai.draftSceneSkeleton.mockResolvedValueOnce(skeletonWithDialogue);
     ai.expandSceneSection.mockImplementation(async (input) =>
-      expandWithExtraDialogue((input as { section: string }).section)
-    )
+      expandWithExtraDialogue((input as { section: string }).section),
+    );
 
     const result = await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: contextFor([eliaCard], "본문"),
+      sceneStem: '01-opening',
+      context: contextFor([eliaCard], '본문'),
       aiService: ai,
-      format: "novel"
-    })
+      format: 'novel',
+    });
 
-    expect(result.dialogueRecord).toBeDefined()
-    expect(result.dialogueRecord?.sceneStem).toBe("01-opening")
-  })
+    expect(result.dialogueRecord).toBeDefined();
+    expect(result.dialogueRecord?.sceneStem).toBe('01-opening');
+  });
 
-  it("records unknown speakers and keeps generating when attribution throws", async () => {
-    const ai = createRecordingAiService()
-    ai.draftSceneSkeleton.mockResolvedValueOnce(skeletonWithDialogue)
+  it('records unknown speakers and keeps generating when attribution throws', async () => {
+    const ai = createRecordingAiService();
+    ai.draftSceneSkeleton.mockResolvedValueOnce(skeletonWithDialogue);
     ai.expandSceneSection.mockImplementation(async (input) =>
-      expandWithExtraDialogue((input as { section: string }).section)
-    )
-    ai.attributeSceneDialogue.mockRejectedValueOnce(new Error("provider down"))
+      expandWithExtraDialogue((input as { section: string }).section),
+    );
+    ai.attributeSceneDialogue.mockRejectedValueOnce(new Error('provider down'));
 
     const result = await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: contextFor([eliaCard, jihoonCard], "본문"),
+      sceneStem: '01-opening',
+      context: contextFor([eliaCard, jihoonCard], '본문'),
       aiService: ai,
-      format: "novel"
-    })
+      format: 'novel',
+    });
 
-    expect(result.draftBody.length).toBeGreaterThan(0)
-    expect(draftWarningMessages(result.warnings).join(" ")).not.toContain("귀속")
+    expect(result.draftBody.length).toBeGreaterThan(0);
+    expect(draftWarningMessages(result.warnings).join(' ')).not.toContain('귀속');
     expect(new Set(result.dialogueRecord?.turns.map((turn) => turn.speaker))).toEqual(
-      new Set(["unknown"])
-    )
-  })
+      new Set(['unknown']),
+    );
+  });
 
-  it("tells each expansion its share of the sentence-frame limit (#188)", async () => {
-    const ai = createRecordingAiService()
+  it('tells each expansion its share of the sentence-frame limit (#188)', async () => {
+    const ai = createRecordingAiService();
 
     await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: contextFor([eliaCard], "본문"),
+      sceneStem: '01-opening',
+      context: contextFor([eliaCard], '본문'),
       aiService: ai,
-      format: "novel"
-    })
+      format: 'novel',
+    });
 
-    const expansionInput = ai.expandSceneSection.mock.calls[0]?.[0] as { sentenceFrameLimit?: string }
-    expect(expansionInput.sentenceFrameLimit).toContain("«괜히»")
-  })
+    const expansionInput = ai.expandSceneSection.mock.calls[0]?.[0] as {
+      sentenceFrameLimit?: string;
+    };
+    expect(expansionInput.sentenceFrameLimit).toContain('«괜히»');
+  });
 
-  it("proofreads the expanded draft and fixes the syllables that broke (#188)", async () => {
-    const ai = createRecordingAiService()
-    ai.expandSceneSection.mockResolvedValue(`${longProse("살붙인 본문")}\n\n성재는 벌써 반쯜 몸을 돌렸다.`)
+  it('proofreads the expanded draft and fixes the syllables that broke (#188)', async () => {
+    const ai = createRecordingAiService();
+    ai.expandSceneSection.mockResolvedValue(
+      `${longProse('살붙인 본문')}\n\n성재는 벌써 반쯜 몸을 돌렸다.`,
+    );
     ai.proofreadSceneText.mockResolvedValue([
-      { before: "반쯜", after: "반쯤" },
-      { before: "살붙인 본문", after: "완전히 새로 쓴 아주 다른 본문" }
-    ])
+      { before: '반쯜', after: '반쯤' },
+      { before: '살붙인 본문', after: '완전히 새로 쓴 아주 다른 본문' },
+    ]);
 
-    const stages: string[] = []
+    const stages: string[] = [];
     const result = await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: contextFor([eliaCard], "본문"),
+      sceneStem: '01-opening',
+      context: contextFor([eliaCard], '본문'),
       aiService: ai,
-      format: "novel",
+      format: 'novel',
       onProgress: (stage): void => {
-        stages.push(stage)
-      }
-    })
+        stages.push(stage);
+      },
+    });
 
     const suspects: string[] = ai.proofreadSceneText.mock.calls.flatMap(
-      (call) => (call[0] as { suspects: readonly string[] }).suspects
-    )
-    expect(suspects.join(" ")).toContain("반쯜")
-    expect(result.draftBody).toContain("반쯤 몸을")
-    expect(result.draftBody).not.toContain("반쯜")
-    expect(result.draftBody).toContain("살붙인 본문")
-    expect(stages.indexOf("proofreadDraft")).toBeGreaterThan(stages.lastIndexOf("expandSection"))
-    expect(sceneDefaultStageIds.indexOf("proofreadDraft")).toBeLessThan(
-      sceneDefaultStageIds.indexOf("attributeDialogue")
-    )
-  })
+      (call) => (call[0] as { suspects: readonly string[] }).suspects,
+    );
+    expect(suspects.join(' ')).toContain('반쯜');
+    expect(result.draftBody).toContain('반쯤 몸을');
+    expect(result.draftBody).not.toContain('반쯜');
+    expect(result.draftBody).toContain('살붙인 본문');
+    expect(stages.indexOf('proofreadDraft')).toBeGreaterThan(stages.lastIndexOf('expandSection'));
+    expect(sceneDefaultStageIds.indexOf('proofreadDraft')).toBeLessThan(
+      sceneDefaultStageIds.indexOf('attributeDialogue'),
+    );
+  });
 
-  it("keeps the draft and warns when proofreading fails or leaves a broken syllable", async () => {
-    const ai = createRecordingAiService()
-    ai.expandSceneSection.mockResolvedValue(`${longProse("살붙인 본문")}\n\n길이 길게 느껴졠다.`)
+  it('keeps the draft and warns when proofreading fails or leaves a broken syllable', async () => {
+    const ai = createRecordingAiService();
+    ai.expandSceneSection.mockResolvedValue(`${longProse('살붙인 본문')}\n\n길이 길게 느껴졠다.`);
     ai.proofreadSceneText.mockRejectedValue(
-      new AiProviderError("generation-failed", "mock", "교정 실패")
-    )
+      new AiProviderError('generation-failed', 'mock', '교정 실패'),
+    );
 
     const result = await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: contextFor([eliaCard], "본문"),
+      sceneStem: '01-opening',
+      context: contextFor([eliaCard], '본문'),
       aiService: ai,
-      format: "novel"
-    })
+      format: 'novel',
+    });
 
-    expect(result.draftBody).toContain("느껴졠다")
-    expect(draftWarningMessages(result.warnings).join(" ")).toContain("교정 실패")
-    expect(draftWarningMessages(result.warnings).join(" ")).toContain("깨진 글자 1곳")
-  })
+    expect(result.draftBody).toContain('느껴졠다');
+    expect(draftWarningMessages(result.warnings).join(' ')).toContain('교정 실패');
+    expect(draftWarningMessages(result.warnings).join(' ')).toContain('깨진 글자 1곳');
+  });
 
   it("feeds the character's earlier lines into the polish call", async () => {
-    const ai = createRecordingAiService()
-    ai.draftSceneSkeleton.mockResolvedValueOnce("엘리아가 말했다. “가자, 지금.”")
+    const ai = createRecordingAiService();
+    ai.draftSceneSkeleton.mockResolvedValueOnce('엘리아가 말했다. “가자, 지금.”');
     const corpus = createRecordingCorpus([
       {
-        sceneStem: "01-opening",
-        bodyHash: computeDraftBodyHash("이전 씬"),
-        turns: [{ index: 1, speaker: "elia", text: "값보다 내력이 먼저입니다." }]
-      }
-    ])
+        sceneStem: '01-opening',
+        bodyHash: computeDraftBodyHash('이전 씬'),
+        turns: [{ index: 1, speaker: 'elia', text: '값보다 내력이 먼저입니다.' }],
+      },
+    ]);
 
     await runSceneGenerationPipeline({
-      sceneStem: "02-next",
-      context: contextFor([eliaCard], "본문"),
+      sceneStem: '02-next',
+      context: contextFor([eliaCard], '본문'),
       aiService: ai,
-      format: "novel",
-      dialogueCorpus: corpus
-    })
+      format: 'novel',
+      dialogueCorpus: corpus,
+    });
 
     const polishInput = ai.polishSceneDialogue.mock.calls[0]?.[0] as {
-      character: { samples: readonly string[] }
-    }
-    expect(polishInput.character.samples).toEqual(["값보다 내력이 먼저입니다."])
-  })
+      character: { samples: readonly string[] };
+    };
+    expect(polishInput.character.samples).toEqual(['값보다 내력이 먼저입니다.']);
+  });
 
   it("shows each polish call the other characters' voice line", async () => {
-    const ai = createRecordingAiService()
-    ai.draftSceneSkeleton.mockResolvedValueOnce("엘리아가 말했다. “가자, 지금.” 지훈이 답했다. “그래, 가자고.”")
-    const jihoon = { type: "character", id: "jihoon", name: "지훈", role: "main", voice: ["느릿한 사투리"] } as const
+    const ai = createRecordingAiService();
+    ai.draftSceneSkeleton.mockResolvedValueOnce(
+      '엘리아가 말했다. “가자, 지금.” 지훈이 답했다. “그래, 가자고.”',
+    );
+    const jihoon = {
+      type: 'character',
+      id: 'jihoon',
+      name: '지훈',
+      role: 'main',
+      voice: ['느릿한 사투리'],
+    } as const;
 
     await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: contextFor([{ ...eliaCard, voice: ["짧은 존댓말", "단정함"] }, jihoon], "본문"),
+      sceneStem: '01-opening',
+      context: contextFor([{ ...eliaCard, voice: ['짧은 존댓말', '단정함'] }, jihoon], '본문'),
       aiService: ai,
-      format: "novel"
-    })
+      format: 'novel',
+    });
 
     const inputs = ai.polishSceneDialogue.mock.calls.map(
-      (call) => call[0] as { character: { name: string }; otherVoices?: Record<string, string> }
-    )
-    expect(inputs.find((input) => input.character.name === "엘리아")?.otherVoices).toEqual({ 지훈: "느릿한 사투리" })
-    expect(inputs.find((input) => input.character.name === "지훈")?.otherVoices).toEqual({ 엘리아: "짧은 존댓말" })
-  })
+      (call) => call[0] as { character: { name: string }; otherVoices?: Record<string, string> },
+    );
+    expect(inputs.find((input) => input.character.name === '엘리아')?.otherVoices).toEqual({
+      지훈: '느릿한 사투리',
+    });
+    expect(inputs.find((input) => input.character.name === '지훈')?.otherVoices).toEqual({
+      엘리아: '짧은 존댓말',
+    });
+  });
 
   it("fills the first scene's samples from the notes' quoted lines", async () => {
-    const ai = createRecordingAiService()
-    ai.draftSceneSkeleton.mockResolvedValueOnce("엘리아가 말했다. “가자, 지금.”")
+    const ai = createRecordingAiService();
+    ai.draftSceneSkeleton.mockResolvedValueOnce('엘리아가 말했다. “가자, 지금.”');
     const corpus: ISceneDialogueCorpus = {
       loadCorpus: async () => [],
-      loadVoiceSeeds: async () => ({ characters: { elia: ["값보다 내력이 먼저입니다.", "응."] } })
-    }
+      loadVoiceSeeds: async () => ({ characters: { elia: ['값보다 내력이 먼저입니다.', '응.'] } }),
+    };
 
     await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: contextFor([eliaCard], "본문"),
+      sceneStem: '01-opening',
+      context: contextFor([eliaCard], '본문'),
       aiService: ai,
-      format: "novel",
-      dialogueCorpus: corpus
-    })
+      format: 'novel',
+      dialogueCorpus: corpus,
+    });
 
     const polishInput = ai.polishSceneDialogue.mock.calls[0]?.[0] as {
-      character: { samples: readonly string[] }
-    }
-    expect(polishInput.character.samples).toEqual(["값보다 내력이 먼저입니다."])
-  })
+      character: { samples: readonly string[] };
+    };
+    expect(polishInput.character.samples).toEqual(['값보다 내력이 먼저입니다.']);
+  });
 
-  it("never samples a scene that comes after the one being generated", async () => {
-    const ai = createRecordingAiService()
-    ai.draftSceneSkeleton.mockResolvedValueOnce("엘리아가 말했다. “가자, 지금.”")
+  it('never samples a scene that comes after the one being generated', async () => {
+    const ai = createRecordingAiService();
+    ai.draftSceneSkeleton.mockResolvedValueOnce('엘리아가 말했다. “가자, 지금.”');
     const corpus = createRecordingCorpus([
       {
-        sceneStem: "01-opening",
-        bodyHash: computeDraftBodyHash("앞 씬"),
-        turns: [{ index: 1, speaker: "elia", text: "앞 씬에서 한 말입니다." }]
+        sceneStem: '01-opening',
+        bodyHash: computeDraftBodyHash('앞 씬'),
+        turns: [{ index: 1, speaker: 'elia', text: '앞 씬에서 한 말입니다.' }],
       },
       {
-        sceneStem: "09-later",
-        bodyHash: computeDraftBodyHash("뒤 씬"),
-        turns: [{ index: 1, speaker: "elia", text: "뒤 씬에서 할 말입니다." }]
-      }
-    ])
+        sceneStem: '09-later',
+        bodyHash: computeDraftBodyHash('뒤 씬'),
+        turns: [{ index: 1, speaker: 'elia', text: '뒤 씬에서 할 말입니다.' }],
+      },
+    ]);
 
     await runSceneGenerationPipeline({
-      sceneStem: "02-next",
-      context: contextFor([eliaCard], "본문"),
+      sceneStem: '02-next',
+      context: contextFor([eliaCard], '본문'),
       aiService: ai,
-      format: "novel",
-      dialogueCorpus: corpus
-    })
+      format: 'novel',
+      dialogueCorpus: corpus,
+    });
 
     const polishInput = ai.polishSceneDialogue.mock.calls[0]?.[0] as {
-      character: { samples: readonly string[] }
-    }
-    expect(polishInput.character.samples).toEqual(["앞 씬에서 한 말입니다."])
-  })
-})
+      character: { samples: readonly string[] };
+    };
+    expect(polishInput.character.samples).toEqual(['앞 씬에서 한 말입니다.']);
+  });
+});
 
-describe("배경 묘사 갱신", () => {
+describe('배경 묘사 갱신', () => {
   const marketCard: BackgroundCard = {
-    type: "location",
-    id: "grey-market",
-    name: "회색시장",
+    type: 'location',
+    id: 'grey-market',
+    name: '회색시장',
     characterIds: [],
-    description: ["안개가 낀 무허가 시장"]
-  } as BackgroundCard
+    description: ['안개가 낀 무허가 시장'],
+  } as BackgroundCard;
 
   function createBackgroundStore(cached: string | undefined): {
-    readonly load: ReturnType<typeof vi.fn>
-    readonly save: ReturnType<typeof vi.fn>
+    readonly load: ReturnType<typeof vi.fn>;
+    readonly save: ReturnType<typeof vi.fn>;
   } {
-    return { load: vi.fn(async () => cached), save: vi.fn(async () => undefined) }
+    return { load: vi.fn(async () => cached), save: vi.fn(async () => undefined) };
   }
 
-  it("reuses the cached atmosphere when the location has not appeared before", async () => {
-    const ai = createRecordingAiService()
-    const store = createBackgroundStore("고여 있는 안개")
+  it('reuses the cached atmosphere when the location has not appeared before', async () => {
+    const ai = createRecordingAiService();
+    const store = createBackgroundStore('고여 있는 안개');
 
     await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: contextFor([eliaCard], "본문", marketCard),
+      sceneStem: '01-opening',
+      context: contextFor([eliaCard], '본문', marketCard),
       aiService: ai,
-      format: "novel",
-      backgroundStore: store
-    })
-
-    expect(store.load).toHaveBeenCalledTimes(1)
-    expect(ai.describeBackground).not.toHaveBeenCalled()
-    expect(store.save).not.toHaveBeenCalled()
-  })
-
-  it("regenerates with the excerpt when the same location appears again", async () => {
-    const ai = createRecordingAiService()
-    const store = createBackgroundStore("고여 있는 안개")
-    ai.describeBackground.mockResolvedValueOnce("돌계단 옆에 천막 좌판이 늘었다.")
-
-    await runSceneGenerationPipeline({
-      sceneStem: "05-return",
-      context: contextFor([eliaCard], "본문", marketCard),
-      aiService: ai,
-      format: "novel",
+      format: 'novel',
       backgroundStore: store,
-      backgroundRecentExcerpt: "돌계단 아래 천막 좌판에서 부적을 살폈다."
-    })
+    });
 
-    expect(store.load).not.toHaveBeenCalled()
-    expect(ai.describeBackground).toHaveBeenCalledTimes(1)
-    expect(ai.describeBackground.mock.calls[0]?.[2]).toBe("돌계단 아래 천막 좌판에서 부적을 살폈다.")
+    expect(store.load).toHaveBeenCalledTimes(1);
+    expect(ai.describeBackground).not.toHaveBeenCalled();
+    expect(store.save).not.toHaveBeenCalled();
+  });
 
-    expect(store.save).not.toHaveBeenCalled()
-  })
-})
+  it('regenerates with the excerpt when the same location appears again', async () => {
+    const ai = createRecordingAiService();
+    const store = createBackgroundStore('고여 있는 안개');
+    ai.describeBackground.mockResolvedValueOnce('돌계단 옆에 천막 좌판이 늘었다.');
 
-describe("validatePolishedSkeleton", () => {
-  const base = { characters: [eliaCard, jihoonCard], lengthLimit: 1000 }
+    await runSceneGenerationPipeline({
+      sceneStem: '05-return',
+      context: contextFor([eliaCard], '본문', marketCard),
+      aiService: ai,
+      format: 'novel',
+      backgroundStore: store,
+      backgroundRecentExcerpt: '돌계단 아래 천막 좌판에서 부적을 살폈다.',
+    });
+
+    expect(store.load).not.toHaveBeenCalled();
+    expect(ai.describeBackground).toHaveBeenCalledTimes(1);
+    expect(ai.describeBackground.mock.calls[0]?.[2]).toBe(
+      '돌계단 아래 천막 좌판에서 부적을 살폈다.',
+    );
+
+    expect(store.save).not.toHaveBeenCalled();
+  });
+});
+
+describe('validatePolishedSkeleton', () => {
+  const base = { characters: [eliaCard, jihoonCard], lengthLimit: 1000 };
 
   it("allows a line rewritten in the character's own voice", () => {
     const violations = validatePolishedSkeleton({
       ...base,
       skeleton: '엘리아가 말했다. "가자, 지금."',
-      polished: '엘리아가 말했다. "가자, 지금. 더 늦으면 문이 닫혀."'
-    })
+      polished: '엘리아가 말했다. "가자, 지금. 더 늦으면 문이 닫혀."',
+    });
 
-    expect(violations).toEqual([])
-  })
+    expect(violations).toEqual([]);
+  });
 
-  it("rejects a turn the skeleton never had", () => {
+  it('rejects a turn the skeleton never had', () => {
     const violations = validatePolishedSkeleton({
       ...base,
       skeleton: '엘리아가 말했다. "가자, 지금."',
-      polished: '엘리아가 말했다. "가자, 지금." 그리고 다시 말했다. "지금 가자는 뜻입니까."'
-    })
+      polished: '엘리아가 말했다. "가자, 지금." 그리고 다시 말했다. "지금 가자는 뜻입니까."',
+    });
 
-    expect(violations.map((violation) => violation.kind)).toEqual(["dialogue-count"])
-  })
+    expect(violations.map((violation) => violation.kind)).toEqual(['dialogue-count']);
+  });
 
-  it("rejects a turn the polish quietly dropped", () => {
+  it('rejects a turn the polish quietly dropped', () => {
     const violations = validatePolishedSkeleton({
       ...base,
       skeleton: '엘리아가 말했다. "가자, 지금." 그리고 덧붙였다. "문이 닫히기 전에."',
-      polished: '엘리아가 말했다. "가자, 지금." 그리고 문 쪽을 보았다.'
-    })
+      polished: '엘리아가 말했다. "가자, 지금." 그리고 문 쪽을 보았다.',
+    });
 
-    expect(violations.map((violation) => violation.kind)).toEqual(["dialogue-count"])
-    expect(violations[0]?.detail).toContain("사라졌습니다")
-  })
+    expect(violations.map((violation) => violation.kind)).toEqual(['dialogue-count']);
+    expect(violations[0]?.detail).toContain('사라졌습니다');
+  });
 
-  it("rejects a character the skeleton never had", () => {
+  it('rejects a character the skeleton never had', () => {
     const violations = validatePolishedSkeleton({
       ...base,
       skeleton: '엘리아가 걷는다. "혼자 가."',
-      polished: '엘리아가 걷는다. "혼자 갈게." 지훈이 뒤따랐다.'
-    })
+      polished: '엘리아가 걷는다. "혼자 갈게." 지훈이 뒤따랐다.',
+    });
 
-    expect(violations.map((violation) => violation.kind)).toEqual(["cast"])
-  })
+    expect(violations.map((violation) => violation.kind)).toEqual(['cast']);
+  });
 
-  it("rejects a polish that more than doubled the skeleton", () => {
+  it('rejects a polish that more than doubled the skeleton', () => {
     const violations = validatePolishedSkeleton({
       ...base,
-      skeleton: "엘리아가 걷는다.",
-      polished: "엘리아가 걷는다. " + "말".repeat(2000),
-      lengthLimit: 100
-    })
+      skeleton: '엘리아가 걷는다.',
+      polished: '엘리아가 걷는다. ' + '말'.repeat(2000),
+      lengthLimit: 100,
+    });
 
-    expect(violations.map((violation) => violation.kind)).toContain("too-long")
-  })
-})
+    expect(violations.map((violation) => violation.kind)).toContain('too-long');
+  });
+});
 
-describe("splitSkeletonIntoSections — 장면 전환 우선 절단", () => {
-  const paragraph = (n: number): string => `문단${n} ${"가".repeat(200)}`
+describe('splitSkeletonIntoSections — 장면 전환 우선 절단', () => {
+  const paragraph = (n: number): string => `문단${n} ${'가'.repeat(200)}`;
 
-  it("cuts at a scene break rather than mid-paragraph", () => {
-    const skeleton = [paragraph(1), paragraph(2), "---", paragraph(3), paragraph(4), paragraph(5), "---", paragraph(6), paragraph(7), paragraph(8)].join("\n\n")
+  it('cuts at a scene break rather than mid-paragraph', () => {
+    const skeleton = [
+      paragraph(1),
+      paragraph(2),
+      '---',
+      paragraph(3),
+      paragraph(4),
+      paragraph(5),
+      '---',
+      paragraph(6),
+      paragraph(7),
+      paragraph(8),
+    ].join('\n\n');
 
-    const sections = splitSkeletonIntoSections(skeleton, 3)
+    const sections = splitSkeletonIntoSections(skeleton, 3);
 
-    expect(sections).toHaveLength(3)
-    expect(sections[0]?.endsWith("---")).toBe(true)
-  })
+    expect(sections).toHaveLength(3);
+    expect(sections[0]?.endsWith('---')).toBe(true);
+  });
 
-  it("falls back to paragraph boundaries when the skeleton has no scene break", () => {
-    const skeleton = Array.from({ length: 9 }, (_, i) => paragraph(i + 1)).join("\n\n")
+  it('falls back to paragraph boundaries when the skeleton has no scene break', () => {
+    const skeleton = Array.from({ length: 9 }, (_, i) => paragraph(i + 1)).join('\n\n');
 
-    expect(splitSkeletonIntoSections(skeleton, 3)).toHaveLength(3)
-  })
-})
+    expect(splitSkeletonIntoSections(skeleton, 3)).toHaveLength(3);
+  });
+});
 
-describe("별칭·게임명 오탐 방지", () => {
+describe('별칭·게임명 오탐 방지', () => {
   const zeroCard: CharacterCard = {
-    type: "character",
-    id: "ijun",
-    name: "이준",
-    role: "main",
-    attributes: { gamename: "제로" }
-  }
+    type: 'character',
+    id: 'ijun',
+    name: '이준',
+    role: 'main',
+    attributes: { gamename: '제로' },
+  };
 
-  it("does not flag a game name as a new character in expansion", () => {
+  it('does not flag a game name as a new character in expansion', () => {
     const violations = validateExpandedSection({
-      skeleton: "이준은 스크린샷을 보았다.",
-      section: "이준은 스크린샷을 보았다.",
-      expanded: longProse("사진 속에는 제로라는 이름이 남아 있었다. 이준은 그것을 오래 보았다."),
+      skeleton: '이준은 스크린샷을 보았다.',
+      section: '이준은 스크린샷을 보았다.',
+      expanded: longProse('사진 속에는 제로라는 이름이 남아 있었다. 이준은 그것을 오래 보았다.'),
       characters: [zeroCard],
-      targetLength: 10
-    })
+      targetLength: 10,
+    });
 
-    expect(violations).toEqual([])
-  })
+    expect(violations).toEqual([]);
+  });
 
-  it("does not flag a game name as a new character in polishing", () => {
+  it('does not flag a game name as a new character in polishing', () => {
     const violations = validatePolishedSkeleton({
       skeleton: '이준은 스크린샷을 보았다. "저 자리 기억나?"',
       polished: '이준은 스크린샷을 보았다. "제로, 저 자리 기억나?"',
       characters: [zeroCard],
-      lengthLimit: 1000
-    })
+      lengthLimit: 1000,
+    });
 
-    expect(violations).toEqual([])
-  })
-})
+    expect(violations).toEqual([]);
+  });
+});
 
-describe("출연진은 씬 전체 기준으로 판정한다", () => {
-  it("does not flag a character the section referred to only by pronoun", () => {
+describe('출연진은 씬 전체 기준으로 판정한다', () => {
+  it('does not flag a character the section referred to only by pronoun', () => {
     const violations = validateExpandedSection({
-      skeleton: "엘리아와 지훈이 골목을 지난다. 지훈이 앞장섰다.",
-      section: "그는 골목 끝에서 걸음을 멈췄다.",
-      expanded: longProse("지훈은 골목 끝에서 걸음을 멈췄다. 엘리아가 그 옆에 섰다."),
+      skeleton: '엘리아와 지훈이 골목을 지난다. 지훈이 앞장섰다.',
+      section: '그는 골목 끝에서 걸음을 멈췄다.',
+      expanded: longProse('지훈은 골목 끝에서 걸음을 멈췄다. 엘리아가 그 옆에 섰다.'),
       characters: [eliaCard, jihoonCard],
-      targetLength: 10
-    })
+      targetLength: 10,
+    });
 
-    expect(violations).toEqual([])
-  })
+    expect(violations).toEqual([]);
+  });
 
-  it("still flags a character absent from the whole skeleton", () => {
+  it('still flags a character absent from the whole skeleton', () => {
     const violations = validateExpandedSection({
-      skeleton: "엘리아가 골목을 지난다.",
-      section: "엘리아가 골목을 지난다.",
-      expanded: longProse("엘리아가 골목을 지난다. 지훈이 뒤따라 나타났다."),
+      skeleton: '엘리아가 골목을 지난다.',
+      section: '엘리아가 골목을 지난다.',
+      expanded: longProse('엘리아가 골목을 지난다. 지훈이 뒤따라 나타났다.'),
       characters: [eliaCard, jihoonCard],
-      targetLength: 10
-    })
+      targetLength: 10,
+    });
 
-    expect(violations.map((violation) => violation.kind)).toContain("cast")
-  })
-})
+    expect(violations.map((violation) => violation.kind)).toContain('cast');
+  });
+});
 
-describe("runSceneGenerationPipeline — 배우 뼈대 단계", () => {
-  const actedStages = ["buildPersonas", "describeBackground", "actBeats", "expandSection"] as const
+describe('runSceneGenerationPipeline — 배우 뼈대 단계', () => {
+  const actedStages = ['buildPersonas', 'describeBackground', 'actBeats', 'expandSection'] as const;
   const beats = [
-    { text: "엘리아가 창고 문을 연다", cast: ["elia"], place: "창고", time: "밤 9시" },
-    { text: "지훈이 편지를 내민다", cast: ["elia", "jihoon"], place: "창고", time: "밤 9시 5분" },
-    { text: "지훈이 부두로 나간다", cast: ["jihoon"], place: "부두", time: "밤 9시 20분" }
-  ]
+    { text: '엘리아가 창고 문을 연다', cast: ['elia'], place: '창고', time: '밤 9시' },
+    { text: '지훈이 편지를 내민다', cast: ['elia', 'jihoon'], place: '창고', time: '밤 9시 5분' },
+    { text: '지훈이 부두로 나간다', cast: ['jihoon'], place: '부두', time: '밤 9시 20분' },
+  ];
 
   const stageWarnings = (warnings: readonly string[]): string[] =>
-    warnings.filter((warning) => warning.startsWith("배우 뼈대"))
+    warnings.filter((warning) => warning.startsWith('배우 뼈대'));
 
   function actedContext(cardBeats: typeof beats | null = beats): SceneContext {
     const scene = {
-      ...sceneFile("엘리아와 지훈이 창고에 있다."),
-      card: { type: "scene", id: "01-opening", endState: "지훈이 사라진다.", ...(cardBeats ? { beats: cardBeats } : {}) }
-    } as SceneFile
-    return { scene, characters: [eliaCard, jihoonCard] }
+      ...sceneFile('엘리아와 지훈이 창고에 있다.'),
+      card: {
+        type: 'scene',
+        id: '01-opening',
+        endState: '지훈이 사라진다.',
+        ...(cardBeats ? { beats: cardBeats } : {}),
+      },
+    } as SceneFile;
+    return { scene, characters: [eliaCard, jihoonCard] };
   }
 
-  it("asks each cast member, then the arbiter and the judge, once per beat, and assembles a marked skeleton", async () => {
-    const progress: [SceneGenerationPipelineStage, number, number][] = []
-    const ai = createRecordingAiService()
+  it('asks each cast member, then the arbiter and the judge, once per beat, and assembles a marked skeleton', async () => {
+    const progress: [SceneGenerationPipelineStage, number, number][] = [];
+    const ai = createRecordingAiService();
 
     const result = await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
+      sceneStem: '01-opening',
       context: actedContext(),
       aiService: ai,
-      format: "novel",
-      characterKnowledge: new Map([["지훈", ["엘리아가 편지를 기다린다"]]]),
-      styleDirective: { narration: { person: "first", focal: "엘리아" } },
+      format: 'novel',
+      characterKnowledge: new Map([['지훈', ['엘리아가 편지를 기다린다']]]),
+      styleDirective: { narration: { person: 'first', focal: '엘리아' } },
       onProgress: (stage, current, total) => progress.push([stage, current, total]),
-      stages: actedStages
-    })
+      stages: actedStages,
+    });
 
-    expect(progress.filter(([stage]) => stage === "actBeats")).toEqual([["actBeats", 1, 3], ["actBeats", 2, 3], ["actBeats", 3, 3]])
-    expect(ai.draftSceneSkeleton).not.toHaveBeenCalled()
-    expect(ai.proposeBeatAction).toHaveBeenCalledTimes(4)
-    expect(ai.arbitrateBeat).toHaveBeenCalledTimes(3)
-    expect(ai.judgeBeat).toHaveBeenCalledTimes(3)
+    expect(progress.filter(([stage]) => stage === 'actBeats')).toEqual([
+      ['actBeats', 1, 3],
+      ['actBeats', 2, 3],
+      ['actBeats', 3, 3],
+    ]);
+    expect(ai.draftSceneSkeleton).not.toHaveBeenCalled();
+    expect(ai.proposeBeatAction).toHaveBeenCalledTimes(4);
+    expect(ai.arbitrateBeat).toHaveBeenCalledTimes(3);
+    expect(ai.judgeBeat).toHaveBeenCalledTimes(3);
 
     const secondBeatActors = ai.proposeBeatAction.mock.calls
-      .map((call) => call[0] as { character: { name: string; knowledge: readonly string[]; witnessed?: string }; beat: { number: number; coordinates?: string }; nextBeats: readonly { number: number }[] })
-      .filter((input) => input.beat.number === 2)
-    expect(secondBeatActors.map((input) => input.character.name)).toEqual(["엘리아", "지훈"])
-    expect(secondBeatActors[1]?.character.knowledge).toEqual(["엘리아가 편지를 기다린다"])
-    expect(secondBeatActors[1]?.character.witnessed).toBe("")
-    expect(secondBeatActors[0]?.character.witnessed).toContain("대목 1 본문")
-    expect(secondBeatActors[0]?.beat.coordinates).toBe("출연: 엘리아, 지훈 / 장소: 창고 / 시각: 밤 9시 5분")
-    expect(secondBeatActors[0]?.nextBeats.map((beat) => beat.number)).toEqual([3])
+      .map(
+        (call) =>
+          call[0] as {
+            character: { name: string; knowledge: readonly string[]; witnessed?: string };
+            beat: { number: number; coordinates?: string };
+            nextBeats: readonly { number: number }[];
+          },
+      )
+      .filter((input) => input.beat.number === 2);
+    expect(secondBeatActors.map((input) => input.character.name)).toEqual(['엘리아', '지훈']);
+    expect(secondBeatActors[1]?.character.knowledge).toEqual(['엘리아가 편지를 기다린다']);
+    expect(secondBeatActors[1]?.character.witnessed).toBe('');
+    expect(secondBeatActors[0]?.character.witnessed).toContain('대목 1 본문');
+    expect(secondBeatActors[0]?.beat.coordinates).toBe(
+      '출연: 엘리아, 지훈 / 장소: 창고 / 시각: 밤 9시 5분',
+    );
+    expect(secondBeatActors[0]?.nextBeats.map((beat) => beat.number)).toEqual([3]);
 
-    const arbiterInputs = ai.arbitrateBeat.mock.calls.map((call) => call[0] as { innerCharacter?: string; endState?: string; priorPassages?: string; proposals: readonly { name: string }[] })
-    expect(arbiterInputs[0]).toMatchObject({ innerCharacter: "엘리아" })
-    expect(arbiterInputs[2]?.innerCharacter).toBeUndefined()
-    expect(arbiterInputs[2]).toMatchObject({ endState: "지훈이 사라진다." })
-    expect(arbiterInputs[1]?.proposals.map((proposal) => proposal.name)).toEqual(["엘리아", "지훈"])
-    expect(arbiterInputs[1]?.priorPassages).toContain("[대목 1]")
+    const arbiterInputs = ai.arbitrateBeat.mock.calls.map(
+      (call) =>
+        call[0] as {
+          innerCharacter?: string;
+          endState?: string;
+          priorPassages?: string;
+          proposals: readonly { name: string }[];
+        },
+    );
+    expect(arbiterInputs[0]).toMatchObject({ innerCharacter: '엘리아' });
+    expect(arbiterInputs[2]?.innerCharacter).toBeUndefined();
+    expect(arbiterInputs[2]).toMatchObject({ endState: '지훈이 사라진다.' });
+    expect(arbiterInputs[1]?.proposals.map((proposal) => proposal.name)).toEqual([
+      '엘리아',
+      '지훈',
+    ]);
+    expect(arbiterInputs[1]?.priorPassages).toContain('[대목 1]');
 
-    expect(result.skeleton).toBe(["대목 1 본문 “대사 1입니다.”", "대목 2 본문 “대사 2입니다.”", "---", "대목 3 본문 “대사 3입니다.”"].join("\n\n"))
+    expect(result.skeleton).toBe(
+      [
+        '대목 1 본문 “대사 1입니다.”',
+        '대목 2 본문 “대사 2입니다.”',
+        '---',
+        '대목 3 본문 “대사 3입니다.”',
+      ].join('\n\n'),
+    );
     expect(result.sceneCoordinates).toEqual([
-      "1. 시각: 밤 9시 / 장소: 창고 / 있는 사람: 엘리아",
-      "2. 시각: 밤 9시 20분 / 장소: 부두 / 있는 사람: 지훈"
-    ])
-    expect(stageWarnings(draftWarningMessages(result.warnings))).toEqual([])
-    expect(result.draftBody).toContain("살붙인 본문")
-  })
+      '1. 시각: 밤 9시 / 장소: 창고 / 있는 사람: 엘리아',
+      '2. 시각: 밤 9시 20분 / 장소: 부두 / 있는 사람: 지훈',
+    ]);
+    expect(stageWarnings(draftWarningMessages(result.warnings))).toEqual([]);
+    expect(result.draftBody).toContain('살붙인 본문');
+  });
 
   it("re-arbitrates once with the judge's reasons and warns when they remain", async () => {
-    const ai = createRecordingAiService()
+    const ai = createRecordingAiService();
     ai.judgeBeat.mockImplementation(async (input) => {
-      const names = (input as { characters: readonly { name: string }[] }).characters.map((c) => c.name)
+      const names = (input as { characters: readonly { name: string }[] }).characters.map(
+        (c) => c.name,
+      );
       return (input as { beat: { number: number } }).beat.number === 2
-        ? { ...verdictFor(names, 2), scores: [{ name: "지훈", score: 2, reason: "모르는 사실을 말함", avoid: "먼저 밝히기" }] }
-        : verdictFor(names)
-    })
+        ? {
+            ...verdictFor(names, 2),
+            scores: [
+              { name: '지훈', score: 2, reason: '모르는 사실을 말함', avoid: '먼저 밝히기' },
+            ],
+          }
+        : verdictFor(names);
+    });
 
     const result = await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
+      sceneStem: '01-opening',
       context: actedContext(),
       aiService: ai,
-      format: "novel",
-      stages: actedStages
-    })
+      format: 'novel',
+      stages: actedStages,
+    });
 
-    expect(ai.arbitrateBeat).toHaveBeenCalledTimes(4)
-    expect((ai.arbitrateBeat.mock.calls[2]?.[0] as { retryReasons?: readonly string[] }).retryReasons).toEqual([
-      "지훈: 모르는 사실을 말함 → 피할 것: 먼저 밝히기"
-    ])
-    expect(stageWarnings(draftWarningMessages(result.warnings))).toEqual(["배우 뼈대 2번 대목: 지훈: 모르는 사실을 말함 → 피할 것: 먼저 밝히기"])
+    expect(ai.arbitrateBeat).toHaveBeenCalledTimes(4);
+    expect(
+      (ai.arbitrateBeat.mock.calls[2]?.[0] as { retryReasons?: readonly string[] }).retryReasons,
+    ).toEqual(['지훈: 모르는 사실을 말함 → 피할 것: 먼저 밝히기']);
+    expect(stageWarnings(draftWarningMessages(result.warnings))).toEqual([
+      '배우 뼈대 2번 대목: 지훈: 모르는 사실을 말함 → 피할 것: 먼저 밝히기',
+    ]);
 
     const thirdBeatActor = ai.proposeBeatAction.mock.calls
-      .map((call) => call[0] as { character: { name: string; notes?: readonly string[] }; beat: { number: number } })
-      .find((input) => input.beat.number === 3)
-    expect(thirdBeatActor?.character.notes).toEqual(["먼저 밝히기"])
-  })
+      .map(
+        (call) =>
+          call[0] as {
+            character: { name: string; notes?: readonly string[] };
+            beat: { number: number };
+          },
+      )
+      .find((input) => input.beat.number === 3);
+    expect(thirdBeatActor?.character.notes).toEqual(['먼저 밝히기']);
+  });
 
   it("re-arbitrates when a character's catchphrases exceed the per-beat cap, unless the beat quotes them", async () => {
-    const ai = createRecordingAiService()
-    ai.arbitrateBeat.mockImplementation(async () => ({ choice: "", passage: "“뭐 별거는 아닌데.” “뭐 별거는 아닌데, 진짜.”" }))
-    const talkative: CharacterCard = { ...eliaCard, catchphrases: ["뭐 별거는 아닌데"] }
-    const context = { ...actedContext([
-      { text: "엘리아가 말을 돌린다", cast: ["elia"], place: "창고", time: "밤" },
-      { text: '엘리아가 "뭐 별거는 아닌데"를 두 번 되뇐다', cast: ["elia"], place: "창고", time: "밤" }
-    ]), characters: [talkative, jihoonCard] }
-
-    const result = await runSceneGenerationPipeline({ sceneStem: "01-opening", context, aiService: ai, format: "novel", stages: actedStages })
-
-    expect(ai.arbitrateBeat).toHaveBeenCalledTimes(3)
-    expect(stageWarnings(draftWarningMessages(result.warnings))).toHaveLength(1)
-    expect(stageWarnings(draftWarningMessages(result.warnings))[0]).toContain("배우 뼈대 1번 대목")
-    expect(stageWarnings(draftWarningMessages(result.warnings))[0]).toContain("입버릇")
-  })
-
-  it("asks an actor again when a proposed line breaks the length cap", async () => {
-    const ai = createRecordingAiService()
-    ai.proposeBeatAction.mockImplementationOnce(async () => ({
-      inner: "",
-      options: [{ strategy: "연설", action: "", lines: ["가".repeat(81)] }]
-    }))
-
-    await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: actedContext([{ text: "엘리아가 입을 연다", cast: ["elia"], place: "창고" }]),
-      aiService: ai,
-      format: "novel",
-      stages: actedStages
-    })
-
-    expect(ai.proposeBeatAction).toHaveBeenCalledTimes(2)
-    expect((ai.proposeBeatAction.mock.calls[1]?.[0] as { overlongLines?: readonly string[] }).overlongLines).toEqual([
-      `선택지 1: "${"가".repeat(81)}" (81자)`
-    ])
-  })
-
-  it("falls back to the skeleton call, with a warning, when the card has no beats", async () => {
-    const ai = createRecordingAiService()
+    const ai = createRecordingAiService();
+    ai.arbitrateBeat.mockImplementation(async () => ({
+      choice: '',
+      passage: '“뭐 별거는 아닌데.” “뭐 별거는 아닌데, 진짜.”',
+    }));
+    const talkative: CharacterCard = { ...eliaCard, catchphrases: ['뭐 별거는 아닌데'] };
+    const context = {
+      ...actedContext([
+        { text: '엘리아가 말을 돌린다', cast: ['elia'], place: '창고', time: '밤' },
+        {
+          text: '엘리아가 "뭐 별거는 아닌데"를 두 번 되뇐다',
+          cast: ['elia'],
+          place: '창고',
+          time: '밤',
+        },
+      ]),
+      characters: [talkative, jihoonCard],
+    };
 
     const result = await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
+      sceneStem: '01-opening',
+      context,
+      aiService: ai,
+      format: 'novel',
+      stages: actedStages,
+    });
+
+    expect(ai.arbitrateBeat).toHaveBeenCalledTimes(3);
+    expect(stageWarnings(draftWarningMessages(result.warnings))).toHaveLength(1);
+    expect(stageWarnings(draftWarningMessages(result.warnings))[0]).toContain('배우 뼈대 1번 대목');
+    expect(stageWarnings(draftWarningMessages(result.warnings))[0]).toContain('입버릇');
+  });
+
+  it('asks an actor again when a proposed line breaks the length cap', async () => {
+    const ai = createRecordingAiService();
+    ai.proposeBeatAction.mockImplementationOnce(async () => ({
+      inner: '',
+      options: [{ strategy: '연설', action: '', lines: ['가'.repeat(81)] }],
+    }));
+
+    await runSceneGenerationPipeline({
+      sceneStem: '01-opening',
+      context: actedContext([{ text: '엘리아가 입을 연다', cast: ['elia'], place: '창고' }]),
+      aiService: ai,
+      format: 'novel',
+      stages: actedStages,
+    });
+
+    expect(ai.proposeBeatAction).toHaveBeenCalledTimes(2);
+    expect(
+      (ai.proposeBeatAction.mock.calls[1]?.[0] as { overlongLines?: readonly string[] })
+        .overlongLines,
+    ).toEqual([`선택지 1: "${'가'.repeat(81)}" (81자)`]);
+  });
+
+  it('falls back to the skeleton call, with a warning, when the card has no beats', async () => {
+    const ai = createRecordingAiService();
+
+    const result = await runSceneGenerationPipeline({
+      sceneStem: '01-opening',
       context: actedContext(null),
       aiService: ai,
-      format: "novel",
-      stages: actedStages
-    })
+      format: 'novel',
+      stages: actedStages,
+    });
 
-    expect(ai.proposeBeatAction).not.toHaveBeenCalled()
-    expect(ai.draftSceneSkeleton).toHaveBeenCalledTimes(1)
-    expect(result.skeleton).toBe("뼈대 본문")
-    expect(stageWarnings(draftWarningMessages(result.warnings))).toEqual(["배우 뼈대: 씬 카드에 비트가 없어 뼈대 단계로 대신 썼습니다."])
-  })
+    expect(ai.proposeBeatAction).not.toHaveBeenCalled();
+    expect(ai.draftSceneSkeleton).toHaveBeenCalledTimes(1);
+    expect(result.skeleton).toBe('뼈대 본문');
+    expect(stageWarnings(draftWarningMessages(result.warnings))).toEqual([
+      '배우 뼈대: 씬 카드에 비트가 없어 뼈대 단계로 대신 썼습니다.',
+    ]);
+  });
 
-  it("stays out of the bundled plan but stands in for the skeleton when a spec names it", () => {
-    expect(sceneDefaultStageIds).not.toContain("actBeats")
+  it('stays out of the bundled plan but stands in for the skeleton when a spec names it', () => {
+    expect(sceneDefaultStageIds).not.toContain('actBeats');
     try {
       expect(
         overrideScenePipelinePlan({
           version: 1,
-          stages: ["buildPersonas", "describeBackground", "actBeats", "polishDialogue", "expandSection"]
-        })
-      ).toEqual(["buildPersonas", "describeBackground", "actBeats", "polishDialogue", "expandSection"])
+          stages: [
+            'buildPersonas',
+            'describeBackground',
+            'actBeats',
+            'polishDialogue',
+            'expandSection',
+          ],
+        }),
+      ).toEqual([
+        'buildPersonas',
+        'describeBackground',
+        'actBeats',
+        'polishDialogue',
+        'expandSection',
+      ]);
     } finally {
-      resetScenePipelinePlan()
+      resetScenePipelinePlan();
     }
-  })
-})
+  });
+});
 
-describe("runSceneGenerationPipeline — 단계 계획", () => {
-  it("runs the bundled stage order when nothing is laid over it", () => {
-    expect(resolveScenePipelinePlan()).toEqual(sceneDefaultStageIds)
-  })
+describe('runSceneGenerationPipeline — 단계 계획', () => {
+  it('runs the bundled stage order when nothing is laid over it', () => {
+    expect(resolveScenePipelinePlan()).toEqual(sceneDefaultStageIds);
+  });
 
-  it("skips a stage the plan leaves out and hands the skeleton straight to expansion", async () => {
-    const progress: SceneGenerationPipelineStage[] = []
-    const ai = createRecordingAiService()
+  it('skips a stage the plan leaves out and hands the skeleton straight to expansion', async () => {
+    const progress: SceneGenerationPipelineStage[] = [];
+    const ai = createRecordingAiService();
 
     const result = await runSceneGenerationPipeline({
-      sceneStem: "01-opening",
-      context: contextFor([eliaCard, jihoonCard], "엘리아와 지훈이 학교에 있다."),
+      sceneStem: '01-opening',
+      context: contextFor([eliaCard, jihoonCard], '엘리아와 지훈이 학교에 있다.'),
       aiService: ai,
-      format: "novel",
+      format: 'novel',
       onProgress: (stage) => progress.push(stage),
-      stages: ["buildPersonas", "describeBackground", "draftSkeleton", "expandSection"]
-    })
+      stages: ['buildPersonas', 'describeBackground', 'draftSkeleton', 'expandSection'],
+    });
 
-    expect(progress).toEqual(["buildPersonas", "buildPersonas", "draftSkeleton", "expandSection"])
-    expect(ai.polishSceneDialogue).not.toHaveBeenCalled()
-    expect(ai.attributeSceneDialogue).not.toHaveBeenCalled()
-    expect(result.skeleton).toBe("뼈대 본문")
-    expect(result.dialogueRecord).toBeUndefined()
-  })
+    expect(progress).toEqual(['buildPersonas', 'buildPersonas', 'draftSkeleton', 'expandSection']);
+    expect(ai.polishSceneDialogue).not.toHaveBeenCalled();
+    expect(ai.attributeSceneDialogue).not.toHaveBeenCalled();
+    expect(result.skeleton).toBe('뼈대 본문');
+    expect(result.dialogueRecord).toBeUndefined();
+  });
 
-  it("takes the order from a spec laid over the bundled one, and refuses a spec that drops the skeleton", async () => {
+  it('takes the order from a spec laid over the bundled one, and refuses a spec that drops the skeleton', async () => {
     try {
       overrideScenePipelinePlan({
         version: 1,
         stages: [
-          "buildPersonas",
-          "describeBackground",
-          "draftSkeleton",
-          { id: "polishDialogue", enabled: false },
-          "expandSection"
-        ]
-      })
-      const ai = createRecordingAiService()
+          'buildPersonas',
+          'describeBackground',
+          'draftSkeleton',
+          { id: 'polishDialogue', enabled: false },
+          'expandSection',
+        ],
+      });
+      const ai = createRecordingAiService();
 
       await runSceneGenerationPipeline({
-        sceneStem: "01-opening",
-        context: contextFor([eliaCard, jihoonCard], "엘리아와 지훈이 학교에 있다."),
+        sceneStem: '01-opening',
+        context: contextFor([eliaCard, jihoonCard], '엘리아와 지훈이 학교에 있다.'),
         aiService: ai,
-        format: "novel"
-      })
+        format: 'novel',
+      });
 
-      expect(ai.polishSceneDialogue).not.toHaveBeenCalled()
+      expect(ai.polishSceneDialogue).not.toHaveBeenCalled();
       expect(() =>
         overrideScenePipelinePlan({
           version: 1,
-          stages: ["buildPersonas", "describeBackground", "expandSection"]
-        })
-      ).toThrow("draftSkeleton")
+          stages: ['buildPersonas', 'describeBackground', 'expandSection'],
+        }),
+      ).toThrow('draftSkeleton');
     } finally {
-      resetScenePipelinePlan()
+      resetScenePipelinePlan();
     }
 
-    expect(resolveScenePipelinePlan()).toEqual(sceneDefaultStageIds)
-  })
-})
+    expect(resolveScenePipelinePlan()).toEqual(sceneDefaultStageIds);
+  });
+});

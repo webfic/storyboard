@@ -634,6 +634,7 @@ export class ExpandSectionStage implements ISceneStage {
         backgroundFacts: request.backgroundFacts,
         backgroundConflicts: run.backgroundFactConflicts.map(formatBackgroundFactConflict),
         castFacts: request.castFacts,
+        skeletonFacts: run.skeletonFacts,
         sceneCoordinates: request.sceneCoordinates,
         catchphraseLimits: request.catchphraseBudgets.map(describeCatchphraseBudget),
         ...(request.sentenceFrameBudget === undefined

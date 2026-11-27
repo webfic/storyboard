@@ -22,6 +22,7 @@ export interface SceneRunState {
   sceneCoordinates: SceneCoordinateLedger;
   polishedText: string;
   skeletonCallParagraphs: readonly SkeletonCallParagraphs[];
+  skeletonFacts: readonly string[];
   skeletonBeatStarts: ReadonlyMap<number, number> | undefined;
   dialoguePolish: DialoguePolishSummary | undefined;
   draftBody: string;
@@ -56,6 +57,7 @@ function captureSceneRun(run: SceneRunState): SceneRunSnapshot {
     sceneCoordinates: captureSceneCoordinates(run.sceneCoordinates),
     polishedText: run.polishedText,
     skeletonCallParagraphs: run.skeletonCallParagraphs,
+    ...(run.skeletonFacts.length === 0 ? {} : { skeletonFacts: run.skeletonFacts }),
     ...(run.skeletonBeatStarts === undefined ? {} : { skeletonBeatStarts: [...run.skeletonBeatStarts] }),
     ...(run.dialoguePolish === undefined ? {} : { dialoguePolish: run.dialoguePolish }),
     draftBody: run.draftBody,
@@ -72,6 +74,7 @@ function restoreSceneRun(run: SceneRunState, snapshot: SceneRunSnapshot): void {
   run.sceneCoordinates = restoreSceneCoordinates(snapshot.sceneCoordinates);
   run.polishedText = snapshot.polishedText;
   run.skeletonCallParagraphs = snapshot.skeletonCallParagraphs;
+  run.skeletonFacts = snapshot.skeletonFacts ?? [];
   run.skeletonBeatStarts =
     snapshot.skeletonBeatStarts === undefined ? undefined : new Map(snapshot.skeletonBeatStarts);
   run.dialoguePolish = snapshot.dialoguePolish;

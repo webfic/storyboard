@@ -234,6 +234,7 @@ describe("the whole pipeline is unchanged by an explicit default", () => {
         log.push("background")
         return ""
       }),
+      extractSkeletonFacts: vi.fn(async () => []),
       draftSceneSkeleton: vi.fn(async (input) => {
         skeletonCalls += 1
         const { targetLength } = input as { targetLength?: number }

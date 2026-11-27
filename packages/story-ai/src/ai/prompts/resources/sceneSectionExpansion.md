@@ -52,6 +52,13 @@ prefixCacheTtl: 1h
 {{#hasCastFacts}}
 
 {{/hasCastFacts}}
+{{#hasSkeletonFacts}}
+[뼈대가 정한 사실 — 이 장면에서 이미 정해졌다. 같은 점을 다르게 쓰지 마라]
+{{#skeletonFacts}}
+- {{.}}
+{{/skeletonFacts}}
+
+{{/hasSkeletonFacts}}
 {{#hasSceneCoordinates}}
 [장면 좌표 — 대목마다 시각·장소·있는 사람]
 {{/hasSceneCoordinates}}

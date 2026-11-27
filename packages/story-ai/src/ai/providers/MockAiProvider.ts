@@ -281,6 +281,7 @@ const mockResponseBuilders: Readonly<Partial<Record<AiTaskName, MockResponseBuil
   sceneProofread: (): string => '[]',
   continuityCheck: (): string => '[]',
   draftConsistency: (): string => '[]',
+  skeletonFacts: (): string => '[]',
   beatLocation: (promptSummary: string): string => mockBeatParagraphs(promptSummary),
   cardFactExtraction: (): string =>
     JSON.stringify({ attributes: [], relations: [], arc: { summary: '' } }),

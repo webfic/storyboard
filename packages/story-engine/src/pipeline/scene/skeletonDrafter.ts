@@ -36,7 +36,10 @@ import {
   buildGenerateOptions,
   withAttribution,
 } from '#engine/pipeline/sceneGenerationStages';
-import type { SceneGenerationPipelineAiService, SceneWarning } from '#engine/pipeline/sceneGenerationTypes';
+import type {
+  SceneGenerationPipelineAiService,
+  SceneWarning,
+} from '#engine/pipeline/sceneGenerationTypes';
 import {
   findSeamRepeatViolations,
   validateSceneSkeleton,
@@ -185,6 +188,11 @@ export class SkeletonDrafter {
       run.styleDirective,
       run.tuning.skeletonRatio,
     );
+    const castFacts: string[] = selectSectionCastFacts({
+      characters: run.context.characters,
+      beats: this.beats,
+      beatNumbers: this.beats.map((_, beatIndex) => beatIndex + 1),
+    });
     const base: SkeletonCallInput = {
       narrativeSource: run.narrativeSource,
       ...(run.design.length > 0 ? { design: run.design } : {}),
@@ -192,11 +200,7 @@ export class SkeletonDrafter {
       catchphrases: characterCatchphrases(run.context.characters),
       characterKnowledge: run.input.characterKnowledge,
       speechToOthers: characterSpeechToOthers(run.context.characters),
-      castFacts: selectSectionCastFacts({
-        characters: run.context.characters,
-        beats: this.beats,
-        beatNumbers: this.beats.map((_, beatIndex) => beatIndex + 1),
-      }),
+      castFacts,
       background: run.background,
       backgroundConflicts: run.backgroundFactConflicts.map(formatBackgroundFactConflict),
       previousContext: buildSkeletonContext(run.condensedPreviousContext, run.input.canonFactLines),
@@ -228,6 +232,21 @@ export class SkeletonDrafter {
           });
     run.warnings.push(...skeleton.warnings);
     this.adopt(skeleton.text);
+    run.skeletonFacts = await this.extractSkeletonFacts(castFacts);
+  }
+
+  private async extractSkeletonFacts(castFacts: readonly string[]): Promise<string[]> {
+    const { run } = this;
+    if (run.skeleton.trim().length === 0) {
+      return [];
+    }
+
+    return await run.aiService.extractSkeletonFacts(
+      { skeleton: run.skeleton, narrativeSource: run.narrativeSource, castFacts },
+      withAttribution(buildGenerateOptions(run.providers, 'skeletonFacts'), {
+        primary: run.sceneRef,
+      }),
+    );
   }
 
   private async draftInOneCall(
@@ -248,7 +267,10 @@ export class SkeletonDrafter {
       beats.map((beat) => beatText(beat) ?? ''),
     );
     run.skeletonCallParagraphs = [
-      { beatNumbers: everyBeat.map((beatIndex) => beatIndex + 1), paragraphCount: splitDraftParagraphs(whole.text).length },
+      {
+        beatNumbers: everyBeat.map((beatIndex) => beatIndex + 1),
+        paragraphCount: splitDraftParagraphs(whole.text).length,
+      },
     ];
 
     return {
@@ -322,7 +344,10 @@ export class SkeletonDrafter {
   ): SceneWarning[] {
     return drafts.flatMap((draft, index) => {
       const sectionNumber: number = index + 1;
-      const label: string = skeletonWarningLabel(`뼈대 ${sectionNumber}/${drafts.length}`, draft.retries);
+      const label: string = skeletonWarningLabel(
+        `뼈대 ${sectionNumber}/${drafts.length}`,
+        draft.retries,
+      );
       const kept: SectionViolation[] = [
         ...draft.violations.filter((violation) => violation.kind !== 'missing-beats'),
         ...missingBeatsViolation(draft.missingBeats.filter((beat) => stillMissing.has(beat))),
@@ -419,7 +444,10 @@ export class SkeletonDrafter {
     const withheldTerms: string[] = listAddressTermsCoinedAfter(this.coinedAddresses, lastBeat);
     const coinedNotes: string[] = this.coinedAddresses
       .filter((entry) => callBeats.includes(entry.beatIndex))
-      .map((entry) => `«${entry.term}»: «${beatText(this.beats[entry.beatIndex]) ?? ''}»에서 처음 붙는다`);
+      .map(
+        (entry) =>
+          `«${entry.term}»: «${beatText(this.beats[entry.beatIndex]) ?? ''}»에서 처음 붙는다`,
+      );
 
     return {
       ...input,
@@ -443,7 +471,11 @@ export class SkeletonDrafter {
     }
 
     const statusOf = (text: string): TraceBeatStatus =>
-      coverage.missingBeats.includes(text) ? 'missing' : coverage.reversedBeats.includes(text) ? 'reversed' : 'present';
+      coverage.missingBeats.includes(text)
+        ? 'missing'
+        : coverage.reversedBeats.includes(text)
+          ? 'reversed'
+          : 'present';
     this.run.report({
       kind: 'beats-checked',
       ...(tag.skeletonCallIndex === undefined ? {} : { skeletonCallIndex: tag.skeletonCallIndex }),

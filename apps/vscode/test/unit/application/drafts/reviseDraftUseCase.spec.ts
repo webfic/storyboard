@@ -191,6 +191,28 @@ describe("ReviseDraftUseCase", () => {
     expect(facts).toContain("장면 좌표 1. 시각: 아침 / 장소: 거실 / 있는 사람: 주인공")
   })
 
+  it("reviews against the facts the skeleton fixed when the generation recorded them (#260)", async () => {
+    const sceneCacheRepository = {
+      read: vi.fn(async () => ({ skeletonFacts: ["주인공은 이 집에서 3년을 살았다"] })),
+      write: vi.fn(async () => undefined),
+      ensureDirectory: vi.fn(async () => undefined)
+    }
+    const options = baseOptions()
+
+    await runReviseDraftWorkflow({
+      ...options,
+      paths: { ...(options.paths as object), sceneCacheDirectory: vscode.Uri.file("/ws/project/.storyboard/cache/scenes") } as never,
+      host: createTestHost({
+        ...options.host,
+        fileSystem: { ...(options.host.fileSystem as object), exists: async () => true } as never
+      }),
+      repositories: createTestRepositories({ sceneCache: sceneCacheRepository as never })
+    })
+
+    const facts = (critiqueDraftMock.mock.calls[0]?.[0] as { facts: readonly string[] }).facts
+    expect(facts).toContain("이 장면에서 정한 사실 — 주인공은 이 집에서 3년을 살았다")
+  })
+
   it("falls back to the beat coordinates when no generation record exists", async () => {
     await runReviseDraftWorkflow(baseOptions())
 

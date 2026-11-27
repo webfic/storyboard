@@ -28,6 +28,7 @@ export type SceneGenerationPipelineAiService = Pick<
   | 'describeBackground'
   | 'findBackgroundFactConflicts'
   | 'draftSceneSkeleton'
+  | 'extractSkeletonFacts'
   | 'checkSceneCoverage'
   | 'proposeBeatAction'
   | 'arbitrateBeat'
@@ -51,6 +52,7 @@ export type SceneGenerationPipelineStage =
 export interface SceneGenerationPipelineTaskProviders {
   readonly personaGeneration?: AiProviderId;
   readonly sceneSkeleton?: AiProviderId;
+  readonly skeletonFacts?: AiProviderId;
   readonly sceneBeatActor?: AiProviderId;
   readonly sceneBeatArbiter?: AiProviderId;
   readonly sceneBeatJudge?: AiProviderId;
@@ -153,6 +155,7 @@ export interface RunSceneGenerationPipelineResult {
   readonly draftBody: string;
   readonly skeleton: string;
   readonly sceneCoordinates: readonly string[];
+  readonly skeletonFacts: readonly string[];
   readonly warnings: readonly SceneStageWarning[];
   readonly beatSegments?: readonly (readonly number[])[];
   readonly detectedCharacters: readonly string[];
@@ -177,6 +180,7 @@ export interface SceneRunSnapshot {
   readonly sceneCoordinates: SceneCoordinateSnapshot;
   readonly polishedText: string;
   readonly skeletonCallParagraphs: readonly SkeletonCallParagraphs[];
+  readonly skeletonFacts?: readonly string[];
   readonly skeletonBeatStarts?: readonly (readonly [number, number])[];
   readonly dialoguePolish?: DialoguePolishSummary;
   readonly draftBody: string;

@@ -17,6 +17,7 @@ import { GenreFormattingPrompt } from '#ai/ai/prompts/genreFormatting';
 import { PersonaGenerationPrompt } from '#ai/ai/prompts/personaGeneration';
 import { SceneBeatsPrompt } from '#ai/ai/prompts/sceneBeats';
 import { SceneSkeletonPrompt, type SceneSkeletonInput } from '#ai/ai/prompts/sceneSkeleton';
+import { SkeletonFactsPrompt, type SkeletonFactsInput } from '#ai/ai/prompts/skeletonFacts';
 import {
   coerceBeatProposal,
   SceneBeatActorPrompt,
@@ -189,6 +190,24 @@ export class SceneAiService {
     });
 
     return response.text.trim();
+  }
+
+  public async extractSkeletonFacts(
+    input: SkeletonFactsInput,
+    options: GenerateTextOptions = {},
+  ): Promise<string[]> {
+    const variant: PromptVariantId = this.gateway.resolvePromptVariant('skeletonFacts', options);
+    const prompt: PromptArtifact = SkeletonFactsPrompt.build(input, variant);
+    const response: AiGenerateResponse = await this.gateway.generate('skeletonFacts', toPromptMessages(prompt), {
+      ...options,
+      temperature: options.temperature ?? SkeletonFactsPrompt.config.temperature,
+      maxTokens: options.maxTokens ?? SkeletonFactsPrompt.config.maxTokens,
+    });
+    const parsed: unknown[] | null = parseJsonArray(response.text);
+
+    return (parsed ?? []).flatMap((value): string[] =>
+      typeof value === 'string' && value.trim().length > 0 ? [value.trim()] : [],
+    );
   }
 
   public async polishSceneDialogue(

@@ -27,6 +27,7 @@ export interface SceneCacheRecord {
   readonly detectedCharacters: readonly string[];
   readonly skeleton?: string;
   readonly sceneCoordinates?: readonly string[];
+  readonly skeletonFacts?: readonly string[];
   readonly bodyHash?: string;
   readonly personasUsed: Readonly<Record<string, string>>;
   readonly backgroundSnapshot?: SceneCacheBackgroundSnapshot;
@@ -76,6 +77,7 @@ interface SceneCacheProviders {
   backgroundFactConflicts?: AiProviderId;
   sceneDraft?: AiProviderId;
   sceneSkeleton?: AiProviderId;
+  skeletonFacts?: AiProviderId;
   sceneDialoguePolish?: AiProviderId;
   sceneDialogueAttribution?: AiProviderId;
   sceneSectionExpansion?: AiProviderId;
@@ -127,6 +129,7 @@ interface SceneCacheRecordPayload {
   providers: SceneCacheProviders;
   skeleton?: string;
   sceneCoordinates?: string[];
+  skeletonFacts?: string[];
   bodyHash?: string;
   backgroundSnapshot?: SceneCacheBackgroundSnapshot;
   previousContext?: string;
@@ -140,6 +143,7 @@ const sceneCacheRecordSchema: z.ZodType<SceneCacheRecordPayload> = z.object({
   detectedCharacters: z.array(z.string()),
   skeleton: z.string().optional(),
   sceneCoordinates: z.array(z.string()).optional(),
+  skeletonFacts: z.array(z.string()).optional(),
   bodyHash: z
     .string()
     .regex(/^sha256:[a-f0-9]{64}$/)

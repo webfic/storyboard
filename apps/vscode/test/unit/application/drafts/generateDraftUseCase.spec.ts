@@ -122,6 +122,7 @@ const pipelineSuccessResult = {
   draftBody: "생성된 초안 본문",
   detectedCharacters: ["준서"],
   sceneCoordinates: [] as readonly string[],
+  skeletonFacts: [] as readonly string[],
   situations: [],
   personasUsed: new Map<string, string>(),
   warnings: [] as readonly never[],
@@ -553,6 +554,17 @@ describe("GenerateDraftUseCase", () => {
 
       const record = sceneCacheRepository.write.mock.calls[0]?.[1] as { bodyHash?: string }
       expect(record.bodyHash).toMatch(/^sha256:[a-f0-9]{64}$/)
+    })
+
+    it("records the facts the skeleton fixed in the scene cache for the review (#260)", async () => {
+      pipelineRunMock.mockResolvedValue({ ...pipelineSuccessResult, skeletonFacts: ["준서는 이 집에서 3년을 살았다"] })
+      const sceneCacheRepository = createSceneCacheRepository()
+      const dependencies = createDependencies({ sceneCacheRepository })
+
+      await execute(dependencies, createRequest({ force: true }))
+
+      const record = sceneCacheRepository.write.mock.calls[0]?.[1] as { skeletonFacts?: readonly string[] }
+      expect(record.skeletonFacts).toEqual(["준서는 이 집에서 3년을 살았다"])
     })
 
     it("records the scene coordinates in the scene cache for the review", async () => {

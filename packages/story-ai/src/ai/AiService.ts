@@ -198,6 +198,13 @@ export class StoryboardAiService {
     return this.sceneAiService.findBackgroundFactConflicts(background, options);
   }
 
+  public async extractSkeletonFacts(
+    input: Parameters<SceneAiService['extractSkeletonFacts']>[0],
+    options: GenerateTextOptions = {},
+  ): Promise<string[]> {
+    return this.sceneAiService.extractSkeletonFacts(input, options);
+  }
+
   public async draftSceneSkeleton(
     input: Parameters<SceneAiService['draftSceneSkeleton']>[0],
     options: GenerateTextOptions = {},

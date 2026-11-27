@@ -331,6 +331,20 @@ describe("ledger updates after generation", () => {
     recorderStates = new Map()
   })
 
+  it("hands the facts the skeleton fixed to the ledger update (#260)", async () => {
+    const service = aiService([])
+
+    await new StoryStateRecorder(recorderDependencies()).updateAfterGeneration(
+      generationInputs(1, hashA),
+      service,
+      "본문",
+      ["주인공은 이 집에서 3년을 살았다"]
+    )
+
+    const update = (service as { updateStoryState: { mock: { calls: [{ skeletonFacts?: string[] }][] } } }).updateStoryState
+    expect(update.mock.calls[0]?.[0].skeletonFacts).toEqual(["주인공은 이 집에서 3년을 살았다"])
+  })
+
   it("records the scene input hash so the next audit has something to compare", async () => {
     await new StoryStateRecorder(recorderDependencies()).updateAfterGeneration(
       generationInputs(1, hashA),

@@ -20,4 +20,12 @@ describe("StoryStateUpdatePrompt golden", () => {
     expect(StoryStateUpdatePrompt.build(bare, variant)).toMatchSnapshot()
     expect(StoryStateUpdatePrompt.build(emptyPrevious, variant)).toMatchSnapshot()
   })
+
+  it.each(["generic", "xs"] as const)("asks for the personal facts a scene fixed and lists the skeleton's facts for the %s variant (#260)", (variant) => {
+    const prompt = StoryStateUpdatePrompt.build({ ...bare, skeletonFacts: ["엘리아는 항구에서 10년을 살았다"] }, variant)
+
+    expect(prompt.system).toMatch(/신상/)
+    expect(prompt.user).toContain("[뼈대가 정한 사실]\n- 엘리아는 항구에서 10년을 살았다")
+    expect(StoryStateUpdatePrompt.build(bare, variant).user).not.toContain("[뼈대가 정한 사실]")
+  })
 })

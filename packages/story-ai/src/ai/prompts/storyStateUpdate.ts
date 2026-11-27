@@ -7,6 +7,7 @@ export interface StoryStateUpdateInput {
   readonly draftBody: string;
   readonly previousState?: string;
   readonly characterNames?: readonly string[];
+  readonly skeletonFacts?: readonly string[];
 }
 
 export const StoryStateUpdatePrompt: PromptModule<
@@ -23,6 +24,8 @@ export const StoryStateUpdatePrompt: PromptModule<
         previousState: input.previousState,
         sceneTitle: input.sceneTitle,
         draftBody: input.draftBody,
+        hasSkeletonFacts: (input.skeletonFacts ?? []).length > 0,
+        skeletonFacts: input.skeletonFacts ?? [],
       },
     });
   },

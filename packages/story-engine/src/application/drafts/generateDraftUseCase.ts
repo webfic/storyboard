@@ -276,7 +276,12 @@ export class GenerateDraftUseCase implements IUseCase<GenerateDraftRequest, Gene
 
     const stateStep: DraftGenerationStepId = 'updateStoryState';
     await this.ai.traceRecorder.runStage(inputs.paths.workspaceRoot, stateStep, () =>
-      this.storyStateRecorder.updateAfterGeneration(inputs, aiService, pipelineResult.draftBody),
+      this.storyStateRecorder.updateAfterGeneration(
+        inputs,
+        aiService,
+        pipelineResult.draftBody,
+        pipelineResult.skeletonFacts,
+      ),
     );
     const isReviseAboutToFollow: boolean =
       request.reviseFollows === 'always' ||

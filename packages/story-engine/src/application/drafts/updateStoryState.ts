@@ -99,9 +99,10 @@ export class StoryStateRecorder {
     inputs: SceneGenerationInputs,
     aiService: StoryboardAiService,
     draftBody: string,
+    skeletonFacts: readonly string[] = [],
   ): Promise<void> {
     try {
-      await this.recordFromDraft(inputs, aiService, draftBody);
+      await this.recordFromDraft(inputs, aiService, draftBody, skeletonFacts);
     } catch (error) {
       this.dependencies.host.logger.warn(`이야기 상태를 갱신하지 못했습니다: ${String(error)}`);
     }
@@ -111,6 +112,7 @@ export class StoryStateRecorder {
     inputs: SceneGenerationInputs,
     aiService: StoryboardAiService,
     draftBody: string,
+    skeletonFacts: readonly string[] = [],
   ): Promise<void> {
     const { host, ai } = this.dependencies;
     const { threadPaths, scene, context, inputHash } = inputs;
@@ -123,6 +125,7 @@ export class StoryStateRecorder {
         draftBody,
         previousState: formatStoryStateForPrompt(previous, scene.order, draftBody),
         characterNames: witnessNameLabels(context.characters),
+        ...(skeletonFacts.length === 0 ? {} : { skeletonFacts }),
       },
       {
         providerId: ai.gateway.getTaskProvider('storyStateUpdate'),

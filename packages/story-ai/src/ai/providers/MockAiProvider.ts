@@ -280,6 +280,7 @@ const mockResponseBuilders: Readonly<Partial<Record<AiTaskName, MockResponseBuil
   grammarCheck: createMockGrammarIssues,
   sceneProofread: (): string => '[]',
   continuityCheck: (): string => '[]',
+  draftConsistency: (): string => '[]',
   beatLocation: (promptSummary: string): string => mockBeatParagraphs(promptSummary),
   cardFactExtraction: (): string =>
     JSON.stringify({ attributes: [], relations: [], arc: { summary: '' } }),

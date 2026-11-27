@@ -10,6 +10,10 @@ after the first public release.
 
 ## [Unreleased]
 
+### Added
+
+- **The review finds statements inside the draft that contradict each other (#260).** The continuity check only compared the text with the cards, so when the draft stated a point the cards leave open twice in two ways (sixteen years in the house in one place, ten in another), both stayed with no warning. Each review round now runs a new check (`draftConsistency`) for two statements in the draft that cannot both be true, and passes the one that disagrees with the cards (the later one when the cards say neither) to the rewrite like a continuity finding. The round record shows «내부 모순 N건», and `storyboard draft check consistency <scene>` runs it on its own. Each review round makes one more call.
+
 ## [0.17.5] - 2026-11-27
 
 ### Fixed

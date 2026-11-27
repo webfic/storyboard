@@ -63,7 +63,7 @@ describe('computeCompletions', () => {
   it('completes the kind a verb takes as its first argument', () => {
     expect(texts(['card', 'create', ''])).toEqual(['character', 'background', 'narrator']);
     expect(texts(['card', 'recommend', 'b'])).toEqual(['background']);
-    expect(texts(['draft', 'check', ''])).toEqual(['grammar', 'continuity', 'slop']);
+    expect(texts(['draft', 'check', ''])).toEqual(['grammar', 'continuity', 'consistency', 'slop']);
     expect(texts(['notes', 'connect', ''])).toEqual(['notion']);
     expect(texts(['card', 'list', 'c'])).toEqual(['character']);
     expect(texts(['card', 'show', ''])).toEqual(['seorin']);

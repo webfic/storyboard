@@ -12,7 +12,7 @@ export class DraftCheckCommand implements ICommandHandler {
     group: '초안',
     usage: `draft check <${draftCheckKinds.join('|')}> <stem>`,
     summary:
-      '초안을 검사합니다 — grammar 문법, continuity 카드의 사실과 어긋나는 곳, slop 상투 표현(AI 호출 없음). 문제가 있으면 종료 코드 1',
+      '초안을 검사합니다 — grammar 문법, continuity 카드의 사실과 어긋나는 곳, consistency 본문 안에서 서로 어긋나는 곳, slop 상투 표현(AI 호출 없음). 문제가 있으면 종료 코드 1',
     examples: [
       'storyboard draft check slop 001-scene-1-1',
       'storyboard draft check continuity 001-scene-1-1 --json',
@@ -74,6 +74,11 @@ function describeDraftCheck(draftCheck: CheckDraftResult): CommandOutcome {
     case 'grammar':
       return {
         ...describeFindingCount(draftCheck.issues, '문법 문제를 찾지 못했습니다.'),
+        data: draftCheck.issues,
+      };
+    case 'consistency':
+      return {
+        ...describeFindingCount(draftCheck.issues, '본문 안에서 어긋나는 곳을 찾지 못했습니다.'),
         data: draftCheck.issues,
       };
     case 'continuity':

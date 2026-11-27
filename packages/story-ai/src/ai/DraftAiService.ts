@@ -12,6 +12,7 @@ import {
   type GrammarIssue,
 } from '#ai/ai/aiResponseCoercion';
 import { ContinuityCheckPrompt } from '#ai/ai/prompts/continuityCheck';
+import { DraftConsistencyPrompt } from '#ai/ai/prompts/draftConsistency';
 import { DraftAugmentPrompt, type DraftAugmentInput } from '#ai/ai/prompts/draftAugment';
 import { DraftCritiquePrompt, type DraftCritiqueInput } from '#ai/ai/prompts/draftCritique';
 import { DraftCondensePrompt, type DraftCondenseInput } from '#ai/ai/prompts/draftCondense';
@@ -101,6 +102,25 @@ export class DraftAiService {
       'continuityCheck',
       prompt,
       ContinuityCheckPrompt.config,
+      options,
+    );
+    refuseTruncatedReview(response);
+    const parsedArray: unknown[] | null = parseJsonArray(response.text);
+
+    return parsedArray ? parsedArray.flatMap((value) => toContinuityIssue(value)) : [];
+  }
+
+  public async checkConsistency(
+    body: string,
+    facts: readonly string[],
+    options: GenerateTextOptions = {},
+  ): Promise<ContinuityIssue[]> {
+    const variant: PromptVariantId = this.gateway.resolvePromptVariant('draftConsistency', options);
+    const prompt: PromptArtifact = DraftConsistencyPrompt.build(body, facts, variant);
+    const response: AiGenerateResponse = await this.generateWithDefaults(
+      'draftConsistency',
+      prompt,
+      DraftConsistencyPrompt.config,
       options,
     );
     refuseTruncatedReview(response);

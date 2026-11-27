@@ -50,6 +50,7 @@ export type AiTaskName =
   | 'backgroundFactExtraction'
   | 'grammarCheck'
   | 'continuityCheck'
+  | 'draftConsistency'
   | 'inlineCompletion'
   | 'draftExpansion'
   | 'draftAugment'
@@ -103,6 +104,7 @@ export const aiTaskCatalog: readonly AiTaskCatalogEntry[] = [
   { name: 'backgroundFactExtraction', label: '배경 사실 추출' },
   { name: 'grammarCheck', label: '문법 검사' },
   { name: 'continuityCheck', label: '연속성 검사' },
+  { name: 'draftConsistency', label: '본문 내부 모순 검사' },
   { name: 'inlineCompletion', label: '인라인 완성' },
   { name: 'draftExpansion', label: '드래프트 확장' },
   { name: 'draftAugment', label: '초안 보충' },

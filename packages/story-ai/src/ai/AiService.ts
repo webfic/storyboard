@@ -333,6 +333,14 @@ export class StoryboardAiService {
     return this.draftAiService.checkContinuity(body, facts, options);
   }
 
+  public async checkConsistency(
+    body: string,
+    facts: readonly string[],
+    options: GenerateTextOptions = {},
+  ): Promise<ContinuityIssue[]> {
+    return this.draftAiService.checkConsistency(body, facts, options);
+  }
+
   public async checkSceneCoverage(
     beats: readonly string[],
     draft: string,

@@ -111,6 +111,7 @@ export interface ReviseLoopFailure {
 export interface ReviseRound {
   readonly round: number;
   readonly continuityIssues: readonly ContinuityIssueLike[];
+  readonly consistencyIssues?: readonly ContinuityIssueLike[];
   readonly critiqueIssues: readonly DraftCritiqueIssue[];
   readonly blocking: number;
   readonly passed: boolean;
@@ -138,6 +139,12 @@ export interface ReviseLoopResult {
   };
   readonly failure?: ReviseLoopFailure;
   readonly rounds: readonly ReviseRound[];
+}
+
+const consistencyReasonPrefix: string = '본문 안의 모순';
+
+function labelConsistencyIssue(issue: ContinuityIssueLike): ContinuityIssueLike {
+  return { ...issue, reason: `${consistencyReasonPrefix} — ${issue.reason}` };
 }
 
 function addsBrokenHangul(originalText: string, candidateText: string): boolean {
@@ -239,6 +246,7 @@ export function planSectionRevisions(
 
 interface ReviewCheckResults {
   continuityIssues: Awaited<ReturnType<StoryboardAiService['checkContinuity']>>;
+  consistencyIssues: Awaited<ReturnType<StoryboardAiService['checkConsistency']>>;
   critiqueIssues: Awaited<ReturnType<StoryboardAiService['critiqueDraft']>>;
 }
 
@@ -489,9 +497,13 @@ export class ReviseLoop {
   ): ReviseRound {
     const seed: ReviseSeedIssues | undefined =
       state.getRevisionCount() === 0 ? this.options.seedIssues : undefined;
+    const consistencyIssues: ContinuityIssueLike[] = checked.consistencyIssues.map(
+      labelConsistencyIssue,
+    );
     const continuityIssues: ContinuityIssueLike[] = [
       ...checked.continuityIssues,
       ...(seed?.continuityIssues ?? []),
+      ...consistencyIssues,
     ];
     const critiqueIssues: DraftCritiqueIssue[] = [
       ...checked.critiqueIssues,
@@ -507,6 +519,7 @@ export class ReviseLoop {
     return {
       round,
       continuityIssues,
+      consistencyIssues,
       critiqueIssues,
       blocking: review.blocking,
       passed: review.passed,
@@ -570,9 +583,13 @@ export class ReviseLoop {
       ...(addressFact === undefined ? [] : [addressFact]),
     ];
 
-    const [continuityIssues, critiqueIssues] = await Promise.all([
+    const [continuityIssues, consistencyIssues, critiqueIssues] = await Promise.all([
       aiService.checkContinuity(body, continuityFacts, {
         providerId: registry.getTaskProvider('continuityCheck'),
+        attribution,
+      }),
+      aiService.checkConsistency(body, continuityFacts, {
+        providerId: registry.getTaskProvider('draftConsistency'),
         attribution,
       }),
       aiService.critiqueDraft(
@@ -590,7 +607,7 @@ export class ReviseLoop {
       ),
     ]);
 
-    return { continuityIssues, critiqueIssues };
+    return { continuityIssues, consistencyIssues, critiqueIssues };
   }
 
   private async applySectionRevisions(
@@ -770,8 +787,11 @@ export function describeReviseRound(round: ReviseRound): string {
   const highContinuity: number = round.continuityIssues.filter(
     (issue) => issue.severity === 'high',
   ).length;
+  const consistency: readonly ContinuityIssueLike[] = round.consistencyIssues ?? [];
+  const highConsistency: number = consistency.filter((issue) => issue.severity === 'high').length;
+  const continuityOnly: number = round.continuityIssues.length - consistency.length;
   const parts: string[] = [
-    `검사 ${round.round}: 연속성 ${round.continuityIssues.length}건(높음 ${highContinuity}) · 비평 ${round.critiqueIssues.length}건 · 차단 ${round.blocking}`,
+    `검사 ${round.round}: 연속성 ${continuityOnly}건(높음 ${highContinuity - highConsistency}) · 내부 모순 ${consistency.length}건(높음 ${highConsistency}) · 비평 ${round.critiqueIssues.length}건 · 차단 ${round.blocking}`,
   ];
 
   if (round.passed) {

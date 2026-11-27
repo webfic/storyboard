@@ -114,8 +114,9 @@
 
 생성이 아니라 그 뒤의 별도 루프다. `revise.maxIterations` 회까지 돈다.
 
-1. **검사**: `continuityCheck` (0.1)와 `draftCritique` (0.2)를 **동시에** 부른다. 연속성 검사는
-   카드의 사실·원장의 사실 줄과 본문을 맞추고, 비평은 voice / purpose / repetition 세 관점만 본다.
+1. **검사**: `continuityCheck` (0.1), `draftConsistency` (0.1), `draftCritique` (0.2)를 **동시에** 부른다. 연속성 검사는
+   카드의 사실·원장의 사실 줄과 본문을 맞추고, 내부 모순 검사는 본문 안에서 함께 참일 수 없는 두 진술을
+   찾아 고칠 쪽을 연속성 지적으로 합치며(이유 앞에 «본문 안의 모순»), 비평은 voice / purpose / repetition 세 관점만 본다.
    첫 회전에는 1층 ⑥이 넘긴 씨앗 이슈도 합친다.
 2. **라우팅**: 지적마다 담당을 정한다. `reviewRouting.ts`의 네 담당 `canon` / `persona` /
    `narrator` / `setting`과 카드 id로 묶고, 어디에도 속하지 않으면 전역 지시로 둔다.
@@ -174,6 +175,7 @@
 | `sceneProofread` | 집필 | 2층 6a, 조각마다 | 초안 조각 + 의심 글자 → 고칠 구절 목록 | 0 / 2000 |
 | `sceneDialogueAttribution` | 집필 | 2층 7 | 완성 초안 → 대사별 화자 | 0 / 4000 |
 | `continuityCheck` | 검수 | 되먹임 루프, 1층 ⑥, `draft check continuity` | 본문 + 사실 줄 → 모순 목록(severity) | 0.1 / 2000 |
+| `draftConsistency` | 검수 | 되먹임 루프, `draft check consistency` | 본문 + 사실 줄 → 본문 안의 모순 목록(고칠 자리, severity) | 0.1 / 2000 |
 | `draftCritique` | 검수 | 되먹임 루프, 1층 ⑥ | 본문 + 카드·시점·문체 → voice/purpose/repetition 지적 | 0.2 / 2000 |
 | `draftRevision` | 수정 | 되먹임 루프, 1층 ⑦, `draft condense` | 본문 + 담당별 지시문 → 고친 본문 | 0.7 / 4000 |
 | `chapterSummary` | 기억 | 1층 ⑧ | 장의 씬 초안들 → 한 장 요약 | 0.3 / 600 |

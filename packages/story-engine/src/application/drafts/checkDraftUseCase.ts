@@ -20,11 +20,12 @@ import {
 
 import { runUseCase, type IUseCase, type UseCaseFailure } from '#engine/application/useCase';
 
-export type DraftCheckKind = 'grammar' | 'continuity' | 'slop';
+export type DraftCheckKind = 'grammar' | 'continuity' | 'consistency' | 'slop';
 
 export const draftCheckKinds: readonly [DraftCheckKind, ...DraftCheckKind[]] = [
   'grammar',
   'continuity',
+  'consistency',
   'slop',
 ];
 
@@ -43,6 +44,7 @@ export type CheckDraftResult =
       readonly issues: readonly ContinuityIssue[];
       readonly hasFacts: boolean;
     }
+  | { readonly ok: true; readonly kind: 'consistency'; readonly issues: readonly ContinuityIssue[] }
   | { readonly ok: true; readonly kind: 'slop'; readonly findings: readonly SlopFinding[] }
   | UseCaseFailure;
 
@@ -95,6 +97,20 @@ export class CheckDraftUseCase implements IUseCase<CheckDraftRequest, CheckDraft
             attribution,
           });
         return { ok: true, kind: 'continuity', issues, hasFacts: true };
+      }
+
+      case 'consistency': {
+        const factLines: readonly string[] = await this.loadCanonFactLines(
+          request.workspaceRoot,
+          request.sceneStem,
+        );
+        const issues: ContinuityIssue[] = await aiGateway
+          .createService(request.workspaceRoot)
+          .checkConsistency(request.text, factLines, {
+            providerId: aiGateway.getTaskProvider('draftConsistency'),
+            attribution,
+          });
+        return { ok: true, kind: 'consistency', issues };
       }
     }
   }

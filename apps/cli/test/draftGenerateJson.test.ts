@@ -197,6 +197,23 @@ async function generateAllScenes(...extraArgs: string[]): Promise<BatchData> {
   return (JSON.parse(result.stdout) as { data: BatchData }).data;
 }
 
+describe('draft check consistency (#260)', () => {
+  it('runs the internal consistency check on a saved draft and finds nothing in a mock draft', async () => {
+    await generateScene();
+
+    const result = await new CommandDispatcher(deps()).dispatch([
+      'draft',
+      'check',
+      'consistency',
+      '001-opening',
+      '--json',
+    ]);
+
+    expect(result.exitCode).toBe(0);
+    expect(JSON.parse(result.stdout)).toMatchObject({ ok: true, data: [] });
+  });
+});
+
 describe('draft generate --all --json', () => {
   it('reports each scene with the fields of a one-scene run and the calls of the whole batch', async () => {
     const params: string = join(workspace, 'point.json');

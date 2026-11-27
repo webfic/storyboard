@@ -78,6 +78,7 @@ describe('suggestForInput', () => {
     expect(suggestForInput('draft check ', cwd).map((s) => s.line)).toEqual([
       'draft check grammar ',
       'draft check continuity ',
+      'draft check consistency ',
       'draft check slop ',
     ]);
     expect(suggestForInput('draft generate --f', cwd)).toEqual([

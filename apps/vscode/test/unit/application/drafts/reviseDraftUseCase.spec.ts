@@ -23,6 +23,7 @@ vi.mock("@storyboard/story-ai", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@storyboard/story-ai")>()),
   StoryboardAiService: class {
     checkContinuity = (): Promise<ContinuityIssueLike[]> => checkContinuityMock()
+    checkConsistency = async (): Promise<ContinuityIssueLike[]> => []
     critiqueDraft = (input: unknown): Promise<DraftCritiqueIssue[]> => critiqueDraftMock(input)
     reviseDraft = async (input: unknown): Promise<DraftRevisionAnswer> => {
       const answer: string | DraftRevisionAnswer = await reviseDraftMock(input)
@@ -252,8 +253,8 @@ describe("ReviseDraftUseCase", () => {
     const record = JSON.parse(new TextDecoder().decode(content)) as { rounds: unknown[] }
     expect(record.rounds).toHaveLength(2)
     expect(loggerInfoMock.mock.calls.map((call) => call[0])).toEqual([
-      "01-scene: 검사 1: 연속성 1건(높음 1) · 비평 0건 · 차단 1 → 재작성 1구간 중 1구간 반영",
-      "01-scene: 검사 2: 연속성 0건(높음 0) · 비평 0건 · 차단 0 → 통과"
+      "01-scene: 검사 1: 연속성 1건(높음 1) · 내부 모순 0건(높음 0) · 비평 0건 · 차단 1 → 재작성 1구간 중 1구간 반영",
+      "01-scene: 검사 2: 연속성 0건(높음 0) · 내부 모순 0건(높음 0) · 비평 0건 · 차단 0 → 통과"
     ])
   })
 

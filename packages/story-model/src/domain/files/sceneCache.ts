@@ -88,6 +88,7 @@ interface SceneCacheProviders {
   backgroundFactExtraction?: AiProviderId;
   grammarCheck?: AiProviderId;
   continuityCheck?: AiProviderId;
+  draftConsistency?: AiProviderId;
   inlineCompletion?: AiProviderId;
   draftExpansion?: AiProviderId;
   draftAugment?: AiProviderId;

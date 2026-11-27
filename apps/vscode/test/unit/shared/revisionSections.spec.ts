@@ -6,9 +6,11 @@ import {
   locateQuoteSection,
   planSectionRevisions,
   replaceSectionText,
+  describeReviseRound,
   ReviseLoop,
   splitDraftSections,
-  type ReviseLoopResult
+  type ReviseLoopResult,
+  type ReviseRound
 } from "@storyboard/story-engine"
 
 const body = [
@@ -128,6 +130,7 @@ describe("ReviseLoop by section", () => {
 
     return {
       checkContinuity,
+      checkConsistency: vi.fn().mockResolvedValue([]),
       critiqueDraft: vi.fn().mockResolvedValue([]),
       reviseDraft: vi.fn(async (input: { body: string }) => ({ text: await reviseDraft(input), isTruncated: false }))
     } as never
@@ -257,6 +260,7 @@ describe("ReviseLoop by section", () => {
         .fn()
         .mockResolvedValueOnce([{ original: "", reason: "전반의 모순", severity: "high" }])
         .mockResolvedValue([]),
+      checkConsistency: vi.fn().mockResolvedValue([]),
       critiqueDraft: vi.fn().mockResolvedValue([]),
       reviseDraft
     } as never
@@ -340,6 +344,7 @@ describe("ReviseLoop and address terms not yet given (#253)", () => {
         .fn()
         .mockResolvedValueOnce([{ original, reason: "설정상 별명으로만 부른다", severity: "high" }])
         .mockResolvedValue([]),
+      checkConsistency: vi.fn().mockResolvedValue([]),
       critiqueDraft: vi.fn().mockResolvedValue([]),
       reviseDraft: vi.fn(async (input: { body: string }) => ({ text: rewrite(input.body), isTruncated: false }))
     } as never
@@ -396,5 +401,57 @@ describe("ReviseLoop and address terms not yet given (#253)", () => {
 
     const checkContinuity = (aiService as { checkContinuity: { mock: { calls: [string, string[]][] } } }).checkContinuity
     expect(checkContinuity.mock.calls[0]?.[1].at(-1)).toContain("«별똥이»")
+  })
+})
+
+describe("ReviseLoop and contradictions inside the draft (#260)", () => {
+  const registry = { getTaskProvider: () => "mock" } as never
+  const loopContext = {
+    format: "novel",
+    intent: "",
+    factLines: [],
+    castProfileLines: [],
+    characterNames: [],
+    characterCards: [],
+    styleConstraints: [],
+    qualityCriteria: [],
+    styleDirective: undefined,
+    characters: []
+  } as never
+
+  it("sends a contradiction the consistency check finds to the rewrite and reports it in the round", async () => {
+    const aiService = {
+      checkContinuity: vi.fn().mockResolvedValue([]),
+      checkConsistency: vi
+        .fn()
+        .mockResolvedValueOnce([
+          { original: "바베큐 연기가", reason: "«교문을 나서자»와 함께 참일 수 없다", severity: "high" }
+        ])
+        .mockResolvedValue([]),
+      critiqueDraft: vi.fn().mockResolvedValue([]),
+      reviseDraft: vi.fn(async (input: { body: string }) => ({ text: `${input.body} 고쳤다.`, isTruncated: false }))
+    } as never
+    const rounds: ReviseRound[] = []
+
+    const result = await new ReviseLoop({
+      aiService,
+      registry,
+      attribution: { primary: { kind: "scene", id: "01" } },
+      loopContext,
+      body,
+      maxIterations: 1,
+      reviseScoreThreshold: 0,
+      maxCompressionPercent: 50,
+      onRound: (round): void => void rounds.push(round)
+    }).run()
+
+    const reviseDraft = (aiService as { reviseDraft: { mock: { calls: [{ instructions: string[] }][] } } }).reviseDraft
+    expect(reviseDraft.mock.calls).toHaveLength(1)
+    expect(reviseDraft.mock.calls[0]?.[0].instructions.join("\n")).toContain("본문 안의 모순")
+    expect(splitDraftSections(result.body).sections[2]).toContain("고쳤다.")
+    expect(rounds[0]?.consistencyIssues).toHaveLength(1)
+    expect(rounds[0]?.blocking).toBe(1)
+    expect(describeReviseRound(rounds[0] as ReviseRound)).toContain("내부 모순 1건(높음 1)")
+    expect(result.passed).toBe(true)
   })
 })

@@ -345,7 +345,7 @@ describe('kind arguments', () => {
     );
 
     expect(missingKind.ok).toBe(false);
-    expect(missingKind.message).toContain('<grammar|continuity|slop>');
+    expect(missingKind.message).toContain('<grammar|continuity|consistency|slop>');
     expect(missingDraft.ok).toBe(false);
     expect(missingDraft.message).toContain('초안이 없습니다: 01-first');
   });

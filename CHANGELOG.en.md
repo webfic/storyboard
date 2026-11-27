@@ -10,6 +10,8 @@ after the first public release.
 
 ## [Unreleased]
 
+## [0.17.5] - 2026-11-27
+
 ### Fixed
 
 - **`draft generate --all --force` generates every scene again (#255).** Until now `--force` given with `--all` was ignored without a word: scenes whose input had not changed were left as they were and the run ended in success. Now each scene is made again, as `--force` does for one scene, and the cost confirmation counts every scene. A forced run that is paused says that running it again with `--force` starts again from the first scene. `help draft` and the `--force` description follow this behaviour. The extension's «generate all» is unchanged.
